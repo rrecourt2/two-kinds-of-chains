@@ -1,0 +1,15 @@
+/* Page shell for the standalone build only. Hosts such as SharePoint keep their own body styles. */
+html,
+body {
+  margin: 0;
+  background: var(--tkc-page);
+  color: var(--tkc-ink);
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  background: var(--tkc-surface);
+}
