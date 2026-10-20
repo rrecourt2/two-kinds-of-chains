@@ -40,7 +40,7 @@
     { title: 'Alternatives everywhere', text: 'Any qualified person can approve, and every critical system has a fallback. No link depends on one name.', ch: 'riddle' },
     { title: 'Enter it once', text: 'One shared record that every system reads, instead of copies that each need re-keying, checking and correcting.', ch: 'systems' },
     { title: 'Check data as it is typed', text: 'Automatic checks at entry stop a problem before it spreads into other systems. That is where Grove was right.', ch: 'breakfast' },
-    { title: 'One approval, later', text: 'One person approves the whole request when the picture is complete, instead of a sign-off at every system.', ch: 'systems' },
+    { title: 'Approve in parallel, or once at the end', text: 'No approval waits for another. Standard requests get one approval when the picture is complete; requests that cannot be undone get several reviewers working at the same time.', ch: 'systems' },
     { title: 'Spare capacity', text: 'Keep key reviewers and key systems below about 80% loaded, and give them one shared queue.', ch: 'queues' },
     { title: 'Care in proportion to the risk', text: 'Small, reversible decisions get light, fast checks. The most care goes where mistakes cannot be undone.', ch: 'ergodicity' },
     { title: 'Tools before gates', text: 'Bring in AI and automation as tools that work the screens for people. Judge them by the screens and steps they remove.', ch: 'tools' },
@@ -202,8 +202,8 @@
     </p>
     <p class="tkc-lede">
       None of this argues for fewer controls. A bank needs its checks. It argues for controls shaped like options:
-      alternatives at every link, data entered once, one approval when the picture is complete, spare capacity, and
-      tools that take screens away instead of adding them.
+      alternatives at every link, data entered once, approvals that run in parallel or once at the end, spare capacity,
+      and tools that take screens away instead of adding them.
     </p>
   </section>
 

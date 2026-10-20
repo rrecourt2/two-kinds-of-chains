@@ -24,11 +24,11 @@
 
   const minute = [
     { ch: 'riddle', text: 'Chains multiply. Six links that each work 95% of the time make a 74% process. Give every link an alternative and it is 99%.' },
-    { ch: 'systems', text: 'Linked systems spread problems. When each system copies the last, one wrong field stops the request and must be fixed everywhere it went.' },
+    { ch: 'systems', text: 'Linked systems spread problems. When each system copies the last, one wrong field stops the request and must be fixed everywhere it went. One shared record makes the same controls faster and stronger.' },
     { ch: 'queues', text: 'Full calendars are queues. At 90% busy, a one-hour review waits nine hours.' },
     { ch: 'ergodicity', text: 'Averages mislead when outcomes multiply, and the data hides the rare event. Survival comes first.' },
     { ch: 'tools', text: 'Tools beat gates. AI that fills in the screens for people, with a person checking, eases UI fatigue. AI added as one more mandatory screen adds to it.' },
-    { ch: 'monday', text: 'Keep the controls. Change their shape: alternatives, one shared record, one approval later, spare capacity.' },
+    { ch: 'monday', text: 'Keep the controls. Change their shape: alternatives, one shared record, reviews in parallel or once at the end, spare capacity.' },
   ];
 </script>
 

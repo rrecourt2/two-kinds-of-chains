@@ -253,12 +253,20 @@
       </li>
       <li><strong>Every new system adds a link.</strong> Each specialist team’s new tool brings its own form, its own approval, its own copy of the data and its own screen to learn. People feel the sum of those screens as UI fatigue.</li>
     </ul>
-    <h3>Two changes, and no control removed</h3>
+    <h3>Faster and safer at the same time</h3>
+    <p>
+      Today’s chain is the worst of both worlds: the slowest design and the one that lets the most problems through.
+    </p>
     <p>
       Switch to one shared record. Every system reads the same data, so it is entered once, a problem is fixed in one
-      place, and no system waits for another’s output. Then move the approval to the end, where one person sees the
-      whole request. The typical request falls from weeks to days, and fewer problems slip through than with six
-      separate approvals.
+      place, and the approvals can happen at the same time instead of one after another. The typical request falls from
+      more than three weeks to about one, and almost no problems slip through, because every approver now sees the whole
+      record.
+    </p>
+    <p>
+      Then try one approval at the end. It is the fastest design, a few days, and it still lets fewer problems through
+      than today’s chain, though more than several parallel reviews. That is a choice to make by risk: one approval for
+      standard requests, several reviewers working in parallel for the ones that cannot be undone.
     </p>
   {/snippet}
 
@@ -266,8 +274,8 @@
     <BankNote ask="Which of our systems ask for data that already exists in another system?">
       <p>
         Follow one request across every system it touches. For each, ask two questions. Does it copy data from another
-        system, or read it from one shared source? Does it need its own approval, or could one person approve the whole
-        request once, at the end?
+        system, or read it from one shared source? Does it need its own approval in sequence, or could the approvals run
+        at the same time, or as one approval at the end for standard cases?
       </p>
     </BankNote>
   {/snippet}

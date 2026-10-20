@@ -6,16 +6,19 @@ Everything ships as one file, with no external requests, so it can run inside a 
 
 | # | Chapter | Live model |
 |---|---------|------------|
-| 0 | Two Kinds of Chains | Same four steps staffed two ways: named people vs interchangeable people |
-| 1 | A riddle about chains | A month calendar: how often everyone a decision needs is in (AND vs OR) |
+| 0 | Two Kinds of Chains | The hook: guess how many of 100 requests survive six systems, then watch them flow |
+| 1 | A riddle about chains | A month calendar of people or systems: how often everything you need is available (AND vs OR) |
 | 2 | Why longer chains get cheaper | Adam Smith's pin workshop: the best number of specialists grows with the market |
-| 3 | Waiting for people who aren't there | The approval relay: sign-offs, stand-ins, parallel review, send-backs |
+| 3 | When systems lean on each other | One request through linked systems: forms, approvals, and problems that stop the work and spread |
 | 4 | Why full calendars make long queues | Four approvers, named lines vs one shared line, waiting vs utilization |
-| 5 | When the average lies | Ole Peters' coin game: ergodicity, staking less, pooling |
-| 6 | 2008: when links became conditions | A 48-bank interbank network you can push into contagion |
-| 7 | Why species go extinct | Specialist vs generalist on 40 islands, in calm and volatile worlds |
-| 8 | Scale amplifies what you build | Mesh vs single approver vs small teams as the organization grows |
-| 9 | What to do on Monday | Two-question test, seven moves, and a tool to check a real process |
+| 5 | The breakfast factory | Andrew Grove's kitchen slid towards a bank: the moving limiting step, and where checks belong |
+| 6 | When the average lies | Ole Peters' coin game: ergodicity, staking less, pooling |
+| 7 | 2008: when links became conditions | A 48-bank interbank network you can push into contagion |
+| 8 | What the data cannot show | Black swans, the turkey, and thin versus fat tails in 40 years of data |
+| 9 | Why species go extinct | Specialist vs generalist on 40 islands, in calm and volatile worlds |
+| 10 | The shape of the graph | Graph theory: mesh, hub and modules as the network grows; Simon's watchmakers |
+| 11 | Tools, not gates | UI fatigue and AI: convex tools versus concave gates |
+| 12 | What to do on Monday | Two-question test, eight moves, and a tool to check a real request |
 
 ## Run it
 
@@ -42,12 +45,25 @@ Node 20.19+ or 22.12+ is required (Vite 8).
 - `startAt`: a chapter id to open first.
 - Returns `{ destroy() }`.
 
+## Deploy on Vercel
+
+The repository is set up for Vercel's GitHub import, with no settings to change:
+
+1. In Vercel, choose **Add New → Project** and import this GitHub repository.
+2. Vercel reads `vercel.json`: install with `npm ci`, build with `npm run build:page`, serve `dist/`.
+3. Every push to `main` deploys again. Pull requests get preview links.
+
+Production deployments on Vercel are public by default. If the story should stay inside the bank, turn on
+Vercel Authentication or password protection for the project, or host `dist/index.html` internally instead
+(see `sharepoint/README.md`).
+
 ## Where things live
 
 ```
 src/
   App.svelte              story shell: chain-link navigation, chapter switching, keyboard arrows
   chapters/*.svelte       one file per chapter: the text and the interactive figure
+  lib/ui/Hook.svelte      the opening guess-and-reveal
   chapters/index.js       chapter order, titles and URL ids
   lib/sim/*.js            the models (pure JavaScript, seeded random numbers, unit-tested)
   lib/ui/*.svelte         slider, segmented control, stat tile, chapter layout, "Back at the bank" box

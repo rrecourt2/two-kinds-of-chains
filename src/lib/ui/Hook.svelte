@@ -49,6 +49,7 @@
   const gateX = (k) => left + 24 + ((span - 24) * (k + 0.5)) / gates;
   const endX = $derived(left + span + 10);
   const showNames = $derived(span / gates >= 74);
+  const showReasons = $derived(span / gates >= 118);
   const DURATION = 2600; // ms for one request to cross
   const STAGGER = 26;
   const FALL = 450;
@@ -191,7 +192,7 @@
           <text class="tkc-axis-label" x={x - 2} y={laneY - 32} text-anchor="middle">{showNames ? NAMES[k] : k + 1}</text>
           {#if phase === 'done' && stuckCounts[k] > 0}
             <text class="tkc-label" x={x} y={trayY + 22} text-anchor="middle">−{stuckCounts[k]}</text>
-            {#if showNames}<text class="tkc-axis-label" x={x} y={trayY + 36} text-anchor="middle">{REASONS[k]}</text>{/if}
+            {#if showReasons}<text class="tkc-axis-label" x={x} y={trayY + 36} text-anchor="middle">{REASONS[k]}</text>{/if}
           {/if}
         {/each}
         <line x1={left} x2={endX - 8} y1={trayY + 6} y2={trayY + 6} class="tray" />
