@@ -102,16 +102,14 @@
 </script>
 
 <Chapter
-  n={10}
+  n={11}
   kicker="Graph theory"
   title="The shape of the graph"
   lede="Every chapter so far has been about a network. Its shape, more than its size, decides whether growth makes an organization smarter or slower."
 >
   {#snippet setup()}
     <p>
-      Graph theory is the mathematics of dots and lines. It began in 1736, when Leonhard Euler proved that nobody could
-      walk through the city of Königsberg crossing each of its seven bridges exactly once. Today it describes anything
-      made of parts and links: people and their dependencies, systems and their data feeds, banks and their exposures.
+      Graph theory is the mathematics of dots and lines. It describes anything made of parts and links: people and their dependencies, systems and their data feeds, banks and their exposures.
     </p>
     <p>
       Every chapter so far was a graph. A chain of sign-offs is a path, and stand-ins are parallel paths. Linked systems

@@ -75,7 +75,7 @@
   n={3}
   kicker="Linked systems"
   title="When systems lean on each other"
-  lede="Every specialist team builds its own system. When each one copies its data from the one before, every new system adds a form, an approval and one more place for a problem to spread."
+  lede="When each system copies its data from the last, one wrong field stops the request and must be fixed everywhere it went. One shared record makes the same approvals faster and safer."
 >
   {#snippet setup()}
     <p>

@@ -1,4 +1,4 @@
-// How three team structures scale (chapter 8). Every mandatory working
+// How three team structures scale (chapter 11). Every mandatory working
 // relationship costs each side 2% of their time. Output is counted in
 // "people's worth" of useful work.
 

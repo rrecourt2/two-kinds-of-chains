@@ -66,10 +66,10 @@
 </script>
 
 <Chapter
-  n={9}
+  n={10}
   kicker="Ecology"
   title="Why species go extinct"
-  lede="Species rarely die out for being specialized. They die out for depending on one thing in a variable world."
+  lede="The species that die out are the ones that depend on a single thing when the world turns volatile."
 >
   {#snippet setup()}
     <p>
@@ -193,7 +193,7 @@
       <li><strong>Small populations die of bad luck</strong>, even when the average year is good. Start with 10 animals per island and watch.</li>
       <li>
         <strong>A population can grow on average and still be doomed.</strong> Richard Lewontin and Dan Cohen proved this
-        in 1969, decades before the coin game in chapter 6 became famous in economics. Desert plants hedge against it by
+        in 1969, decades before the coin game in chapter 7 became famous in economics. Desert plants hedge against it by
         never letting all their seeds germinate in the same year.
       </li>
     </ul>

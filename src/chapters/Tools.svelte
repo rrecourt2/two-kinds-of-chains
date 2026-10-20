@@ -55,9 +55,9 @@
 </script>
 
 <Chapter
-  n={11}
+  n={6}
   kicker="AI and convexity"
-  title="Tools, not gates"
+  title="Tools before gates"
   lede="AI that does the work behind the screens, with a person checking the result, is an option with a small downside. AI added as one more mandatory screen is a gate with a small upside."
 >
   {#snippet setup()}
@@ -72,10 +72,9 @@
       the AI is just one more screen.
     </p>
     <p>
-      The difference has a precise name: convexity. A payoff is <strong>convex</strong> when its upside is bigger than
-      its downside: you gain a lot when things go well and lose little when they go badly. An option is convex. A payoff
-      is <strong>concave</strong> when the downside dominates. Nassim Taleb’s point in <em>Antifragile</em> is that
-      convex things benefit from variability and concave things are hurt by it.
+      Traders have a name for the difference: <strong>convexity</strong>. A bought option has a small, known downside and
+      a large upside, so variability helps it. A sold option has the reverse. A tool is a bought option. A gate is a sold
+      one. Nassim Taleb built <em>Antifragile</em> on this idea.
     </p>
     <p>
       Below, an AI fills in the entries for a client request. On average it saves half an hour, but some drafts save a

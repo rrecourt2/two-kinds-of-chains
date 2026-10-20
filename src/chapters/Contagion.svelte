@@ -95,7 +95,7 @@
 </script>
 
 <Chapter
-  n={7}
+  n={8}
   kicker="Contagion"
   title="2008: when links became conditions"
   lede="Links absorb small shocks and spread big ones. The more connected a system, the more it depends on its buffers and its hubs."

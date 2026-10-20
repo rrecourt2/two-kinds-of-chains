@@ -85,14 +85,15 @@
 </script>
 
 <Chapter
-  n={6}
+  n={7}
   kicker="Ergodicity"
   title="When the average lies"
   lede="When outcomes multiply, the average result is not what a typical person, team or bank lives through. Survival comes first."
 >
   {#snippet setup()}
     <p>
-      Here is a game. Each round, flip a coin. Heads, your wealth grows by 50%. Tails, it shrinks by 40%. On average,
+      The chapters so far were about speed. The next four are about survival, which is why a bank has controls at all.
+      Start with a game. Each round, flip a coin. Heads, your wealth grows by 50%. Tails, it shrinks by 40%. On average,
       each round makes you 5% richer. Would you play it every round, with everything you own?
     </p>
     <p>Below, 2,000 players each play 100 rounds.</p>
@@ -216,8 +217,8 @@
   {#snippet bank()}
     <BankNote ask="Which of our processes would we design differently if we judged them by their worst month instead of their average month?">
       <p>
-        A bank cannot average over parallel universes; it has to survive the one path it is on. That is why it holds
-        capital and liquidity buffers. Processes need the same thinking: slack and stand-ins are buffers, and a pool of
+        A bank lives through one path, so it holds capital and liquidity buffers. The same logic puts the heaviest controls
+        where a mistake cannot be undone. Processes need the same thinking: slack and stand-ins are buffers, and a pool of
         reviewers is risk-sharing.
       </p>
     </BankNote>

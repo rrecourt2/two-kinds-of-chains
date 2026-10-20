@@ -80,7 +80,7 @@
 </script>
 
 <Chapter
-  n={8}
+  n={9}
   kicker="Black swans"
   title="What the data cannot show"
   lede="The risks that matter most are the ones least visible in your data, and the costs of caution are the ones nobody records."

@@ -37,14 +37,14 @@
   const x = $derived(linear(0, xMax, labelW, width - 44));
 
   const moves = [
-    { title: 'Alternatives everywhere', text: 'Any qualified person can approve, and every critical system has a fallback. No link depends on one name.', ch: 'riddle' },
-    { title: 'Enter it once', text: 'One shared record that every system reads, instead of copies that each need re-keying, checking and correcting.', ch: 'systems' },
+    { title: 'Alternatives everywhere', text: 'Every approval can be given by more than one person with the right delegated authority, and every critical system has a tested fallback. No link depends on one name.', ch: 'riddle' },
+    { title: 'Enter it once', text: 'One shared record that every system reads, instead of copies that each need re-keying, checking and correcting. Run it as a protected hub with a tested fallback.', ch: 'systems' },
     { title: 'Check data as it is typed', text: 'Automatic checks at entry stop a problem before it spreads into other systems. That is where Grove was right.', ch: 'breakfast' },
     { title: 'Approve in parallel, or once at the end', text: 'No approval waits for another. Standard requests get one approval when the picture is complete; requests that cannot be undone get several reviewers working at the same time.', ch: 'systems' },
     { title: 'Spare capacity', text: 'Keep key reviewers and key systems below about 80% loaded, and give them one shared queue.', ch: 'queues' },
     { title: 'Care in proportion to the risk', text: 'Small, reversible decisions get light, fast checks. The most care goes where mistakes cannot be undone.', ch: 'ergodicity' },
     { title: 'Tools before gates', text: 'Bring in AI and automation as tools that work the screens for people. Judge them by the screens and steps they remove.', ch: 'tools' },
-    { title: 'Count the silent costs', text: 'Measure waiting time, re-keying and abandoned requests, not only incidents. What is not counted keeps growing.', ch: 'black-swans' },
+    { title: 'Count the silent costs', text: 'Measure waiting, re-keying and abandoned requests alongside incidents, and track one number: the share of a request’s time that is actual work.', ch: 'black-swans' },
   ];
 
   const sources = [
@@ -59,7 +59,7 @@
     ['Ole Peters', '2019', '“The ergodicity problem in economics”, Nature Physics', 'The coin game, and time averages versus ensemble averages.'],
     ['Ole Peters and Alexander Adamou', '2015', '“An evolutionary advantage of cooperation”', 'Pooling raises the growth rate a typical member experiences.'],
     ['Duncan J. Watts', '2002', '“A simple model of global cascades on random networks”, PNAS', 'Cascade windows and robust-yet-fragile networks.'],
-    ['Prasanna Gai and Sujit Kapadia', '2010', '“Contagion in financial networks”, Proceedings of the Royal Society A', 'The interbank model behind chapter 7.'],
+    ['Prasanna Gai and Sujit Kapadia', '2010', '“Contagion in financial networks”, Proceedings of the Royal Society A', 'The interbank model behind chapter 8.'],
     ['Andrew Haldane', '2009', '“Rethinking the financial network”, speech, Amsterdam', 'The financial system as robust yet fragile.'],
     ['Andrew Haldane and Robert May', '2011', '“Systemic risk in banking ecosystems”, Nature', 'A central banker and an ecologist on banks as an ecosystem.'],
     ['Karl Popper', '1959', 'The Logic of Scientific Discovery', 'Theories can be falsified, never proven by examples.'],
@@ -67,7 +67,6 @@
     ['Microsoft', '2024', 'Statement on the CrowdStrike incident, 20 July', 'About 8.5 million Windows devices affected.'],
     ['Richard Lewontin and Dan Cohen', '1969', '“On population growth in a randomly varying environment”, PNAS', 'A population can grow on average and still go extinct.'],
     ['Lian Pin Koh and colleagues', '2004', '“Species coextinctions and the biodiversity crisis”, Science', 'Species that disappear with the species they depend on.'],
-    ['Leonhard Euler', '1736', 'The seven bridges of Königsberg', 'The first theorem of graph theory.'],
     ['Herbert A. Simon', '1962', '“The Architecture of Complexity”, Proceedings of the American Philosophical Society', 'The watchmakers Hora and Tempus, and why modular systems survive.'],
     ['Melvin Conway', '1968', '“How Do Committees Invent?”', 'Organizations design systems that copy their communication structure.'],
     ['Frederick P. Brooks', '1975', 'The Mythical Man-Month', 'Adding people to a late project makes it later.'],
@@ -80,7 +79,7 @@
   <header class="head">
     <div class="tkc-eyebrow">Chapter {total} of {total} · Playbook</div>
     <h2 class="tkc-display tkc-chapter-title" id="{prefix}-chapter-title">What to do on Monday</h2>
-    <p class="tkc-lede">Keep the controls. Change their shape. For each step in a process, ask two questions: does it add value, and is there an alternative if it is unavailable?</p>
+    <p class="tkc-lede">Keep the controls. Change their shape. For each step in a process, ask two questions: does it do the work or check it, and is there an alternative when it is unavailable?</p>
   </header>
 
   <div class="matrix" role="table" aria-label="Two-question test for a step in a process">
@@ -88,7 +87,7 @@
     <div class="colhead" role="columnheader">There is an alternative</div>
     <div class="colhead" role="columnheader">Only one person or system can do it</div>
 
-    <div class="rowhead" role="rowheader">It adds value</div>
+    <div class="rowhead" role="rowheader">It does the work</div>
     <div class="cell good" role="cell">
       <span class="cell-name">Specialization</span>
       <span>Good complexity. Protect it and give it volume. <em>Examples: a pool of credit analysts; a platform any team can use.</em></span>
@@ -98,14 +97,14 @@
       <span>Valuable but fragile. Train a second person, add a fallback. <em>Example: the one person who can fix a legacy system.</em></span>
     </div>
 
-    <div class="rowhead" role="rowheader">It only checks</div>
+    <div class="rowhead" role="rowheader">It checks the work</div>
     <div class="cell" role="cell">
       <span class="cell-name">Light control</span>
       <span>Keep it fast and automatic where you can. <em>Examples: a check as data is typed; a four-eyes check by any qualified colleague.</em></span>
     </div>
     <div class="cell bad" role="cell">
       <span class="cell-name">Bad complexity</span>
-      <span>Redesign this first. <em>Examples: a named sign-off everything waits for; a form that re-keys data another system already has.</em></span>
+      <span>Redesign this first: keep the check and give it a second route. <em>Examples: a named sign-off everything waits for; a form that re-keys data another system already has.</em></span>
     </div>
   </div>
 
@@ -155,7 +154,7 @@
           <Stat label="Typical request" value="{shortDays(d.now.median, HORIZON)} days" sub="median, working days" />
           <Stat label="1 in 10 takes more than" value="{shortDays(d.now.p90, HORIZON)} days" />
           <Stat label="Problems that slip through" value={pct(d.now.slipped, d.now.slipped < 0.1 ? 1 : 0)} />
-          <Stat label="Within two weeks" value={pct(d.now.withinDeadline)} />
+          <Stat label="Time actually worked" value={pct(d.now.workShare)} sub="of the elapsed working hours" />
         </div>
 
         <div class="tkc-chart" bind:clientWidth={width}>
@@ -201,9 +200,8 @@
       conditions. Scale multiplies whichever you have.
     </p>
     <p class="tkc-lede">
-      None of this argues for fewer controls. A bank needs its checks. It argues for controls shaped like options:
-      alternatives at every link, data entered once, approvals that run in parallel or once at the end, spare capacity,
-      and tools that take screens away instead of adding them.
+      A bank needs its checks. Give them the shape of options: alternatives at every link, data entered once, approvals
+      that run in parallel or once at the end, spare capacity, and tools that take screens away instead of adding them.
     </p>
   </section>
 

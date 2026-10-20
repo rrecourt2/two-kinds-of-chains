@@ -1,4 +1,4 @@
-// Thin and fat tails (chapter 8). Both worlds have the same ordinary days: daily
+// Thin and fat tails (chapter 9). Both worlds have the same ordinary days: daily
 // moves with a standard deviation of 1%. The thin-tailed world draws them from a
 // normal distribution; the fat-tailed world from Student's t with 3 degrees of
 // freedom (a common simple model of daily market moves), scaled to the same spread.

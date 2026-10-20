@@ -135,7 +135,7 @@
   n={4}
   kicker="Queues"
   title="Why full calendars make long queues"
-  lede="An expert who is 95% busy is not efficient. They are a queue, and everyone else waits in it."
+  lede="An expert who is 95% busy has become a queue, and everyone else waits in it."
 >
   {#snippet setup()}
     <p>
@@ -283,7 +283,8 @@
       <p>
         When an expert becomes a bottleneck, the reflex is to route even more through them. Do the opposite. Send the
         work to a pool of qualified people, and keep key reviewers around 70–80% loaded so there is room for the urgent
-        case.
+        case. Spare capacity looks like waste on a utilization report. The waiting it prevents appears on no report at
+        all.
       </p>
     </BankNote>
   {/snippet}

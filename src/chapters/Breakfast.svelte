@@ -170,7 +170,7 @@
         or a system change often only becomes visible as the work proceeds. An approval before every step adds a wait
         each time and catches less than one careful approval later, when the whole picture exists.
       </li>
-      <li><strong>No two requests are alike.</strong> A kitchen learns by making the same breakfast a thousand times. Bank requests differ every time, and the rare case dominates (chapter 8).</li>
+      <li><strong>No two requests are alike.</strong> A kitchen learns by making the same breakfast a thousand times. Bank requests differ every time, and the rare case dominates (chapter 9).</li>
     </ul>
     <h3>Where Grove is right</h3>
     <p>
@@ -185,7 +185,8 @@
       <p>
         Use Grove’s playbook where work is repeatable and visible, such as payment operations or standard account
         openings. Where work is variable and linked, plan for spare capacity and alternatives instead of a fixed limiting
-        step, automate the cheap checks at entry, and keep one human approval for the end.
+        step, automate the cheap checks at entry, and hold human approvals until the picture is complete. Checks the law
+        fixes in time, such as sanctions screening before a payment, stay where the law puts them.
       </p>
     </BankNote>
   {/snippet}

@@ -164,8 +164,8 @@
   <div class="tkc-eyebrow">Before you start: a quick guess</div>
   <p class="q" id="{prefix}-hook-q">
     A client request has to pass through <strong>six systems</strong>, each built by a different specialist team.
-    Each one works <strong>95% of the time</strong>. Out of 100 requests, how many get all the way through without
-    getting stuck?
+    At each one, a request goes through cleanly <strong>95% of the time</strong>: no missing field, no approver away. Out
+    of 100 requests, how many get all the way through without getting stuck?
   </p>
 
   {#if phase === 'ask'}
@@ -217,12 +217,11 @@
         <p class="lead">
           You guessed {first.guess}.
           {#if Math.abs(first.guess - first.through) <= 4}
-            Well done: you multiplied the chances instead of adding them.
+            Good guess. Each system looks safe on its own, yet one request in four gets stuck: {arithmetic}.
           {:else if first.guess > first.through}
-            Six steps that each work 95% of the time do not make a 95% process. They make a 74% one, because the chances
-            multiply: {arithmetic}.
+            Each system looks safe on its own, yet one request in four gets stuck. The chances multiply: {arithmetic}.
           {:else}
-            It is better than that, but not by much: {arithmetic}.
+            It is better than that: {arithmetic}. Still, one request in four gets stuck.
           {/if}
         </p>
       {:else if latest.backups}

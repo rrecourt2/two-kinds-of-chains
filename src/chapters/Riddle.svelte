@@ -158,7 +158,7 @@
       Every extra role multiplies in another 90%. With ten roles it is about one day in three.
     </p>
     <p>
-      Now add one qualified stand-in per role. You have doubled the number of people involved, which sounds like more
+      Go back to six roles and add one qualified stand-in per role. You have doubled the number of people involved, which sounds like more
       complexity. Yet the decision is now possible on 94% of days.
     </p>
     <p>

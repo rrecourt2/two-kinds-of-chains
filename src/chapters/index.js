@@ -20,11 +20,11 @@ export const CHAPTERS = [
   { id: 'systems', short: 'Linked systems', title: 'When systems lean on each other', component: Systems },
   { id: 'queues', short: 'Queues', title: 'Why full calendars make long queues', component: Queues },
   { id: 'breakfast', short: 'Breakfast factory', title: 'The breakfast factory', component: Breakfast },
+  { id: 'tools', short: 'AI and tools', title: 'Tools before gates', component: Tools },
   { id: 'ergodicity', short: 'Ergodicity', title: 'When the average lies', component: Ergodicity },
   { id: 'contagion', short: 'Contagion', title: '2008: when links became conditions', component: Contagion },
   { id: 'black-swans', short: 'Black swans', title: 'What the data cannot show', component: BlackSwans },
   { id: 'extinction', short: 'Extinction', title: 'Why species go extinct', component: Extinction },
   { id: 'graph', short: 'Graphs', title: 'The shape of the graph', component: Graph },
-  { id: 'tools', short: 'AI and tools', title: 'Tools, not gates', component: Tools },
   { id: 'monday', short: 'Playbook', title: 'What to do on Monday', component: Monday },
 ];
