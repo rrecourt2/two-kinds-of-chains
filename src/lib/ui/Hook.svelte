@@ -1,10 +1,12 @@
 <script>
   // The opening hook: guess, then watch 100 requests flow through a chain of systems.
-  import { getContext, onDestroy } from 'svelte';
+  import { getContext, onDestroy, tick } from 'svelte';
   import { makeRng } from '../sim/rng.js';
   import { prefersReducedMotion } from '../motion.js';
 
   const prefix = getContext('tkc-id') ?? 'tkc';
+  const go = getContext('tkc-go');
+  const total = getContext('tkc-total') ?? 12;
   const NAMES = ['Client file', 'Risk model', 'Limits', 'Pricing', 'Booking', 'Reporting', 'Documents', 'Collateral', 'Sanctions', 'Accounting', 'Archive', 'Access'];
   const REASONS = ['missing field', 'data mismatch', 'approver away', 'system down', 'awaiting sign-off', 'wrong format', 'old version', 'stale value', 'false alert', 'posting error', 'retention flag', 'access expired'];
   const RELIABILITY = 0.95;
@@ -15,10 +17,15 @@
   let gates = $state(6);
   let backups = $state(false);
   let runs = $state([]); // history of { gates, backups, through, guess }
-  let width = $state(640);
+  let width = $state(560);
   let t = $state(0);
+  let announce = $state('');
   let raf = 0;
   let seed = 1;
+  let guessEl = $state();
+  let statusEl = $state();
+  let resultEl = $state();
+  let picEl = $state();
 
   const pass = $derived(backups ? 1 - (1 - RELIABILITY) ** 2 : RELIABILITY);
 
@@ -39,50 +46,64 @@
   }
   let flow = $state(plan(6, RELIABILITY, 1));
 
-  // Geometry.
-  const H = 252;
-  const laneY = 64;
-  const trayY = 214;
-  const left = 18;
-  const pileW = $derived(width < 480 ? 56 : 76);
-  const span = $derived(width - left - pileW - 18);
-  const gateX = (k) => left + 24 + ((span - 24) * (k + 0.5)) / gates;
-  const endX = $derived(left + span + 10);
-  const showNames = $derived(span / gates >= 74);
-  const showReasons = $derived(span / gates >= 118);
-  const DURATION = 2600; // ms for one request to cross
-  const STAGGER = 26;
+  // Geometry: an inbox of 100 requests, a lane through the gates, and a tray for what gets through.
+  const H = 250;
+  const laneY = 74;
+  const trayY = 200;
+  const narrow = $derived(width < 480);
+  const ip = $derived(narrow ? 5 : 6); // spacing of the waiting requests
+  const inboxX = 2;
+  const laneStart = $derived(inboxX + ip * 10 + 12);
+  const pileCols = $derived(narrow ? 6 : 8);
+  const endX = $derived(width - pileCols * 7 - 12);
+  const gateFrom = $derived(laneStart + 14);
+  const spacing = $derived((endX - 14 - gateFrom) / gates);
+  const gateX = (k) => gateFrom + spacing * (k + 0.5);
+  const gateW = $derived(Math.max(8, Math.min(22, spacing * 0.7)));
+  const stackCols = $derived(spacing < 24 ? 2 : 3);
+  const showNames = $derived(spacing >= 70);
+  const showReasons = $derived(spacing >= 112);
+  const showCounts = $derived(spacing >= 22);
+  const dotR = $derived(narrow ? 2.2 : 2.6);
+  const inboxPos = (i) => ({ x: inboxX + 4 + (i % 10) * ip, y: laneY - 4.5 * ip + Math.floor(i / 10) * ip });
+  const pileX = (slot) => endX + 8 + (slot % pileCols) * 7;
+  const pileY = (slot) => trayY - Math.floor(slot / pileCols) * 7;
+
+  // The first run is the show; repeat runs are quicker.
+  const ENTER = 160;
   const FALL = 450;
+  let duration = 2400;
+  let stagger = 22;
+  const totalTime = () => (REQUESTS - 1) * stagger + ENTER + duration + FALL + 100;
+  const ease = (f) => f * f * (3 - 2 * f);
 
   function position(i) {
-    const start = i * STAGGER;
-    const x0 = left;
-    const travel = endX - x0;
-    const p = Math.max(0, t - start) / DURATION;
-    const y = laneY + flow.jitter[i] * 11;
+    const start = i * stagger;
+    const home = inboxPos(i);
+    if (t < start) return { ...home, state: 'wait' };
+    const y = laneY + flow.jitter[i] * 9;
+    const since = t - start;
+    if (since < ENTER) {
+      const f = since / ENTER;
+      return { x: home.x + (laneStart - home.x) * f, y: home.y + (y - home.y) * f, state: 'move' };
+    }
+    const tt = since - ENTER;
+    const travel = endX - laneStart;
     const k = flow.stuckAt[i];
-    if (t < start) return { x: x0, y, state: 'wait' };
     if (k >= 0) {
       const gx = gateX(k);
-      const reach = ((gx - x0) / travel) * DURATION;
-      const since = t - start - reach;
-      if (since < 0) return { x: x0 + p * travel, y, state: 'move' };
-      const slot = stackIndex(i, k);
-      const tx = gx + ((slot % 3) - 1) * 7;
-      const ty = trayY - Math.floor(slot / 3) * 7;
-      const f = Math.min(1, since / FALL);
-      const ease = f * f * (3 - 2 * f);
-      return { x: gx + (tx - gx) * ease, y: y + (ty - y) * ease, state: 'stuck' };
+      const reach = ((gx - laneStart) / travel) * duration;
+      if (tt < reach) return { x: laneStart + (tt / duration) * travel, y, state: 'move' };
+      const slot = stackSlots[i];
+      const tx = gx + ((slot % stackCols) - (stackCols - 1) / 2) * 6;
+      const ty = trayY - Math.floor(slot / stackCols) * 6;
+      const e = ease(Math.min(1, (tt - reach) / FALL));
+      return { x: gx + (tx - gx) * e, y: y + (ty - y) * e, state: 'stuck' };
     }
-    if (p < 1) return { x: x0 + p * travel, y, state: 'move' };
-    const slot = pileIndex(i);
-    const cols = width < 480 ? 6 : 8;
-    const since = t - start - DURATION;
-    const f = Math.min(1, since / FALL);
-    const ease = f * f * (3 - 2 * f);
-    const tx = endX + 4 + (slot % cols) * 7;
-    const ty = trayY - Math.floor(slot / cols) * 7;
-    return { x: endX + (tx - endX) * ease, y: y + (ty - y) * ease, state: 'through' };
+    if (tt < duration) return { x: laneStart + (tt / duration) * travel, y, state: 'move' };
+    const slot = pileSlots[i];
+    const e = ease(Math.min(1, (tt - duration) / FALL));
+    return { x: endX + (pileX(slot) - endX) * e, y: y + (pileY(slot) - y) * e, state: 'through' };
   }
 
   // Slot numbers for stacking, computed once per run.
@@ -94,33 +115,42 @@
     stackSlots = flow.stuckAt.map((k) => (k >= 0 ? perGate[k]++ : -1));
     pileSlots = flow.stuckAt.map((k) => (k < 0 ? pile++ : -1));
   }
-  const stackIndex = (i) => stackSlots[i];
-  const pileIndex = (i) => pileSlots[i];
   prepareSlots();
 
-  const totalTime = () => (REQUESTS - 1) * STAGGER + DURATION + FALL + 100;
   const stuckCounts = $derived.by(() => {
     const c = new Array(gates).fill(0);
     flow.stuckAt.forEach((k) => k >= 0 && c[k]++);
     return c;
   });
+  // The reader's guess, drawn as hollow dots in the tray, until the first run is over.
+  const showGuess = $derived(phase === 'ask' || runs.length === 0 || (phase === 'done' && runs.length === 1));
 
-  function send(next = {}) {
+  async function send(next = {}) {
     cancelAnimationFrame(raf);
     if (next.gates) gates = next.gates;
     if (next.backups !== undefined) backups = next.backups;
+    duration = runs.length ? 1500 : 2400;
+    stagger = runs.length ? 12 : 22;
     seed += 1;
     flow = plan(gates, pass, seed);
     prepareSlots();
     phase = 'run';
-    if (prefersReducedMotion()) {
-      t = totalTime();
+    announce = `Sending 100 requests through ${describe({ gates, backups })}.`;
+    const reduced = prefersReducedMotion();
+    await tick();
+    statusEl?.focus({ preventScroll: true });
+    if (reduced) {
       finish();
       return;
     }
+    // On a narrow screen the picture sits below the controls: bring it into view to watch.
+    if (picEl) {
+      const box = picEl.getBoundingClientRect();
+      if (box.bottom > window.innerHeight || box.top < 0) picEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
     t = 0;
     let last = 0;
-    const tick = (now) => {
+    const step = (now) => {
       if (!last) last = now;
       t += Math.min(50, now - last);
       last = now;
@@ -128,138 +158,191 @@
         finish();
         return;
       }
-      raf = requestAnimationFrame(tick);
+      raf = requestAnimationFrame(step);
     };
-    raf = requestAnimationFrame(tick);
+    raf = requestAnimationFrame(step);
   }
 
-  function finish() {
+  async function finish() {
     t = totalTime();
     phase = 'done';
     runs = [...runs, { gates, backups, through: flow.through, guess }];
+    announce = `${flow.through} of 100 got through ${describe({ gates, backups })}.${runs.length === 1 ? ` You guessed ${guess}.` : ''}`;
+    await tick();
+    resultEl?.focus({ preventScroll: true });
   }
 
-  function again() {
+  async function again() {
     cancelAnimationFrame(raf);
     gates = 6;
     backups = false;
     runs = [];
     phase = 'ask';
+    announce = '';
     t = 0;
     flow = plan(6, RELIABILITY, seed);
     prepareSlots();
+    await tick();
+    guessEl?.focus();
   }
 
   onDestroy(() => cancelAnimationFrame(raf));
 
   const first = $derived(runs[0]);
   const latest = $derived(runs[runs.length - 1]);
-  const describe = (r) => `${r.gates} systems${r.backups ? ', each with a backup' : ''}`;
+  const describe = (r) => `${r.gates === 6 ? 'six' : r.gates === 12 ? 'twelve' : r.gates} systems${r.backups ? ', each with a backup' : ''}`;
   const arithmetic = $derived(
     latest ? `${latest.backups ? '0.9975' : '0.95'} multiplied ${latest.gates} times ≈ ${Math.round(100 * (latest.backups ? 0.9975 : 0.95) ** latest.gates)}%` : '',
   );
+  const picLabel = $derived(
+    phase === 'ask'
+      ? `${REQUESTS} requests waiting to pass through ${gates} systems. Your guess, ${guess}, is drawn in the tray.`
+      : `${REQUESTS} requests flow through ${gates} systems; ${flow.through} get through.`,
+  );
 </script>
 
-<div class="hook tkc-fig" aria-labelledby="{prefix}-hook-q">
-  <div class="tkc-eyebrow">Before you start: a quick guess</div>
-  <p class="q" id="{prefix}-hook-q">
-    A client request has to pass through <strong>six systems</strong>, each built by a different specialist team.
-    At each one, a request goes through cleanly <strong>95% of the time</strong>: no missing field, no approver away. Out
-    of 100 requests, how many get all the way through without getting stuck?
-  </p>
+<div class="hook tkc-fig">
+  <div class="grid">
+    <div class="tkc-eyebrow head">Before you start: a quick guess</div>
+    <p class="q" id="{prefix}-hook-q">
+      A client request has to pass through <strong>six systems</strong>, each built by a different specialist team. At
+      each one, it goes through cleanly <strong>95% of the time</strong>: no missing field, no approver away. Out of 100
+      requests, how many get all the way through without getting stuck?
+    </p>
 
-  {#if phase === 'ask'}
-    <div class="ask">
-      <label class="guess-label" for="{prefix}-guess">Your guess</label>
-      <div class="guess-row">
-        <input id="{prefix}-guess" type="range" min="0" max="100" bind:value={guess} style:--pct="{guess}%" />
-        <output for="{prefix}-guess" class="guess-value">{guess}</output>
+    {#if phase === 'ask'}
+      <div class="ask">
+        <label class="guess-label" for="{prefix}-guess">Your guess</label>
+        <div class="guess-row">
+          <input id="{prefix}-guess" type="range" min="0" max="100" bind:value={guess} bind:this={guessEl} aria-describedby="{prefix}-hook-q" style:--pct="{guess}%" />
+          <output for="{prefix}-guess" class="guess-value tkc-num">{guess}</output>
+        </div>
+        <button type="button" class="tkc-btn tkc-btn--primary go" onclick={() => send()}>Send 100 requests</button>
       </div>
-      <button type="button" class="tkc-btn tkc-btn--primary go" onclick={() => send()}>Send 100 requests</button>
-    </div>
-  {/if}
+    {:else if phase === 'run'}
+      <p class="ask running" tabindex="-1" bind:this={statusEl}>
+        {runs.length === 0 ? `You guessed ${guess}. ` : ''}Sending 100 requests through {describe({ gates, backups })}…
+      </p>
+    {/if}
 
-  {#if phase !== 'ask'}
-    <div class="tkc-chart" bind:clientWidth={width}>
-      <svg {width} height={H} role="img" aria-label="{REQUESTS} requests flow through {gates} systems; {flow.through} get through.">
-        <line x1={left} x2={endX} y1={laneY} y2={laneY} class="lane" />
+    <div class="pic tkc-chart" bind:clientWidth={width} bind:this={picEl}>
+      <svg {width} height={H} role="img" aria-label={picLabel}>
+        <rect x={inboxX} y={laneY - 5 * ip - 4} width={ip * 10 + 4} height={ip * 10 + 8} rx="6" class="inbox" />
+        <text class="tkc-axis-label" x={inboxX} y={laneY - 5 * ip - 12}>{REQUESTS} requests</text>
+        <line x1={laneStart} x2={endX} y1={laneY} y2={laneY} class="lane" />
         {#each Array(gates) as _, k}
           {@const x = gateX(k)}
           {#if backups}
-            <rect x={x - 9} y={laneY - 27} width="22" height="44" rx="6" class="gate twin" />
+            <rect x={x - gateW / 2 + 4} y={laneY - 27} width={gateW} height="44" rx={Math.min(6, gateW / 3)} class="gate twin" />
           {/if}
-          <rect x={x - 13} y={laneY - 22} width="22" height="44" rx="6" class="gate" />
-          <text class="tkc-axis-label" x={x - 2} y={laneY - 32} text-anchor="middle">{showNames ? NAMES[k] : k + 1}</text>
-          {#if phase === 'done' && stuckCounts[k] > 0}
-            <text class="tkc-label" x={x} y={trayY + 22} text-anchor="middle">−{stuckCounts[k]}</text>
+          <rect x={x - gateW / 2} y={laneY - 22} width={gateW} height="44" rx={Math.min(6, gateW / 3)} class="gate" />
+          <text class="tkc-axis-label" x={x} y={laneY - 32} text-anchor="middle">{showNames ? NAMES[k] : k + 1}</text>
+          {#if phase === 'done' && stuckCounts[k] > 0 && showCounts}
+            <text class="tkc-label stuck-n" x={x} y={trayY + 22} text-anchor="middle">−{stuckCounts[k]}</text>
             {#if showReasons}<text class="tkc-axis-label" x={x} y={trayY + 36} text-anchor="middle">{REASONS[k]}</text>{/if}
           {/if}
         {/each}
-        <line x1={left} x2={endX - 8} y1={trayY + 6} y2={trayY + 6} class="tray" />
-        <text class="tkc-axis-label" x={endX + 4} y={laneY - 32}>Through</text>
+        <line x1={gateFrom} x2={endX - 6} y1={trayY + 6} y2={trayY + 6} class="tray" />
+        <text class="tkc-axis-label" x={gateFrom} y={H - 4}>{phase === 'done' ? `Stuck: ${REQUESTS - flow.through}` : 'Stuck'}</text>
+        <text class="tkc-axis-label" x={width - 2} y={laneY - 32} text-anchor="end">Through</text>
+        <line x1={endX + 4} x2={width - 2} y1={trayY + 6} y2={trayY + 6} class="tray" />
+        {#if showGuess}
+          {#each Array(guess) as _, slot}
+            <circle cx={pileX(slot)} cy={pileY(slot)} r={dotR} class="ghost" />
+          {/each}
+          <text class="tkc-axis-label" x={width - 2} y={trayY + 22} text-anchor="end">Guess {guess}</text>
+        {/if}
+        {#if phase === 'done'}
+          <text class="tkc-label through-n" x={width - 2} y={showGuess ? trayY + 38 : trayY + 22} text-anchor="end">{flow.through} through</text>
+        {/if}
         {#each Array(REQUESTS) as _, i}
           {@const p = position(i)}
-          {#if p.state !== 'wait'}
-            <circle cx={p.x} cy={p.y} r="3" class="dot {p.state}" />
-          {/if}
+          <circle cx={p.x} cy={p.y} r={dotR} class="dot {p.state}" />
         {/each}
       </svg>
     </div>
-  {/if}
 
-  {#if phase === 'done' && latest}
-    <div class="result" aria-live="polite">
-      <div class="big">
-        <span class="num">{latest.through}</span>
-        <span class="of">of 100 got through {describe(latest)}</span>
-      </div>
-      {#if runs.length === 1}
-        <p class="lead">
-          You guessed {first.guess}.
-          {#if Math.abs(first.guess - first.through) <= 4}
-            Good guess. Each system looks safe on its own, yet one request in four gets stuck: {arithmetic}.
-          {:else if first.guess > first.through}
-            Each system looks safe on its own, yet one request in four gets stuck. The chances multiply: {arithmetic}.
-          {:else}
-            It is better than that: {arithmetic}. Still, one request in four gets stuck.
+    {#if phase === 'done' && latest}
+      <div class="result" tabindex="-1" bind:this={resultEl}>
+        <div class="big">
+          <span class="num">{latest.through}</span>
+          <span class="of">of 100 got through {describe(latest)}</span>
+        </div>
+        {#if runs.length === 1}
+          <p class="lead">
+            You guessed {first.guess}.
+            {#if Math.abs(first.guess - first.through) <= 4}
+              Good guess. Each system looks safe on its own, yet one request in four gets stuck: {arithmetic}.
+            {:else if first.guess > first.through}
+              Each system looks safe on its own, yet one request in four gets stuck. The chances multiply: {arithmetic}.
+            {:else}
+              It is better than that: {arithmetic}. Still, one request in four gets stuck.
+            {/if}
+          </p>
+        {:else if latest.backups}
+          <p class="lead">
+            Same six systems, same 95%. The only change: every step has an alternative, a stand-in or a second system, so
+            it is stuck only when both fail. Links that must all hold multiply the risk; links with alternatives divide it.
+          </p>
+        {:else}
+          <p class="lead">Twice the systems, and almost half the requests get stuck: {arithmetic}. Every new link multiplies in another 95%.</p>
+        {/if}
+        <div class="tkc-row">
+          {#if !(latest.gates === 12 && !latest.backups)}
+            <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: 12, backups: false })}>Now try twelve systems</button>
           {/if}
-        </p>
-      {:else if latest.backups}
-        <p class="lead">
-          Same six systems, same 95%. The only change: every step has an alternative, a stand-in or a second system, so it
-          is stuck only when both fail. Links that must all hold multiply the risk; links with alternatives divide it.
-        </p>
-      {:else}
-        <p class="lead">Twice the systems, and almost half the requests get stuck: {arithmetic}. Every new link multiplies in another 95%.</p>
-      {/if}
-      <div class="tkc-row">
-        {#if !(latest.gates === 12 && !latest.backups)}
-          <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: 12, backups: false })}>Now try twelve systems</button>
+          {#if !latest.backups}
+            <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: 6, backups: true })}>Give every step a backup</button>
+          {/if}
+          <button type="button" class="tkc-btn tkc-btn--small" onclick={again}>Start over</button>
+        </div>
+        {#if runs.length > 1}
+          <ul class="history">
+            {#each runs as r, i (i)}
+              <li><span class="tkc-num">{r.through}</span> of 100 · {describe(r)}</li>
+            {/each}
+          </ul>
         {/if}
-        {#if !latest.backups}
-          <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: 6, backups: true })}>Give every step a backup</button>
-        {/if}
-        <button type="button" class="tkc-btn tkc-btn--small" onclick={again}>Start over</button>
+        <div class="next">
+          <button type="button" class="tkc-btn tkc-btn--primary" onclick={() => go?.(1)}>Start the story →</button>
+          <span class="tkc-small">{total} short chapters on why this happens, and what to change.</span>
+        </div>
       </div>
-      {#if runs.length > 1}
-        <ul class="history">
-          {#each runs as r, i (i)}
-            <li><span class="tkc-num">{r.through}</span> of 100 · {describe(r)}</li>
-          {/each}
-        </ul>
-      {/if}
-    </div>
-  {/if}
+    {/if}
+  </div>
+  <p class="tkc-sr" aria-live="polite">{announce}</p>
 </div>
 
 <style>
-  .hook {
+  /* One column on a phone: question, guess, picture, result. Two on a wide card:
+     the question and the guess or result on the left, the picture on the right. */
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'head' 'q' 'ask' 'pic' 'result';
     gap: 14px;
+    min-width: 0;
+  }
+  @container fig (min-width: 860px) {
+    .grid {
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      grid-template-areas: 'head pic' 'q pic' 'ask pic' 'result pic';
+      grid-template-rows: auto auto auto 1fr;
+      column-gap: clamp(24px, 4cqi, 48px);
+    }
+    .pic {
+      align-self: start;
+      padding-top: 8px;
+    }
+  }
+  .head {
+    grid-area: head;
   }
   .q {
+    grid-area: q;
     font-family: var(--tkc-font-display);
     font-weight: 600;
-    font-size: clamp(1.25rem, 1rem + 1.2cqi, 1.65rem);
+    font-size: clamp(1.2rem, 1rem + 1cqi, 1.55rem);
     line-height: 1.3;
     text-wrap: pretty;
     max-width: 44rem;
@@ -272,9 +355,36 @@
     text-underline-offset: 4px;
   }
   .ask {
+    grid-area: ask;
+    display: grid;
+    gap: 8px;
+    max-width: 30rem;
+  }
+  .running {
+    color: var(--tkc-ink-2);
+    font-weight: 600;
+    min-height: 46px;
+    align-content: center;
+  }
+  .running:focus {
+    outline: none;
+  }
+  .pic {
+    grid-area: pic;
+  }
+  .result {
+    grid-area: result;
     display: grid;
     gap: 10px;
-    max-width: 30rem;
+    align-content: start;
+  }
+  .result:focus {
+    outline: none;
+  }
+  .result:focus-visible {
+    outline: 2px solid var(--tkc-focus);
+    outline-offset: 4px;
+    border-radius: 6px;
   }
   .guess-label {
     font-size: 0.875rem;
@@ -290,6 +400,7 @@
     font-weight: 650;
     min-width: 3ch;
     text-align: right;
+    line-height: 1.1;
   }
   .go {
     justify-self: start;
@@ -338,6 +449,14 @@
     outline: 2px solid var(--tkc-focus);
     outline-offset: 2px;
   }
+  input[type='range']:focus-visible::-moz-range-thumb {
+    outline: 2px solid var(--tkc-focus);
+    outline-offset: 2px;
+  }
+  .inbox {
+    fill: var(--tkc-sunken);
+    stroke: var(--tkc-hair);
+  }
   .lane {
     stroke: var(--tkc-hair);
     stroke-width: 26;
@@ -355,6 +474,11 @@
   .gate.twin {
     stroke: var(--tkc-options);
   }
+  .ghost {
+    fill: none;
+    stroke: var(--tkc-muted);
+    stroke-width: 1;
+  }
   .dot {
     fill: var(--tkc-ink-2);
   }
@@ -364,9 +488,11 @@
   .dot.through {
     fill: var(--tkc-options);
   }
-  .result {
-    display: grid;
-    gap: 10px;
+  .stuck-n {
+    fill: var(--tkc-conditions-ink);
+  }
+  .through-n {
+    fill: var(--tkc-options-ink);
   }
   .big {
     display: flex;
@@ -401,5 +527,13 @@
   .history .tkc-num {
     font-weight: 700;
     color: var(--tkc-ink);
+  }
+  .next {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--tkc-hair);
   }
 </style>

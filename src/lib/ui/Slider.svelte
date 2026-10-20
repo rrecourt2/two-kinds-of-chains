@@ -22,7 +22,7 @@
     <label for={inputId}>{label}</label>
     <output for={inputId} class="tkc-num">{format(value)}</output>
   </div>
-  <input id={inputId} type="range" {min} {max} {step} bind:value style:--pct="{pct}%" />
+  <input id={inputId} type="range" {min} {max} {step} bind:value aria-valuetext={format(value)} style:--pct="{pct}%" />
   {#if ends}
     <div class="ends" aria-hidden="true"><span>{ends[0]}</span><span>{ends[1]}</span></div>
   {/if}

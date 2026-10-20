@@ -1,9 +1,10 @@
 <script>
-  import { getContext } from 'svelte';
+  import { getContext, untrack } from 'svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
+  import { announce } from '../lib/ui/announce.js';
   import { diagnose } from '../lib/sim/diagnose.js';
   import { HORIZON } from '../lib/sim/systems.js';
   import { CHAPTERS } from './index.js';
@@ -24,14 +25,22 @@
   let standIns = $state(0);
   let width = $state(560);
 
-  const d = $derived(
-    diagnose({ systems, problems: problems / 100, info, approvals, availability: availability / 100, busy: busy / 100, standIns }),
-  );
+  // Each change re-runs eight simulations, so wait until a slider rests for a moment.
+  const read = () => ({ systems, problems: problems / 100, info, approvals, availability: availability / 100, busy: busy / 100, standIns });
+  let inputs = $state(read());
+  $effect(() => {
+    const next = read();
+    if (JSON.stringify(next) === JSON.stringify(untrack(() => inputs))) return;
+    const id = setTimeout(() => (inputs = next), 150);
+    return () => clearTimeout(id);
+  });
+  const d = $derived(diagnose(inputs));
   const rows = $derived([...d.options, { id: 'together', label: d.together.label, median: d.together.median, p90: d.together.p90, slipped: d.together.slipped, together: true }]);
 
-  // Lever chart: horizontal bars of the typical lead time.
-  const rowH = 34;
-  const labelW = $derived(Math.min(230, width * 0.46));
+  // Lever chart: horizontal bars of the typical lead time. On a phone each label sits above its bar.
+  const stacked = $derived(width < 520);
+  const rowH = $derived(stacked ? 44 : 34);
+  const labelW = $derived(stacked ? 0 : Math.min(230, width * 0.46));
   const H = $derived(rows.length * rowH + 30);
   const xMax = $derived(Math.max(d.now.median, ...rows.map((r) => r.median)) * 1.15 || 1);
   const x = $derived(linear(0, xMax, labelW, width - 44));
@@ -52,7 +61,7 @@
     ['Leonard E. Read', '1958', '“I, Pencil”', 'No single person knows how to make a pencil.'],
     ['OECD', '', 'Global value chains and trade', 'About 70% of international trade involves global value chains.'],
     ['Michael Kremer', '1993', '“The O-Ring Theory of Economic Development”, Quarterly Journal of Economics', 'When every task must succeed, small differences in reliability multiply.'],
-    ['George Labovitz and Yu Sang Chang', '1992', 'The 1-10-100 rule', 'A data error costs far more to fix the longer it survives.'],
+    ['George Labovitz and Yu Sang Chang', '1992', 'The 1-10-100 rule', 'A data error costs far more to fix the longer it survives. The rule is commonly attributed to them; we found no primary publication.'],
     ['J. F. C. Kingman', '1961', '“The single server queue in heavy traffic”, Proceedings of the Cambridge Philosophical Society', 'Why waiting explodes near full utilization.'],
     ['Donald Reinertsen', '2009', 'The Principles of Product Development Flow', 'Queues, utilization and batch size in knowledge work.'],
     ['Andrew S. Grove', '1983', 'High Output Management', 'The breakfast factory and the limiting step.'],
@@ -78,7 +87,7 @@
 <article class="monday" aria-labelledby="{prefix}-chapter-title">
   <header class="head">
     <div class="tkc-eyebrow">Chapter {total} of {total} · Playbook</div>
-    <h2 class="tkc-display tkc-chapter-title" id="{prefix}-chapter-title">What to do on Monday</h2>
+    <h2 class="tkc-display tkc-chapter-title" id="{prefix}-chapter-title" tabindex="-1">What to do on Monday</h2>
     <p class="tkc-lede">Keep the controls. Change their shape. For each step in a process, ask two questions: does it do the work or check it, and is there an alternative when it is unavailable?</p>
   </header>
 
@@ -89,20 +98,24 @@
 
     <div class="rowhead" role="rowheader">It does the work</div>
     <div class="cell good" role="cell">
+      <span class="cell-tag" aria-hidden="true">There is an alternative</span>
       <span class="cell-name">Specialization</span>
       <span>Good complexity. Protect it and give it volume. <em>Examples: a pool of credit analysts; a platform any team can use.</em></span>
     </div>
     <div class="cell" role="cell">
+      <span class="cell-tag" aria-hidden="true">Only one person or system can do it</span>
       <span class="cell-name">Key-person risk</span>
       <span>Valuable but fragile. Train a second person, add a fallback. <em>Example: the one person who can fix a legacy system.</em></span>
     </div>
 
     <div class="rowhead" role="rowheader">It checks the work</div>
     <div class="cell" role="cell">
+      <span class="cell-tag" aria-hidden="true">There is an alternative</span>
       <span class="cell-name">Light control</span>
       <span>Keep it fast and automatic where you can. <em>Examples: a check as data is typed; a four-eyes check by any qualified colleague.</em></span>
     </div>
     <div class="cell bad" role="cell">
+      <span class="cell-tag" aria-hidden="true">Only one person or system can do it</span>
       <span class="cell-name">Bad complexity</span>
       <span>Redesign this first: keep the check and give it a second route. <em>Examples: a named sign-off everything waits for; a form that re-keys data another system already has.</em></span>
     </div>
@@ -150,7 +163,7 @@
           <Slider id="m-stand" label="Stand-ins per approver" bind:value={standIns} min={0} max={3} />
         </div>
 
-        <div class="tkc-stats tkc-stats--4" aria-live="polite">
+        <div class="tkc-stats tkc-stats--4" use:announce>
           <Stat label="Typical request" value="{shortDays(d.now.median, HORIZON)} days" sub="median, working days" />
           <Stat label="1 in 10 takes more than" value="{shortDays(d.now.p90, HORIZON)} days" />
           <Stat label="Problems that slip through" value={pct(d.now.slipped, d.now.slipped < 0.1 ? 1 : 0)} />
@@ -165,9 +178,10 @@
             <text class="tkc-axis-label" x={x(d.now.median)} y={H - 6} text-anchor="middle">Today: {shortDays(d.now.median, HORIZON)} days</text>
             {#each rows as r, i (r.id)}
               {@const yy = 8 + i * rowH}
-              <text class="tkc-label-2" x="0" y={yy + 15}>{r.label}</text>
-              <path d={barRight(labelW, yy + 4, Math.max(2, x(r.median) - labelW), 16)} class="lever" class:together={r.together} />
-              <text class="tkc-label" x={x(r.median) + 6} y={yy + 16}>{shortDays(r.median, HORIZON)}</text>
+              {@const by = stacked ? yy + 18 : yy + 4}
+              <text class="tkc-label-2" x="0" y={stacked ? yy + 12 : yy + 15}>{r.label}</text>
+              <path d={barRight(labelW, by, Math.max(2, x(r.median) - labelW), 16)} class="lever" class:together={r.together} />
+              <text class="tkc-label tkc-halo" x={x(r.median) + 6} y={by + 12}>{shortDays(r.median, HORIZON)}</text>
             {/each}
           </svg>
           <details class="tkc-note">
@@ -188,7 +202,7 @@
 
         {#snippet model()}
           <p>The linked-systems model from chapter 3, with approver absences of four days on average, plus busy approvers from chapter 4: a request waits in each approver’s queue behind other work, and stand-ins share that queue.</p>
-          <p>Each bar applies one change and re-runs the same 1,000 requests. The last bar applies every change except removing a system, so every system and every control stays in place.</p>
+          <p>Each bar applies one change and re-runs the same 1,000 requests. “Check data as it is typed” halves the chance that a form has a problem. The last bar applies every change except removing a system: every system stays{#if d.parallel}, but the approvals become one at the end. Keeping parallel approvals instead gives {shortDays(d.parallel.median, HORIZON)} days for a typical request, with {pct(d.parallel.slipped, 1)} of problems slipping through{/if}.</p>
         {/snippet}
       </Instrument>
     </div>
@@ -283,9 +297,15 @@
     background: var(--tkc-conditions-wash);
     border-color: var(--tkc-conditions);
   }
+  .cell-tag {
+    display: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--tkc-muted);
+  }
   @container tkc (max-width: 560px) {
     .matrix {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     }
     .corner {
       display: none;
@@ -293,6 +313,17 @@
     .rowhead {
       grid-column: 1 / -1;
       padding-top: 6px;
+    }
+  }
+  @container tkc (max-width: 420px) {
+    .matrix {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .colhead {
+      display: none;
+    }
+    .cell-tag {
+      display: block;
     }
   }
   .grid {

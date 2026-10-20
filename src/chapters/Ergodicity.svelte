@@ -5,6 +5,7 @@
   import Slider from '../lib/ui/Slider.svelte';
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
+  import { announce } from '../lib/ui/announce.js';
   import TryThis from '../lib/ui/TryThis.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { simulateCoin, typicalFactor, expectedFactor } from '../lib/sim/coin.js';
@@ -43,7 +44,7 @@
 
   // Chart geometry: wealth on a log scale, from a thousandth to ten thousand times the start.
   const H = 300;
-  const m = { top: 16, right: 92, bottom: 36, left: 52 };
+  const m = { top: 16, right: 100, bottom: 36, left: 58 };
   const LO = 1e-3;
   const HI = 1e4;
   const x = $derived(linear(0, ROUNDS, m.left, width - m.right));
@@ -165,7 +166,7 @@
         <button type="button" class="tkc-btn tkc-btn--small" onclick={() => (seed += 1)}>New players</button>
       </div>
 
-      <div class="tkc-stats tkc-stats--3" aria-live="polite">
+      <div class="tkc-stats tkc-stats--3" use:announce>
         <Stat label="Average wealth" value={multiple(mine.expected[end])} sub="{signedPct(expectedFactor(stake / 100))} a round" />
         <Stat label="Typical player, all in, alone" value={multiple(base.median[end])} sub="{signedPct(typicalFactor(1, 1))} a round" swatch="var(--tkc-conditions)" line={true} />
         {#if changed}
@@ -200,9 +201,9 @@
     <ul>
       <li><strong>Stake less.</strong> At a 25% stake, the typical player grows. Giving up some average return removes the path to ruin.</li>
       <li>
-        <strong>Pool.</strong> Let players share everything each round. With a few partners, the typical player grows;
-        with twenty, almost as fast as the average. This is the logic of insurance, of mutual funds and of banks
-        themselves.
+        <strong>Pool.</strong> Let players share everything each round. A pair is not enough: two players still shrink
+        slightly. In a pool of five, the typical player grows about 3% a round; in a pool of twenty, 4.5%, almost as fast
+        as the average. This is the logic of insurance, of mutual funds and of banks themselves.
       </li>
     </ul>
     <h3>Why this matters for how we organize</h3>

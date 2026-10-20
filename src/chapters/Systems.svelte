@@ -4,6 +4,7 @@
   import Slider from '../lib/ui/Slider.svelte';
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
+  import { announce } from '../lib/ui/announce.js';
   import TryThis from '../lib/ui/TryThis.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { simulateSystems, histogram, SYSTEMS, HORIZON, DEADLINE, ENTER, FIX, AWAY, QUEUED, OK, STOP, IDLE } from '../lib/sim/systems.js';
@@ -75,7 +76,7 @@
   n={3}
   kicker="Linked systems"
   title="When systems lean on each other"
-  lede="When each system copies its data from the last, one wrong field stops the request and must be fixed everywhere it went. One shared record makes the same approvals faster and safer."
+  lede="When each system copies its data from the last, one wrong field stops the request and must be fixed everywhere it went. With one shared record, the same approvals can run at once, and requests move several times faster."
 >
   {#snippet setup()}
     <p>
@@ -94,7 +95,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="One request, six linked systems" sub="1,500 simulated requests. Filling in a system takes a day, and so does each approval.">
+    <Instrument title={`One request, ${systems} linked systems`} sub="1,500 simulated requests. Filling in a system takes a day, and so does each approval.">
       <div class="tkc-controls">
         <Slider id="s-n" label="Systems the request passes through" bind:value={systems} min={2} max={8} />
         <Slider id="s-p" label="Chance a form has a problem" bind:value={problems} min={0} max={30} format={(v) => `${v}%`} />
@@ -126,7 +127,7 @@
         </div>
       </details>
 
-      <div class="tkc-stats tkc-stats--4" aria-live="polite">
+      <div class="tkc-stats tkc-stats--4" use:announce>
         <Stat label="Typical request" value="{shortDays(result.median, HORIZON)} days" sub="median, working days" />
         <Stat label="1 in 10 takes more than" value="{shortDays(result.p90, HORIZON)} days" swatch="var(--tkc-conditions)" line={true} />
         <Stat label="Problems that slip through" value={pct(result.slipped, result.slipped < 0.1 ? 1 : 0)} sub="of requests, after every check" />
@@ -230,7 +231,7 @@
 
       {#snippet model()}
         <p>Filling in a system takes two hours of work, and each step takes a day because the next person picks it up the next day. Each form has a {problems}% chance of a hidden problem, such as a wrong date or a missing identifier.</p>
-        <p>An approver at a system sees only that system and spots each hidden problem half the time. One approver at the end sees the whole request and spots 90%. A spotted problem stops the request. With copies, it is corrected in the system where it started and in every later system it reached, and each of those is approved again. With one shared record, it is corrected once. Approvers are in {availability}% of days, and absences last {meanSpell} day{meanSpell > 1 ? 's' : ''} on average.</p>
+        <p>An approver at a system sees only that system’s data and spots each hidden problem in it half the time. With copies, that data includes every problem copied in from earlier systems. With one shared record, every approver sees the whole record and spots each problem half the time, independently of the others, so six together miss a problem about 1 time in 64. If approvers tend to miss the same problems, parallel reviews catch far fewer. One approver at the end sees the whole request and spots 90%. A spotted problem stops the request. With copies, it is corrected in the system where it started and in every later system it reached, and each of those is approved again. With one shared record, it is corrected once. Approvers are in {availability}% of days, and absences last {meanSpell} day{meanSpell > 1 ? 's' : ''} on average.</p>
       {/snippet}
     </Instrument>
   {/snippet}
@@ -260,13 +261,13 @@
     <p>
       Switch to one shared record. Every system reads the same data, so it is entered once, a problem is fixed in one
       place, and the approvals can happen at the same time instead of one after another. The typical request falls from
-      more than three weeks to about one, and almost no problems slip through, because every approver now sees the whole
-      record.
+      more than three weeks to about one. If every approver checks the whole record, almost no problems slip through.
     </p>
     <p>
-      Then try one approval at the end. It is the fastest design, a few days, and it still lets fewer problems through
-      than today’s chain, though more than several parallel reviews. That is a choice to make by risk: one approval for
-      standard requests, several reviewers working in parallel for the ones that cannot be undone.
+      Then try one approval at the end. It is the fastest design, a few days, and it lets fewer problems through than
+      today’s chain. Several parallel reviews can catch more, but only if each reviewer checks the whole record and they
+      do not all miss the same things. That is a choice to make by risk: one approval for standard requests, several
+      reviewers working in parallel for the ones that cannot be undone.
     </p>
   {/snippet}
 
@@ -348,16 +349,15 @@
   }
   .cell.away,
   .sw-away {
-    fill: var(--tkc-conditions-wash);
-    background: var(--tkc-conditions-wash);
+    fill: color-mix(in srgb, var(--tkc-conditions) 35%, var(--tkc-surface));
+    background: color-mix(in srgb, var(--tkc-conditions) 35%, var(--tkc-surface));
   }
   .cell.away {
     stroke: var(--tkc-conditions);
-    stroke-opacity: 0.4;
     stroke-width: 1;
   }
   .sw-away {
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tkc-conditions) 40%, transparent);
+    box-shadow: inset 0 0 0 1px var(--tkc-conditions);
   }
   .cell.queued {
     fill: var(--tkc-sunken);
@@ -371,9 +371,10 @@
     fill: var(--tkc-surface);
     stroke: var(--tkc-conditions);
     stroke-width: 1.5;
+    stroke-dasharray: 2 2;
   }
   .sw-fix {
     background: var(--tkc-surface);
-    box-shadow: inset 0 0 0 1.5px var(--tkc-conditions);
+    border: 1.5px dashed var(--tkc-conditions);
   }
 </style>

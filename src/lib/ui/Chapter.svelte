@@ -9,7 +9,7 @@
 <article class="chapter" aria-labelledby="{prefix}-chapter-title">
   <header class="head">
     <div class="tkc-eyebrow">Chapter {n} of {total} · {kicker}</div>
-    <h2 class="tkc-display tkc-chapter-title" id="{prefix}-chapter-title">{title}</h2>
+    <h2 class="tkc-display tkc-chapter-title" id="{prefix}-chapter-title" tabindex="-1">{title}</h2>
     {#if lede}<p class="tkc-lede">{lede}</p>{/if}
   </header>
 

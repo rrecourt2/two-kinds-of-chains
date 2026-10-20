@@ -38,7 +38,10 @@ Notes for the review:
 
 - The bundle makes no network requests and loads nothing from outside. It writes one `<style>` element (id
   `two-chains-theme`) whose rules are scoped to the story's own elements or to `--tkc-*` custom properties.
+- Its colour tokens are set on the story's own root element, never on the page's `<html>`, so the host page's
+  colour scheme, form controls and scrollbars are untouched, even on a laptop in dark mode.
 - It does not touch the page URL (`syncHash: false`) and renders in light mode by default to match SharePoint.
+- The ← and → keys change chapter only while keyboard focus is inside the story.
 - Modern SharePoint pages scroll inside a container, not the window. The story never listens to window scrolling,
   and chapter changes call `scrollIntoView`, which works inside SharePoint's scroll region.
 
@@ -51,13 +54,13 @@ Notes for the review:
 3. On the page, add an **Embed** web part and paste the snippet from `embed-snippet.html`.
 
 The iframe has a fixed height. The story is built as one chapter at a time, so a height of 900–1000 px works well;
-anything taller scrolls inside the frame. Deep links work: add `#dependence`, `#contagion` and so on to the URL.
+anything taller scrolls inside the frame. Deep links work: add `#systems`, `#contagion` and so on to the URL.
 
 ## 3. Learning platform (SCORM)
 
 If Learning & Development wants completion tracking, `dist/index.html` can be wrapped as a SCORM 1.2 package (an
 `imsmanifest.xml` plus the file, zipped). Most learning platforms and authoring tools can do this for a single
-HTML file. Completion can be reported when a reader reaches chapter 9.
+HTML file. Completion can be reported when a reader reaches the last chapter, What to do on Monday.
 
 ## 4. File in a document library (zero-approval fallback)
 

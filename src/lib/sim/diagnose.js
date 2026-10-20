@@ -57,5 +57,7 @@ export function diagnose(process, { requests = 1000, seed = 31 } = {}) {
     now,
     options,
     together: { label: 'All of these, same systems', ...summary(run(combined)) },
+    // The same bundle with the approvals kept at every system, now in parallel.
+    parallel: combined.approvals === base.approvals ? null : summary(run({ ...combined, approvals: base.approvals })),
   };
 }

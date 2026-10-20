@@ -1,7 +1,7 @@
 # Two Kinds of Chains
 
 An interactive learning story about good complexity (specialization), bad complexity (dependence) and how scale
-amplifies both. Nine short chapters, each with a live model the reader can change. Built with Svelte 5 and Vite.
+amplifies both. Twelve short chapters, each with a live model the reader can change. Built with Svelte 5 and Vite.
 Everything ships as one file, with no external requests, so it can run inside a locked-down bank intranet.
 
 | # | Chapter | Live model |
@@ -11,13 +11,13 @@ Everything ships as one file, with no external requests, so it can run inside a 
 | 2 | Why longer chains get cheaper | Adam Smith's pin workshop: the best number of specialists grows with the market |
 | 3 | When systems lean on each other | One request through linked systems: forms, approvals, and problems that stop the work and spread |
 | 4 | Why full calendars make long queues | Four approvers, named lines vs one shared line, waiting vs utilization |
-| 5 | The breakfast factory | Andrew Grove's kitchen slid towards a bank: the moving limiting step, and where checks belong |
-| 6 | When the average lies | Ole Peters' coin game: ergodicity, staking less, pooling |
-| 7 | 2008: when links became conditions | A 48-bank interbank network you can push into contagion |
-| 8 | What the data cannot show | Black swans, the turkey, and thin versus fat tails in 40 years of data |
-| 9 | Why species go extinct | Specialist vs generalist on 40 islands, in calm and volatile worlds |
-| 10 | The shape of the graph | Graph theory: mesh, hub and modules as the network grows; Simon's watchmakers |
-| 11 | Tools, not gates | UI fatigue and AI: convex tools versus concave gates |
+| 5 | The breakfast factory | Andrew Grove's kitchen slid towards a bank: variable steps, a limiting step that moves, and where checks belong |
+| 6 | Tools before gates | UI fatigue and AI: convex tools versus concave gates |
+| 7 | When the average lies | Ole Peters' coin game: ergodicity, staking less, pooling |
+| 8 | 2008: when links became conditions | A 48-bank interbank network you can push into contagion |
+| 9 | What the data cannot show | Black swans, the turkey, and thin versus fat tails in 40 years of data |
+| 10 | Why species go extinct | Specialist vs generalist on 40 islands, in calm and volatile worlds |
+| 11 | The shape of the graph | Graph theory: mesh, hub and modules as the network grows; Simon's watchmakers |
 | 12 | What to do on Monday | Two-question test, eight moves, and a tool to check a real request |
 
 ## Run it
@@ -35,13 +35,13 @@ Node 20.19+ or 22.12+ is required (Vite 8).
 
 | File | Use it for |
 |------|------------|
-| `dist/index.html` | The whole story in one self-contained file (about 250 KB, 107 KB compressed, fonts included). Open it from disk, host it on any static web server, embed it in an iframe, or wrap it as a SCORM package. |
+| `dist/index.html` | The whole story in one self-contained file (about 320 KB, 130 KB compressed, fonts included). Open it from disk, host it on any static web server, embed it in an iframe, or wrap it as a SCORM package. |
 | `dist-lib/two-chains.js` | An ES module exporting `mountStory(element, options)`. Used by the SharePoint Framework web part in `sharepoint/spfx/`. Styles travel inside the bundle. |
 
 `mountStory(el, { theme, syncHash, startAt })`
 
 - `theme`: `'light'` (default in the library build, to match SharePoint), `'dark'` or `'auto'` (follow the operating system).
-- `syncHash`: `false` by default in the library build, so the host page's URL is left alone. The standalone page uses `#riddle`, `#dependence` and so on as deep links.
+- `syncHash`: `false` by default in the library build, so the host page's URL is left alone. The standalone page uses `#riddle`, `#systems` and so on as deep links.
 - `startAt`: a chapter id to open first.
 - Returns `{ destroy() }`.
 
@@ -85,7 +85,8 @@ note, so readers can check them.
   width, so layouts respond to the story's own container.
 - **Chapter navigation instead of scroll-driven animation.** It works the same in an iframe of fixed height, in a
   SharePoint scroll region, on a phone and in a workshop where someone clicks through on a projector.
-- **Accessibility.** Native range inputs and radio groups, visible focus, keyboard navigation (← →), live regions
-  for key results, colour never the only signal, `prefers-reduced-motion` respected (animations become static).
+- **Accessibility.** Native range inputs and radio groups, visible focus, keyboard navigation (← →), a skip button,
+  focus moved to each new chapter's heading, one spoken summary of the results after a change rather than a stream
+  of updates, colour never the only signal, `prefers-reduced-motion` respected (animations become static).
 - **Deterministic.** Simulations use seeded random numbers, so everyone in a workshop sees the same month, network
   or century until they press the button for a new one.

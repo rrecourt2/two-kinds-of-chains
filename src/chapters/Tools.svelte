@@ -3,6 +3,7 @@
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
   import Stat from '../lib/ui/Stat.svelte';
+  import { announce } from '../lib/ui/announce.js';
   import TryThis from '../lib/ui/TryThis.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { DESIGNS, averagePayoff, density, chainSuccess, MEAN_HELP } from '../lib/sim/convexity.js';
@@ -93,7 +94,7 @@
         <Slider id="t-spread" label="How much the AI’s usefulness varies from task to task" bind:value={spread} min={0} max={2.5} step={0.1} format={(v) => `±${v.toFixed(1)} hours`} ends={['Steady', 'Erratic']} />
       </div>
 
-      <div class="tkc-stats tkc-stats--3" aria-live="polite">
+      <div class="tkc-stats tkc-stats--3" use:announce>
         {#each averages as d (d.id)}
           <Stat label="{d.label}: average" value={fmtH(d.avg)} sub="per task" swatch={COLORS[d.id]} line={true} />
         {/each}
@@ -109,7 +110,8 @@
           <line class="tkc-grid" x1={x(0)} x2={x(0)} y1={m.top} y2={H - m.bottom} />
           <defs><clipPath id={clipId}><rect x={m.left} y={m.top - 4} width={Math.max(0, width - m.left - m.right)} height={H - m.top - m.bottom + 8} /></clipPath></defs>
           <g clip-path="url(#{clipId})">
-            {#each paths as p (p.id)}
+            <!-- The tool is drawn last: where it runs along the rule, its blue stays visible. -->
+            {#each [...paths].reverse() as p (p.id)}
               <path d={p.path} class="cv" style:stroke={COLORS[p.id]} />
             {/each}
           </g>
@@ -119,7 +121,7 @@
           {#each [-3, -2, -1, 0, 1, 2, 3] as t}
             <text class="tkc-axis-label" x={x(t)} y={H - m.bottom + 16} text-anchor="middle">{t > 0 ? '+' : ''}{t}</text>
           {/each}
-          <text class="tkc-axis-title" x={m.left + (width - m.left - m.right) / 2} y={H - 4} text-anchor="middle">How good the AI’s draft is (hours it could save)</text>
+          <text class="tkc-axis-title" x={m.left + (width - m.left - m.right) / 2} y={H - 4} text-anchor="middle">{width < 380 ? 'How good the AI’s draft is (hours)' : 'How good the AI’s draft is (hours it could save)'}</text>
           {#if hover !== null}
             <line class="cross" x1={x(hover)} x2={x(hover)} y1={m.top} y2={H - m.bottom} />
           {/if}
@@ -208,8 +210,8 @@
     stroke-width: 1;
   }
   .dist {
-    fill: var(--tkc-options-wash);
-    stroke: var(--tkc-options);
+    fill: var(--tkc-sunken);
+    stroke: var(--tkc-muted);
     stroke-width: 1.5;
   }
   .chain {

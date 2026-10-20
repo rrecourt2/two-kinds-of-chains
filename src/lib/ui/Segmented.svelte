@@ -68,10 +68,11 @@
   label:hover {
     color: var(--tkc-ink);
   }
-  label.on {
-    background: var(--tkc-surface);
-    color: var(--tkc-ink);
-    box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+  /* Inverted, so the choice stands out from the track in light and dark themes alike. */
+  label.on,
+  label.on:hover {
+    background: var(--tkc-ink);
+    color: var(--tkc-page);
   }
   input {
     position: absolute;

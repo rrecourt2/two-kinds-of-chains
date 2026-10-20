@@ -3,6 +3,7 @@
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
   import Stat from '../lib/ui/Stat.svelte';
+  import { announce } from '../lib/ui/announce.js';
   import TryThis from '../lib/ui/TryThis.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { ROLE_OPTIONS, MARKETS, workshop, bestDesign } from '../lib/sim/pins.js';
@@ -40,7 +41,7 @@
   ];
 
   // The chain diagram for the design on show.
-  const chainW = $derived(Math.max(260, width));
+  const chainW = $derived(width);
   const linkGap = 6;
   const linkW = $derived(Math.min(64, (chainW - linkGap * (shown.roles - 1)) / shown.roles));
 </script>
@@ -53,8 +54,8 @@
 >
   {#snippet setup()}
     <p>
-      In 1776 Adam Smith described a pin workshop. One worker doing every step alone, he wrote, could perhaps make one
-      pin a day, and certainly not twenty. Ten workers who split the job into about eighteen separate operations made
+      In 1776 Adam Smith described a pin workshop. One untrained worker doing every step alone, he wrote, could scarcely
+      make one pin a day, and certainly not twenty. Ten workers who split the job into about eighteen separate operations made
       48,000 pins a day: 4,800 each.
     </p>
     <p>
@@ -144,12 +145,12 @@
             {/if}
           {/each}
           <text class="tkc-caption-svg" x="0" y="50">
-            {shown.roles === 1 ? 'One link: everyone does all 12 operations' : `A ${shown.roles}-link chain: each link does ${12 / shown.roles} of the 12 operations`}
+            {shown.roles === 1 ? 'One link: everyone does all 12 operations' : chainW < 340 ? `${shown.roles} links, ${12 / shown.roles} of the 12 operations each` : `A ${shown.roles}-link chain: each link does ${12 / shown.roles} of the 12 operations`}
           </text>
         </svg>
       </div>
 
-      <div class="tkc-stats tkc-stats--3" aria-live="polite">
+      <div class="tkc-stats tkc-stats--3" use:announce>
         <Stat label="Best design at this market size" value="{best.roles} role{best.roles > 1 ? 's' : ''}" sub="{int(best.workers)} worker{best.workers > 1 ? 's' : ''} in total" swatch="var(--tkc-options)" />
         <Stat label="Worker-minutes per pin" value={fmtMin(shown.minutesPerPin)} sub={shown.roles === 1 ? 'Everyone does everything' : `${(solo.minutesPerPin / shown.minutesPerPin).toFixed(1)}× cheaper than working alone`} />
         <Stat label="Specialists busy" value={pct(shown.utilization)} sub={shown.utilization < 0.4 ? 'Mostly idle: the market is too small' : 'of each working day'} />

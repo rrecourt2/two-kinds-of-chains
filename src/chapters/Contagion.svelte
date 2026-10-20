@@ -5,6 +5,7 @@
   import Slider from '../lib/ui/Slider.svelte';
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
+  import { announce } from '../lib/ui/announce.js';
   import TryThis from '../lib/ui/TryThis.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { buildNetwork, layout, cascade, pickSeeds, mostConnected, sweep } from '../lib/sim/network.js';
@@ -89,7 +90,7 @@
   const tries = [
     { label: 'One counterparty each', apply: () => ((shape = 'random'), (links = 1)) },
     { label: 'Ten counterparties each', apply: () => ((shape = 'random'), (links = 10)) },
-    { label: 'A few giants', apply: () => ((shape = 'hubs'), (links = 4)) },
+    { label: 'A few giants, 6% capital', apply: () => ((shape = 'hubs'), (links = 4), (capital = 6)) },
     { label: 'Capital at 8%', apply: () => (capital = 8) },
   ];
 </script>
@@ -163,7 +164,7 @@
         </div>
       </div>
 
-      <div class="tkc-stats tkc-stats--3" aria-live="polite">
+      <div class="tkc-stats tkc-stats--3" use:announce>
         <Stat label="Banks failed" value="{count} of {N}" sub={!waves.length ? 'No shock yet' : done && count <= waves[0].length ? 'Absorbed: no other bank failed' : done ? 'Contagion has stopped' : 'Spreading…'} swatch="var(--tkc-conditions)" />
         <Stat label="Rounds of contagion" value={Math.max(0, revealed - 1)} sub="after the first failure" />
         <Stat label="Counterparties per bank" value={meanLinks.toFixed(1)} sub="in this network, on average" />
@@ -171,7 +172,7 @@
 
       <div class="strips" bind:clientWidth={stripW}>
         <div class="tkc-fig-title small">What usually happens, in 960 simulated crises</div>
-        <p class="tkc-small">Each dot is one random network of similar banks at {capital}% capital. The black tick is the average.</p>
+        <p class="tkc-small">Each dot is one random network of similar banks at {capital}% capital. The short line is the average.</p>
         <div class="panels" class:side={sideBySide}>
           {#each [{ title: 'After one bank fails', data: one }, { title: 'After five fail at once', data: five }] as panel (panel.title)}
             <svg width={panelW} height={SH} role="img" aria-label="{panel.title}: share of banks that fail, by number of counterparties.">
@@ -210,7 +211,7 @@
     <ul>
       <li>With one counterparty each, failures stay local. The network is too sparse to carry them.</li>
       <li>Around three counterparties, one failure can bring down most of the system.</li>
-      <li>With eight or more, each loss is a small slice of capital, and a single failure is absorbed.</li>
+      <li>With eight or more, each loss is a small slice of capital, and a single failure is usually absorbed.</li>
     </ul>
     <p>
       That last result is the trap. A dense network absorbs small shocks so well that it looks safe. Now hit five banks
@@ -219,8 +220,9 @@
       yet fragile”.
     </p>
     <p>
-      Switch to <em>A few giants</em> and fail a random bank: usually nothing happens. Then fail the most connected
-      bank. That is the shape of September 2008: Lehman Brothers filed for bankruptcy on the 15th, the largest
+      Switch to <em>A few giants</em> and raise capital to 6%. Fail a few random banks: most failures stay small,
+      because most banks are minor. Then fail the most connected bank: nearly every bank goes down. That is the shape of
+      September 2008: Lehman Brothers filed for bankruptcy on the 15th, the largest
       bankruptcy in US history, and the next day the Federal Reserve lent $85 billion to AIG, which had sold credit
       protection to banks around the world.
     </p>

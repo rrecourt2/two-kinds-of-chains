@@ -4,6 +4,7 @@
   import Slider from '../lib/ui/Slider.svelte';
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
+  import { announce } from '../lib/ui/announce.js';
   import TryThis from '../lib/ui/TryThis.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { simulateMonth, coverageOdds, ROLES, DAY_SYSTEMS } from '../lib/sim/presence.js';
@@ -34,18 +35,21 @@
     backups = 0;
   }
 
-  // Calendar geometry: labels on the left, 21 working days in 4+ weeks.
+  // Calendar geometry: 21 working days in 4+ weeks. Labels sit left of each row,
+  // or above it on narrow screens so the days keep their size.
   const narrow = $derived(width < 520);
-  const labelW = $derived(narrow ? 96 : 150);
+  const stacked = $derived(width < 420);
+  const labelW = $derived(stacked ? 0 : narrow ? 96 : 150);
   const gap = 2;
   const weekGap = $derived(narrow ? 5 : 8);
-  const cell = $derived(Math.max(8, Math.min(24, (width - labelW - 4 * weekGap - DAYS * gap) / DAYS)));
+  const cell = $derived(Math.max(6, Math.min(24, (width - labelW - 4 * weekGap - DAYS * gap) / DAYS)));
   const dayX = (d) => labelW + d * (cell + gap) + Math.floor(d / 5) * weekGap;
-  const rowY = (r) => 34 + r * (cell + gap + 4);
-  const height = $derived(rowY(count) + 8);
+  const rowY = (r) => (stacked ? 50 : 34) + r * (cell + gap + (stacked ? 18 : 4));
+  const labelY = (r) => (stacked ? rowY(r) - 5 : rowY(r) + cell / 2 + 4);
+  const height = $derived(stacked ? rowY(count) - 12 : rowY(count) + 8);
   const label = (r) => {
     const name = mode.names[r];
-    return narrow ? name.replace('Relationship manager', 'Rel. manager').replace('Product owner', 'Product').replace('Booking platform', 'Booking') : name;
+    return narrow && !stacked ? name.replace('Relationship manager', 'Rel. manager').replace('Product owner', 'Product').replace('Booking platform', 'Booking') : name;
   };
 
   const formula = $derived.by(() => {
@@ -110,16 +114,14 @@
 
       <div class="tkc-chart" bind:clientWidth={width}>
         <svg width={width} height={height} role="img" aria-label="Calendar of {count} {sys ? 'systems' : 'roles'} over {DAYS} working days. The work could be done on {month.possibleDays} days.">
-          {#each [0, 1, 2, 3, 4] as wk}
-            {#if wk * 5 < DAYS}
-              <text class="tkc-axis-label" x={dayX(wk * 5)} y="12">Week {wk + 1}</text>
-            {/if}
+          {#each [0, 1, 2, 3] as wk}
+            <text class="tkc-axis-label" x={dayX(wk * 5)} y="12">Week {wk + 1}</text>
           {/each}
           {#each month.allIn as ok, d}
             <rect x={dayX(d)} y="18" width={cell} height="8" rx="2" fill={ok ? 'var(--tkc-options)' : 'var(--tkc-conditions)'} />
           {/each}
           {#each month.grid as row, r}
-            <text class="tkc-label-2" x="0" y={rowY(r) + cell / 2 + 4}>{label(r)}</text>
+            <text class="tkc-label-2" x="0" y={labelY(r)}>{label(r)}</text>
             {#each row as day, d}
               <rect x={dayX(d)} y={rowY(r)} width={cell} height={cell} rx="3" class="cell" class:in={day.main} class:cover={!day.main && day.covered} class:gap={!day.covered} />
             {/each}
@@ -134,7 +136,7 @@
         </div>
       </div>
 
-      <div class="tkc-stats" aria-live="polite">
+      <div class="tkc-stats" use:announce>
         <Stat label="Days this month the work could be done" value="{month.possibleDays} of {DAYS}" sub={month.possibleDays < DAYS / 2 ? 'Less than half the month' : ''} />
         <Stat label="Long-run share of days" value={pct(odds.allCovered)} sub={formula} />
       </div>
@@ -148,6 +150,7 @@
       {#snippet model()}
         <p>Each {sys ? 'system is up' : 'person is in'} on {availability}% of days in the long run. {sys ? 'Outages last about a day.' : 'Absences last three days on average, so they cluster the way holidays and training do.'}</p>
         <p>A link is covered on a day when its main {sys ? 'system' : 'person'} or any {sys ? 'backup' : 'stand-in'} is available. The work needs every link covered on the same day.</p>
+        <p>{sys ? 'Each system fails independently of the others. A backup that shares its main system’s weak points, such as the same network or the same update, would help less.' : 'Each person’s absences are independent of everyone else’s. Stand-ins who take the same holidays as the people they cover would help less.'}</p>
       {/snippet}
     </Instrument>
   {/snippet}
@@ -158,8 +161,8 @@
       Every extra role multiplies in another 90%. With ten roles it is about one day in three.
     </p>
     <p>
-      Go back to six roles and add one qualified stand-in per role. You have doubled the number of people involved, which sounds like more
-      complexity. Yet the decision is now possible on 94% of days.
+      Go back to six roles and add one qualified stand-in per role. You have doubled the number of people involved, which
+      sounds like more complexity. Yet the decision is now possible on 94% of days, and on 90% even with ten roles.
     </p>
     <p>
       Systems follow the same arithmetic. Switch the figure to systems: six systems that are each up 97% of the time are

@@ -4,6 +4,7 @@
   import Slider from '../lib/ui/Slider.svelte';
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
+  import { announce } from '../lib/ui/announce.js';
   import TryThis from '../lib/ui/TryThis.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { STRUCTURES, structure, outputCurve, singlePoints, TEAM_SIZE } from '../lib/sim/scale.js';
@@ -148,7 +149,7 @@
             {/each}
           </svg>
         </div>
-        <div class="tkc-stats tkc-stats--4 side-stats" aria-live="polite">
+        <div class="tkc-stats tkc-stats--4 side-stats" use:announce>
           <Stat label={sys ? 'Links to maintain' : 'Required relationships'} value={int(now.links)} sub={kind === 'mesh' ? 'every pair' : kind === 'hub' ? 'everything to the centre' : `inside modules of about ${TEAM_SIZE}, plus between them`} />
           <Stat label={sys ? 'Effort spent on links' : 'Time spent coordinating'} value={pct(now.overhead)} sub="on average" />
           <Stat label={sys ? 'Capacity left for new work' : 'Useful output'} value={now.output.toFixed(1)} sub={now.overloaded ? (sys ? 'the hub is the limit' : 'the approver is the limit') : sys ? 'systems’ worth' : 'people’s worth'} swatch={COLORS[kind]} />
@@ -224,7 +225,7 @@
       Herbert Simon, a Nobel economist and one of the founders of artificial intelligence, told a parable about two
       watchmakers. Both build watches of 1,000 parts, and both are often interrupted. Tempus builds each watch in one go;
       when he puts it down, it falls apart and he starts again. Hora builds modules of ten parts that hold together, so an
-      interruption costs her only the module in her hands.
+      interruption costs him only the module in his hands.
     </p>
     <figure class="watch" bind:clientWidth={watchW}>
       <Slider id="g-int" label="Chance of an interruption per part" bind:value={interrupt} min={0} max={20} format={(v) => `${(v / 10).toFixed(1)}%`} />
@@ -240,7 +241,7 @@
       <figcaption class="tkc-caption">
         Watches finished per month, placing one part a minute for 160 hours. With no interruptions Tempus is slightly
         faster, because modules cost a little extra assembly.
-        {#if interrupt > 0}At {(interrupt / 10).toFixed(1)}% Hora is {w.ratio < 10 ? `${w.ratio.toFixed(1)} times` : w.ratio < 1e6 ? `about ${int(Number(w.ratio.toPrecision(2)))} times` : 'more than a million times'} faster.{/if}
+        {#if interrupt > 0}At {(interrupt / 10).toFixed(1)}% Hora is {w.ratio < 10 ? `${w.ratio.toFixed(1)} times` : w.ratio < 1e6 ? `about ${int(Number(w.ratio.toPrecision(2)))} times` : 'more than a million times'} faster{#if interrupt === 10}; Simon’s rougher arithmetic gave about 4,000{/if}.{/if}
       </figcaption>
     </figure>
     <p>

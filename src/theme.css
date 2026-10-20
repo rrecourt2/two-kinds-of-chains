@@ -18,8 +18,12 @@
   src: url('./assets/fonts/besley-latin-600-italic.woff2') format('woff2');
 }
 
-:root,
-.tkc[data-theme='light'] {
+/* Tokens live on the story's own root, never on the host page's <html>, so a
+   web part cannot change the colour scheme of the page around it. The story
+   follows, in order: its own data-theme, a data-theme on the page root, then
+   the reader's system setting. */
+.tkc,
+:root[data-theme='light'] .tkc:not([data-theme='dark']) {
   --tkc-page: #f3f5f8;
   --tkc-surface: #ffffff;
   --tkc-sunken: #e8ecf1;
@@ -44,7 +48,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
+  .tkc:not([data-theme='light']) {
     --tkc-page: #0f1318;
     --tkc-surface: #171c23;
     --tkc-sunken: #212831;
@@ -61,13 +65,13 @@
     --tkc-options-wash: rgb(57 135 229 / 0.17);
     --tkc-conditions-wash: rgb(217 89 38 / 0.2);
     --tkc-focus: #8ab9f1;
-  --tkc-on-strong: #ffffff;
+    --tkc-on-strong: #ffffff;
     --tkc-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -14px rgb(0 0 0 / 0.6);
     color-scheme: dark;
   }
 }
 
-:root[data-theme='dark'],
+:root[data-theme='dark'] .tkc:not([data-theme='light']),
 .tkc[data-theme='dark'] {
   --tkc-page: #0f1318;
   --tkc-surface: #171c23;
@@ -318,6 +322,16 @@
   margin-bottom: 6px;
 }
 
+/* ---------- Focus ---------- */
+
+.tkc :where(a, button, input, select, summary, [tabindex]) {
+  scroll-margin-top: 72px;
+}
+/* Headings receive focus when a chapter opens, so screen readers announce it. */
+.tkc :where(h1, h2)[tabindex='-1']:focus {
+  outline: none;
+}
+
 /* ---------- Stats ---------- */
 
 .tkc-stats {
@@ -365,14 +379,20 @@
   line-height: 1.35;
   color: var(--tkc-ink-2);
 }
+/* A tile's colour key sits in front of its label, never in front of the number,
+   where a line swatch would read as a minus sign. */
+.tkc-stat-label .tkc-swatch {
+  margin-right: 6px;
+  vertical-align: 1px;
+}
+.tkc-stat-label .tkc-swatch--line {
+  vertical-align: 3px;
+}
 .tkc-stat-value {
   font-size: 1.625rem;
   font-weight: 650;
   line-height: 1.15;
   letter-spacing: -0.01em;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 .tkc-stat-sub {
   font-size: 0.8125rem;

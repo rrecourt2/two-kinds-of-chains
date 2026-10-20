@@ -170,4 +170,10 @@ test('diagnosis levers', () => {
   console.log('diagnose now', d.now.median, d.now.p90, d.options.map((o) => `${o.id}:${o.median}`).join(' '), 'together', d.together.median, d.together.slipped.toFixed(3));
   for (const o of d.options) assert.ok(o.median <= d.now.median);
   assert.ok(d.together.median < d.now.median / 3);
+  // The bundle ends in one final approval; keeping parallel approvals instead is a little slower and catches more.
+  assert.ok(d.parallel);
+  assert.ok(d.parallel.median >= d.together.median);
+  assert.ok(d.parallel.slipped <= d.together.slipped);
+  // A process that already approves once at the end has no parallel variant to offer.
+  assert.equal(diagnose({ systems: 6, problems: 0.1, info: 'copies', approvals: 'end', availability: 0.85, busy: 0.85, standIns: 0 }).parallel, null);
 });

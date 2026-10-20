@@ -3,6 +3,7 @@
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
   import Stat from '../lib/ui/Stat.svelte';
+  import { announce } from '../lib/ui/announce.js';
   import TryThis from '../lib/ui/TryThis.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { simulateHistory, worst, DAYS_PER_YEAR, turkeyConfidence } from '../lib/sim/tails.js';
@@ -113,7 +114,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="Two worlds with the same ordinary days" sub="Forty years of daily losses. Both worlds have the same typical day: a 1% move. Dots are days with losses above 1.5%.">
+    <Instrument title="Two worlds with the same volatility" sub="Forty years of daily losses. Both worlds have a standard deviation of 1% a day. Dots are days with losses above 1.5%.">
       <div class="tkc-controls tkc-controls--wide">
         <Slider id="k-years" label="Years of data you have" bind:value={known} min={2} max={20} format={(v) => `${v} years`} />
       </div>
@@ -143,11 +144,11 @@
         <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-ink)"></span>Worst day so far (the record)</span>
       </div>
 
-      <div class="tkc-stats" aria-live="polite">
+      <div class="tkc-stats" use:announce>
         {#each stats as s (s.id)}
           <Stat
             label={s.id === 'thin' ? 'Thin tails: worst day after your data' : 'Fat tails: worst day after your data'}
-            value="{s.ratio.toFixed(1)}× worse"
+            value={s.ratio > 1 ? `${s.ratio.toFixed(s.ratio < 1.1 ? 2 : 1)}× worse` : 'Not beaten'}
             sub="{fmt(s.after)} against {fmt(s.before)} in your {known} years"
             swatch={s.color}
           />
@@ -157,7 +158,7 @@
       <TryThis items={tries} />
 
       {#snippet model()}
-        <p>Each world has 10,000 trading days with a typical daily move of 1%. The thin-tailed world draws them from a normal distribution, the textbook assumption. The fat-tailed world draws them from a Student’s t distribution with three degrees of freedom, a common simple model of daily market moves, scaled to the same typical move.</p>
+        <p>Each world has 10,000 trading days with a standard deviation of 1% a day. The thin-tailed world draws them from a normal distribution, the textbook assumption. The fat-tailed world draws them from a Student’s t distribution with three degrees of freedom, a common simple model of daily market moves, scaled to the same standard deviation. Its ordinary days are calmer than the thin-tailed world’s, and its worst days far worse.</p>
         <p>“Worst day after your data” compares the largest loss in the remaining years with the largest loss in the years you had.</p>
       {/snippet}
     </Instrument>
@@ -165,10 +166,11 @@
 
   {#snippet after()}
     <p>
-      Both worlds have the same ordinary days. In the thin-tailed world, ten years of data tell you almost everything:
-      the worst day still to come is about as bad as the worst day you have seen. In the fat-tailed world the record keeps
-      breaking, and the next worst day can be two or three times worse than anything in your data. More data does not fix
-      this.
+      In both worlds the record will probably fall: with ten years of data, the worst day you have seen is beaten in the
+      next thirty years about three times in four. The difference is by how much. In the thin-tailed world the new
+      record is barely worse than the old one, so ten years of data tell you almost everything. In the fat-tailed world
+      it is often far worse: in more than one history in four, at least twice as bad as anything in your data. Twenty
+      years of data halve that risk but do not remove it.
     </p>
     <p>
       In August 2007 the finance chief of Goldman Sachs said the firm was seeing “25-standard deviation moves, several
@@ -186,8 +188,9 @@
       </li>
       <li>
         <strong>Linked systems hide their dependencies.</strong> On 19 July 2024 a faulty update to one security product
-        crashed about 8.5 million Windows computers, grounding flights and disrupting banks and hospitals. Nothing in
-        those systems’ history hinted at it. The dependency became visible only when it broke.
+        crashed about 8.5 million Windows computers, grounding flights and disrupting banks and hospitals. Few of the
+        firms hit had seen anything like it in their own data, though the same product had crashed Linux servers that
+        spring. The dependency became visible only when it broke.
       </li>
     </ul>
   {/snippet}

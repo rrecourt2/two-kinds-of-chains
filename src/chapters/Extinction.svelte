@@ -4,6 +4,7 @@
   import Slider from '../lib/ui/Slider.svelte';
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
+  import { announce } from '../lib/ui/announce.js';
   import TryThis from '../lib/ui/TryThis.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { simulateIslands, longRunGrowth, CAPACITY } from '../lib/sim/species.js';
@@ -104,7 +105,7 @@
         />
       </div>
 
-      <div class="tkc-stats" aria-live="polite">
+      <div class="tkc-stats" use:announce>
         <Stat label="Specialist survives on" value="{sim.survivors.specialist} of {ISLANDS}" sub="islands · {signedPct(gs)} a year in the long run" swatch="var(--tkc-conditions)" line={true} />
         <Stat label="Generalist survives on" value="{sim.survivors.generalist} of {ISLANDS}" sub="islands · {signedPct(gg)} a year in the long run" swatch="var(--tkc-options)" line={true} />
       </div>
@@ -157,7 +158,7 @@
           {#each [0, 20, 40, 60] as t}
             <text class="tkc-axis-label" x={cx(t)} y={CH - cm.bottom + 16} text-anchor="middle">±{t}%</text>
           {/each}
-          <text class="tkc-axis-title" x={cm.left + (curveW - cm.left - cm.right) / 2} y={CH - 4} text-anchor="middle">Swing in food between good and bad years</text>
+          <text class="tkc-axis-title" x={cm.left + (curveW - cm.left - cm.right) / 2} y={CH - 4} text-anchor="middle">{curveW < 380 ? 'Swing in food from year to year' : 'Swing in food between good and bad years'}</text>
           <rect x={cm.left} y={cm.top} width={Math.max(0, curveW - cm.left - cm.right)} height={CH - cm.top - cm.bottom} fill="transparent" role="presentation" onpointermove={onMove} onpointerleave={() => (hover = null)} />
         </svg>
         {#if hover !== null}

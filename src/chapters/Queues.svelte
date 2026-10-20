@@ -5,6 +5,7 @@
   import Slider from '../lib/ui/Slider.svelte';
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
+  import { announce } from '../lib/ui/announce.js';
   import TryThis from '../lib/ui/TryThis.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { LiveQueue, meanWait } from '../lib/sim/queue.js';
@@ -88,8 +89,8 @@
   const laneY = (s) => 8 + s * laneH + laneH / 2;
 
   // Hockey-stick chart.
-  const H = 230;
-  const m = { top: 20, right: 64, bottom: 38, left: 40 };
+  const H = 238;
+  const m = { top: 28, right: 64, bottom: 38, left: 40 };
   const Y_MAX = 24;
   const x = $derived(linear(0.5, 0.98, m.left, width - m.right));
   const y = $derived(linear(0, Y_MAX, H - m.bottom, m.top));
@@ -201,10 +202,11 @@
         </p>
       </div>
 
-      <div class="tkc-stats tkc-stats--3" aria-live="polite">
+      <div class="tkc-stats tkc-stats--3" use:announce>
         <Stat label="Average wait, named approver" value={hours(named)} sub="before work starts" swatch="var(--tkc-conditions)" line={true} />
         <Stat label="Average wait, shared line" value={hours(pooled)} sub="same people, same workload" swatch="var(--tkc-options)" line={true} />
         <Stat
+          quiet
           label="In the animation so far"
           value={snap.samples < 30 ? 'Measuring…' : hours(snap.avg)}
           sub={snap.samples < 30 ? 'collecting the first requests' : `last ${Math.min(400, snap.samples)} requests, ${mode === 'named' ? 'named' : 'shared'}`}
@@ -223,20 +225,20 @@
           <line class="tkc-base" x1={m.left} x2={width - m.right} y1={y(0)} y2={y(0)} />
           <path d={namedCurve.d} class="curve" style:stroke="var(--tkc-conditions)" />
           <path d={pooledCurve.d} class="curve" style:stroke="var(--tkc-options)" />
-          {#if namedCurve.exit !== null}
-            <text class="tkc-label-2 tkc-halo" x={x(namedCurve.exit) - 6} y={m.top + 4} text-anchor="end">Named ↑ {Math.round(meanWait(1, 0.98))}h at 98%</text>
-          {/if}
           <text class="tkc-label-2" x={width - m.right + 6} y={y(meanWait(SERVERS, 0.98)) + 4}>Shared</text>
-          <line class="now" x1={x(rho)} x2={x(rho)} y1={m.top} y2={y(0)} />
+          <line class="now" x1={x(rho)} x2={x(rho)} y1={namedCurve.exit !== null ? m.top + 18 : m.top} y2={y(0)} />
           {#if named <= Y_MAX}
             <circle cx={x(rho)} cy={y(named)} r="5" class="pt" style:fill="var(--tkc-conditions)" />
           {/if}
           <circle cx={x(rho)} cy={y(pooled)} r="5" class="pt" style:fill="var(--tkc-options)" />
+          {#if namedCurve.exit !== null}
+            <text class="tkc-label-2 tkc-halo" x={x(namedCurve.exit) - 6} y={m.top + 12} text-anchor="end">Named ↑ {Math.round(meanWait(1, 0.98))}h at 98%</text>
+          {/if}
           {#if hover !== null}
             <line class="cross" x1={x(hover)} x2={x(hover)} y1={m.top} y2={y(0)} />
           {/if}
           <text class="tkc-axis-title" x={m.left + (width - m.left - m.right) / 2} y={H - 4} text-anchor="middle">How busy the approvers are</text>
-          <text class="tkc-axis-title" x={m.left - 34} y={m.top - 8}>Average wait for a one-hour review</text>
+          <text class="tkc-axis-title" x={m.left - 34} y={m.top - 12}>Average wait for a one-hour review</text>
           <rect x={m.left} y={m.top} width={Math.max(0, width - m.left - m.right)} height={H - m.top - m.bottom} fill="transparent" role="presentation" onpointermove={onMove} onpointerleave={() => (hover = null)} />
         </svg>
         {#if hover !== null}
@@ -255,7 +257,7 @@
       <TryThis items={tries} />
 
       {#snippet model()}
-        <p>Requests arrive at random and reviews take an hour on average, with natural variation. The named line is the classic single-server queue: average wait = busy ÷ (1 − busy) × work time. At 90% busy that is 0.9 ÷ 0.1 = 9 hours. Kingman (1961) showed that every single queue has this shape, scaled by how variable the arrivals and the work are.</p>
+        <p>Requests arrive at random, and review times vary the way an exponential distribution does: an hour on average, sometimes much longer. The named line is the classic single-server queue: average wait = busy ÷ (1 − busy) × work time. At 90% busy that is 0.9 ÷ 0.1 = 9 hours. Reviews that always took exactly one hour would halve the waits. Kingman (1961) showed that, approximately, any single-server queue near full load has this shape, scaled by how variable the arrivals and the work are.</p>
         <p>The shared line is the same four people serving one queue, which queueing theory calls M/M/4 and solves with the Erlang C formula. The animation is a live simulation of the same system.</p>
       {/snippet}
     </Instrument>

@@ -3,6 +3,7 @@
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
   import Stat from '../lib/ui/Stat.svelte';
+  import { announce } from '../lib/ui/announce.js';
   import TryThis from '../lib/ui/TryThis.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { STEPS, READY_AT, simulateMornings, checks } from '../lib/sim/breakfast.js';
@@ -32,12 +33,24 @@
   const tickStep = $derived(tMax > 12 ? 4 : tMax > 6 ? 2 : 1);
   const gTicks = $derived(Array.from({ length: Math.floor(tMax / tickStep) + 1 }, (_, i) => i * tickStep));
 
-  // Mornings strip.
-  const cell = $derived(Math.max(9, Math.min(18, (width - 2) / MORNINGS - 2)));
+  // Mornings strip: one radio button per morning, moved between with the arrow keys.
+  let cellsEl = $state();
+  function onCellKey(event, i) {
+    const moves = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1, Home: -i, End: MORNINGS - 1 - i };
+    if (!(event.key in moves)) return;
+    event.preventDefault();
+    picked = Math.max(0, Math.min(MORNINGS - 1, i + moves[event.key]));
+    cellsEl?.children[picked]?.focus();
+  }
 
-  // Where to put the check.
-  const cm = { left: 196, right: 54 };
+  // The plan label sits right of the "ready at 3" line, or left of it when there is no room.
+  const planLeft = $derived(gx(READY_AT) + 124 > width);
+
+  // Where to put the check. On narrow screens each label sits above its bar.
+  const stackChecks = $derived(width < 420);
+  const cm = $derived(stackChecks ? { left: 0, right: 46 } : { left: 196, right: 54 });
   const cx = $derived(linear(0, 1, cm.left, Math.max(cm.left + 40, width - cm.right)));
+  const checkRowH = $derived(stackChecks ? 58 : 44);
 
   const tries = [
     { label: 'Grove’s kitchen', apply: () => (towardBank = 0) },
@@ -83,7 +96,7 @@
             <text class="tkc-axis-label" x={gx(t)} y={gH - gm.bottom + 16} text-anchor="middle">{t}</text>
           {/each}
           <line class="ready" x1={gx(READY_AT)} x2={gx(READY_AT)} y1={gm.top - 10} y2={gH - gm.bottom} />
-          <text class="tkc-axis-label" x={gx(READY_AT) + 4} y={gm.top - 8}>Planned: ready at 3</text>
+          <text class="tkc-axis-label" x={planLeft ? gx(READY_AT) - 4 : gx(READY_AT) + 4} y={gm.top - 8} text-anchor={planLeft ? 'end' : 'start'}>Planned: ready at 3</text>
           {#each STEPS as step, i (step.id)}
             {@const yy = gm.top + i * rowH}
             <text class="tkc-label-2" x="0" y={yy + 18}>{step.label}</text>
@@ -101,40 +114,42 @@
 
       <div class="strip">
         <div class="tkc-fig-title small">The slowest step, morning by morning</div>
-        <div class="cells" role="list">
+        <div class="cells" role="radiogroup" aria-label="Mornings" bind:this={cellsEl}>
           {#each mornings as d, i}
             <button
               type="button"
-              role="listitem"
+              role="radio"
+              aria-checked={i === picked}
+              tabindex={i === picked ? 0 : -1}
               class="day"
               class:moved={d.slowest !== 0}
               class:late={!d.onTime}
               class:on={i === picked}
-              style:width="{cell}px"
-              style:height="{cell + 6}px"
               aria-label="Morning {i + 1}: slowest step {STEPS[d.slowest].label}{d.onTime ? '' : ', breakfast late'}"
-              onclick={() => (picked = i)}>{STEPS[d.slowest].letter}</button
+              onclick={() => (picked = i)}
+              onkeydown={(e) => onCellKey(e, i)}>{STEPS[d.slowest].letter}</button
             >
           {/each}
         </div>
-        <p class="tkc-caption">E, T and C mark the slowest step: egg, toast or coffee. Orange: the plan’s limiting step was not the limit. A line underneath: breakfast was late. Click a morning to see it above.</p>
+        <p class="tkc-caption">E, T and C mark the slowest step: egg, toast or coffee. Orange: the plan’s limiting step was not the limit. A line underneath: breakfast was late. Choose a morning to see it above.</p>
       </div>
 
-      <div class="tkc-stats" aria-live="polite">
+      <div class="tkc-stats" use:announce>
         <Stat label="The egg was the slowest step" value="{eggSlowest} of {MORNINGS}" sub="mornings" />
         <Stat label="Breakfast ready on time" value="{onTime} of {MORNINGS}" sub="within 10% of the plan" />
       </div>
 
       <div class="checks">
         <div class="tkc-fig-title small">Where should the check go?</div>
-        <svg {width} height="96" role="img" aria-label="A check before every step catches {pct(check.early.caught)} of problems; one check at the end catches {pct(check.late.caught)}.">
+        <svg {width} height={8 + 2 * checkRowH} role="img" aria-label="A check before every step catches {pct(check.early.caught)} of problems; one check at the end catches {pct(check.late.caught)}.">
           {#each [{ label: 'Before every step (Grove)', sub: '3 checks to wait for', v: check.early.caught }, { label: 'Once, at the end', sub: '1 check to wait for', v: check.late.caught }] as row, i (row.label)}
-            {@const yy = 8 + i * 44}
+            {@const yy = 8 + i * checkRowH}
+            {@const by = stackChecks ? yy + 34 : yy + 2}
             <text class="tkc-label-2" x="0" y={yy + 13}>{row.label}</text>
             <text class="tkc-axis-label" x="0" y={yy + 29}>{row.sub}</text>
-            <rect x={cx(0)} y={yy + 2} width={cx(1) - cx(0)} height="18" rx="4" class="track" />
-            <path d={barRight(cx(0), yy + 2, Math.max(2, cx(row.v) - cx(0)), 18)} class="caught" class:win={row.v >= Math.max(check.early.caught, check.late.caught)} />
-            <text class="tkc-label" x={cx(row.v) + 6} y={yy + 15}>{pct(row.v)}</text>
+            <rect x={cx(0)} y={by} width={cx(1) - cx(0)} height="18" rx="4" class="track" />
+            <path d={barRight(cx(0), by, Math.max(2, cx(row.v) - cx(0)), 18)} class="caught" class:win={row.v >= Math.max(check.early.caught, check.late.caught)} />
+            <text class="tkc-label" x={cx(row.v) + 6} y={by + 13}>{pct(row.v)}</text>
           {/each}
         </svg>
         <p class="tkc-small">
@@ -150,7 +165,7 @@
       <TryThis items={tries} />
 
       {#snippet model()}
-        <p>Planned times: egg 3, toast 1, coffee 1, in minutes for a kitchen or days for a bank. Each step starts so that it would finish at 3. Moving right, each step’s time varies more (up to 60% either way), a step is held up on 15% of mornings (a person away, a system down) for 3 extra units on average, and a check before a step spots a problem less often: 90% of the time in the kitchen, 20% in the bank.</p>
+        <p>Planned times: egg 3, toast 1, coffee 1, in minutes for a kitchen or days for a bank. Each step starts so that it would finish at 3. Moving right, each step’s time varies more (a standard deviation of up to 60% of the planned time), a step is held up on 15% of mornings (a person away, a system down) for 3 extra units on average, and a check before a step spots a problem less often: 90% of the time in the kitchen, 20% in the bank.</p>
         <p>One check at the end, when the work is complete and visible, spots 95% of problems.</p>
       {/snippet}
     </Instrument>
@@ -160,10 +175,11 @@
     <p>Three things change between a kitchen and a bank.</p>
     <ul>
       <li>
-        <strong>The limiting step moves.</strong> In Grove’s kitchen the egg is always the slowest step. In a bank the
-        slowest step is whoever or whatever is missing today: the approver on holiday, the system that is down, the form
-        that came back. You cannot plan around a limiting step that changes every morning. You need spare capacity and
-        alternatives instead.
+        <strong>The limiting step moves.</strong> In Grove’s kitchen the egg is always the slowest step. In a bank the egg
+        is often not the limit. On many mornings the slowest step is whoever or whatever is missing that day: the
+        approver on holiday, the system that is down, the form that came back. Even when the egg is the limit, its time
+        varies, so breakfast is late on most mornings. You cannot plan around a limiting step that keeps moving. You need
+        spare capacity and alternatives instead.
       </li>
       <li>
         <strong>Early checks see little.</strong> A cracked egg is visible before it is boiled. The risk in a credit file
@@ -225,32 +241,45 @@
     padding-top: 14px;
   }
   .cells {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
+    display: grid;
+    grid-template-columns: repeat(20, minmax(0, 1fr));
+    gap: 3px;
+    max-width: 720px;
+  }
+  @container fig (max-width: 520px) {
+    .cells {
+      grid-template-columns: repeat(10, minmax(0, 1fr));
+    }
   }
   .day {
+    height: 28px;
     padding: 0;
-    border: 0;
-    border-radius: 3px;
+    border: 1px solid transparent;
+    border-radius: 5px;
     background: var(--tkc-sunken);
     color: var(--tkc-ink-2);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 700;
     line-height: 1;
     cursor: pointer;
     box-shadow: inset 0 -3px 0 0 transparent;
   }
   .day.moved {
-    background: var(--tkc-conditions);
-    color: var(--tkc-on-strong);
+    background: var(--tkc-conditions-wash);
+    border-color: var(--tkc-conditions);
+    color: var(--tkc-conditions-ink);
   }
   .day.late {
     box-shadow: inset 0 -3px 0 0 var(--tkc-ink);
   }
+  /* The chosen morning: a solid frame. Keyboard focus adds the focus ring around it. */
   .day.on {
-    outline: 2px solid var(--tkc-ink);
-    outline-offset: 1px;
+    border: 2px solid var(--tkc-ink);
+    color: var(--tkc-ink);
+  }
+  .day:focus-visible {
+    outline: 2px solid var(--tkc-focus);
+    outline-offset: 2px;
   }
   .track {
     fill: var(--tkc-sunken);

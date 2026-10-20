@@ -25,8 +25,8 @@
   const minute = [
     { ch: 'monday', text: 'Keep the controls. Change their shape: alternatives at every link, one shared record, reviews in parallel or once at the end, spare capacity.' },
     { ch: 'riddle', text: 'Chains multiply. Six links that each work 95% of the time make a 74% process. Give every link an alternative and it is 99%.' },
-    { ch: 'systems', text: 'Linked systems spread problems. When each system copies the last, one wrong field stops the request and must be fixed everywhere it went. One shared record makes the same controls faster and stronger.' },
-    { ch: 'queues', text: 'Full calendars are queues. At 90% busy, a one-hour review waits nine hours.' },
+    { ch: 'systems', text: 'Linked systems spread problems. When each system copies the last, one wrong field stops the request and must be fixed everywhere it went. With one shared record, data is entered once, fixed once and approved in parallel.' },
+    { ch: 'queues', text: 'Full calendars are queues. At 90% busy, a one-hour review waits about nine hours.' },
     { ch: 'ergodicity', text: 'Averages mislead when outcomes multiply, and the data hides the rare event. Survival comes first.' },
     { ch: 'tools', text: 'Tools beat gates. AI that fills in the screens for people, with a person checking, eases UI fatigue. AI added as one more mandatory screen adds to it.' },
   ];
@@ -35,7 +35,7 @@
 <section class="intro" aria-labelledby="{prefix}-story-title">
   <header class="masthead">
     <div class="tkc-eyebrow">An interactive story · about 20 minutes · every chart is live</div>
-    <h1 class="tkc-display title" id="{prefix}-story-title">Two Kinds of Chains</h1>
+    <h1 class="tkc-display title" id="{prefix}-story-title" tabindex="-1">Two Kinds of Chains</h1>
     <p class="deck">
       Why some complexity makes a bank smarter, some makes it stall, and why scale amplifies whichever kind you have.
     </p>
@@ -96,7 +96,7 @@
     max-width: 52rem;
   }
   .title {
-    font-size: clamp(2.6rem, 1.2rem + 6.2cqi, 5.4rem);
+    font-size: clamp(2.6rem, 1.2rem + 5cqi, 4.5rem);
     line-height: 0.98;
     letter-spacing: -0.025em;
   }
@@ -106,6 +106,15 @@
     color: var(--tkc-ink-2);
     max-width: 40rem;
     text-wrap: pretty;
+  }
+  /* On a phone the guess comes first; the thesis further down says the same. */
+  @container tkc (max-width: 560px) {
+    .deck {
+      display: none;
+    }
+    .masthead {
+      gap: 8px;
+    }
   }
   .pair {
     display: grid;

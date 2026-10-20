@@ -1,15 +1,25 @@
-/* Page shell for the standalone build only. Hosts such as SharePoint keep their own body styles. */
+/* Page shell for the standalone build only. Hosts such as SharePoint keep their own
+   page styles; the story's own tokens live on .tkc (theme.css). */
+:root {
+  --page-bg: #f3f5f8;
+  --page-ink: #121820;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --page-bg: #0f1318;
+    --page-ink: #eef2f6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --page-bg: #0f1318;
+  --page-ink: #eef2f6;
+  color-scheme: dark;
+}
 html,
 body {
   margin: 0;
-  background: var(--tkc-page);
-  color: var(--tkc-ink);
-}
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0 0 auto;
-  height: env(safe-area-inset-top, 0px);
-  z-index: 10;
-  background: var(--tkc-surface);
+  background: var(--page-bg);
+  color: var(--page-ink);
 }

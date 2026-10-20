@@ -34,6 +34,16 @@
   let index = $state(initialIndex());
   let visited = $state(CHAPTERS.map((_, i) => i === index));
   let top = $state();
+  let root = $state();
+
+  const headingId = (i) => (i === 0 ? `${prefix}-story-title` : `${prefix}-chapter-title`);
+  function focusHeading() {
+    document.getElementById(headingId(index))?.focus({ preventScroll: true });
+  }
+  function setTitle() {
+    if (syncHash) document.title = index === 0 ? 'Two Kinds of Chains' : `${CHAPTERS[index].title} · Two Kinds of Chains`;
+  }
+  setTitle();
 
   const current = $derived(CHAPTERS[index]);
   const Current = $derived(current.component);
@@ -52,16 +62,22 @@
         /* the host may not allow URL changes */
       }
     }
+    setTitle();
     await tick();
     top?.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    // Move keyboard and screen-reader users to the new chapter, not the button they left behind.
+    focusHeading();
   }
   setContext('tkc-go', go);
 
   function onKey(event) {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
     const el = event.target;
+    // Embedded in a host page, the arrow keys belong to the host unless focus is in the story.
+    if (!syncHash && !root?.contains(el)) return;
     const tag = el?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el?.isContentEditable) return;
+    if (el?.closest?.('[role="radiogroup"]')) return;
     if (event.key === 'ArrowRight' && next) go(index + 1);
     if (event.key === 'ArrowLeft' && prev) go(index - 1);
   }
@@ -74,16 +90,17 @@
 
 <svelte:window onkeydown={onKey} onhashchange={onHashChange} />
 
-<div class="tkc" data-theme={theme === 'auto' ? undefined : theme}>
+<div class="tkc" data-theme={theme === 'auto' ? undefined : theme} bind:this={root}>
   <header class="bar">
     <div class="bar-inner">
+      <button type="button" class="skip" onclick={focusHeading}>Skip to the chapter</button>
       <button type="button" class="home" onclick={() => go(0)} aria-label="Two Kinds of Chains: opening page">
         <span class="home-mark" aria-hidden="true"></span>
         <span class="home-name">Two Kinds of Chains</span>
       </button>
 
       <nav class="links" aria-label="Chapters">
-        <ol>
+        <ol style:--links={CHAPTERS.length}>
           {#each CHAPTERS as chapter, i (chapter.id)}
             <li>
               <button
@@ -143,6 +160,16 @@
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
+  /* On phones with a notch, cover the strip above the sticky bar so text does not show through. */
+  .bar::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: env(safe-area-inset-top, 0px);
+    background: var(--tkc-surface);
+  }
   .bar-inner {
     position: relative;
     max-width: 1200px;
@@ -152,6 +179,30 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+  }
+  .skip {
+    position: absolute;
+    left: 0;
+    top: 9px;
+    z-index: 1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--tkc-ink);
+    background: var(--tkc-surface);
+    color: var(--tkc-ink);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  /* Hidden until a keyboard user reaches it. */
+  .skip:not(:focus-visible) {
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
   .home {
     display: inline-flex;
@@ -345,6 +396,23 @@
     }
     li + li {
       margin-left: -3px;
+    }
+  }
+  /* Narrowest screens and web-part columns: the links share the full width. */
+  @container tkc (max-width: 380px) {
+    .bar {
+      padding-left: max(8px, env(safe-area-inset-left, 0px));
+      padding-right: max(8px, env(safe-area-inset-right, 0px));
+    }
+    .link {
+      width: min(27px, calc((100cqi - 16px) / var(--links)));
+    }
+    .link::before {
+      left: 3px;
+      width: calc(100% - 6px);
+    }
+    li + li {
+      margin-left: 0;
     }
   }
 </style>
