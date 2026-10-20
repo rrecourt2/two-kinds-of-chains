@@ -5,27 +5,31 @@
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { diagnose } from '../lib/sim/diagnose.js';
-  import { HORIZON } from '../lib/sim/relay.js';
+  import { HORIZON } from '../lib/sim/systems.js';
+  import { CHAPTERS } from './index.js';
   import { linear, barRight } from '../lib/scales.js';
   import { pct, shortDays } from '../lib/format.js';
 
   const go = getContext('tkc-go');
   const prefix = getContext('tkc-id') ?? 'tkc';
+  const total = getContext('tkc-total') ?? 12;
+  const numberOf = (id) => CHAPTERS.findIndex((c) => c.id === id);
 
-  let gates = $state(6);
-  let standIns = $state(0);
-  let parallel = $state(false);
+  let systems = $state(6);
+  let problems = $state(10);
+  let info = $state('copies');
+  let approvals = $state('each');
   let availability = $state(85);
   let busy = $state(85);
-  let sendBack = $state(15);
+  let standIns = $state(0);
   let width = $state(560);
 
   const d = $derived(
-    diagnose({ gates, standIns, parallel, availability: availability / 100, busy: busy / 100, sendBack: sendBack / 100 }),
+    diagnose({ systems, problems: problems / 100, info, approvals, availability: availability / 100, busy: busy / 100, standIns }),
   );
-  const rows = $derived([...d.options, { id: 'together', label: d.together.label, median: d.together.median, p90: d.together.p90, together: true }]);
+  const rows = $derived([...d.options, { id: 'together', label: d.together.label, median: d.together.median, p90: d.together.p90, slipped: d.together.slipped, together: true }]);
 
-  // Lever chart: horizontal bars of median lead time.
+  // Lever chart: horizontal bars of the typical lead time.
   const rowH = 34;
   const labelW = $derived(Math.min(230, width * 0.46));
   const H = $derived(rows.length * rowH + 30);
@@ -33,13 +37,14 @@
   const x = $derived(linear(0, xMax, labelW, width - 44));
 
   const moves = [
-    { title: 'Roles, not names', text: 'Any qualified person can sign. A named approver becomes a pool.', ch: 'riddle', n: 1 },
-    { title: 'Automatic delegation', text: 'Out of office means a named stand-in takes over, without anyone asking.', ch: 'dependence', n: 3 },
-    { title: 'Parallel by default', text: 'Reviews that do not need each other’s output start at the same time.', ch: 'dependence', n: 3 },
-    { title: 'Spare capacity for reviewers', text: 'Keep key reviewers below about 80% loaded, and give them one shared queue.', ch: 'queues', n: 4 },
-    { title: 'Gates in proportion to the risk', text: 'Small, reversible decisions get fewer, faster gates. Irreversible ones get the most care.', ch: 'ergodicity', n: 5 },
-    { title: 'No single hub', text: 'Every person or system that everything passes through gets a stand-in.', ch: 'contagion', n: 6 },
-    { title: 'Measure flow', text: 'Track lead time and the share of time actually worked, not how busy people are.', ch: 'dependence', n: 3 },
+    { title: 'Alternatives everywhere', text: 'Any qualified person can approve, and every critical system has a fallback. No link depends on one name.', ch: 'riddle' },
+    { title: 'Enter it once', text: 'One shared record that every system reads, instead of copies that each need re-keying, checking and correcting.', ch: 'systems' },
+    { title: 'Check data as it is typed', text: 'Automatic checks at entry stop a problem before it spreads into other systems. That is where Grove was right.', ch: 'breakfast' },
+    { title: 'One approval, later', text: 'One person approves the whole request when the picture is complete, instead of a sign-off at every system.', ch: 'systems' },
+    { title: 'Spare capacity', text: 'Keep key reviewers and key systems below about 80% loaded, and give them one shared queue.', ch: 'queues' },
+    { title: 'Care in proportion to the risk', text: 'Small, reversible decisions get light, fast checks. The most care goes where mistakes cannot be undone.', ch: 'ergodicity' },
+    { title: 'Tools before gates', text: 'Bring in AI and automation as tools that work the screens for people. Judge them by the screens and steps they remove.', ch: 'tools' },
+    { title: 'Count the silent costs', text: 'Measure waiting time, re-keying and abandoned requests, not only incidents. What is not counted keeps growing.', ch: 'black-swans' },
   ];
 
   const sources = [
@@ -47,94 +52,110 @@
     ['Leonard E. Read', '1958', '“I, Pencil”', 'No single person knows how to make a pencil.'],
     ['OECD', '', 'Global value chains and trade', 'About 70% of international trade involves global value chains.'],
     ['Michael Kremer', '1993', '“The O-Ring Theory of Economic Development”, Quarterly Journal of Economics', 'When every task must succeed, small differences in reliability multiply.'],
+    ['George Labovitz and Yu Sang Chang', '1992', 'The 1-10-100 rule', 'A data error costs far more to fix the longer it survives.'],
     ['J. F. C. Kingman', '1961', '“The single server queue in heavy traffic”, Proceedings of the Cambridge Philosophical Society', 'Why waiting explodes near full utilization.'],
     ['Donald Reinertsen', '2009', 'The Principles of Product Development Flow', 'Queues, utilization and batch size in knowledge work.'],
+    ['Andrew S. Grove', '1983', 'High Output Management', 'The breakfast factory and the limiting step.'],
     ['Ole Peters', '2019', '“The ergodicity problem in economics”, Nature Physics', 'The coin game, and time averages versus ensemble averages.'],
     ['Ole Peters and Alexander Adamou', '2015', '“An evolutionary advantage of cooperation”', 'Pooling raises the growth rate a typical member experiences.'],
-    ['Nassim Nicholas Taleb', '2018', 'Skin in the Game', 'One person at the casino a hundred times is not a hundred people once.'],
     ['Duncan J. Watts', '2002', '“A simple model of global cascades on random networks”, PNAS', 'Cascade windows and robust-yet-fragile networks.'],
-    ['Prasanna Gai and Sujit Kapadia', '2010', '“Contagion in financial networks”, Proceedings of the Royal Society A', 'The interbank model behind chapter 6.'],
+    ['Prasanna Gai and Sujit Kapadia', '2010', '“Contagion in financial networks”, Proceedings of the Royal Society A', 'The interbank model behind chapter 7.'],
     ['Andrew Haldane', '2009', '“Rethinking the financial network”, speech, Amsterdam', 'The financial system as robust yet fragile.'],
     ['Andrew Haldane and Robert May', '2011', '“Systemic risk in banking ecosystems”, Nature', 'A central banker and an ecologist on banks as an ecosystem.'],
-    ['Réka Albert, Hawoong Jeong and Albert-László Barabási', '2000', '“Error and attack tolerance of complex networks”, Nature', 'Hub networks shrug off random failures and collapse when a hub fails.'],
+    ['Karl Popper', '1959', 'The Logic of Scientific Discovery', 'Theories can be falsified, never proven by examples.'],
+    ['Nassim Nicholas Taleb', '2007, 2012, 2018', 'The Black Swan; Antifragile; Skin in the Game', 'Rare events, convexity, and one person at the casino a hundred times.'],
+    ['Microsoft', '2024', 'Statement on the CrowdStrike incident, 20 July', 'About 8.5 million Windows devices affected.'],
     ['Richard Lewontin and Dan Cohen', '1969', '“On population growth in a randomly varying environment”, PNAS', 'A population can grow on average and still go extinct.'],
     ['Lian Pin Koh and colleagues', '2004', '“Species coextinctions and the biodiversity crisis”, Science', 'Species that disappear with the species they depend on.'],
+    ['Leonhard Euler', '1736', 'The seven bridges of Königsberg', 'The first theorem of graph theory.'],
+    ['Herbert A. Simon', '1962', '“The Architecture of Complexity”, Proceedings of the American Philosophical Society', 'The watchmakers Hora and Tempus, and why modular systems survive.'],
+    ['Melvin Conway', '1968', '“How Do Committees Invent?”', 'Organizations design systems that copy their communication structure.'],
     ['Frederick P. Brooks', '1975', 'The Mythical Man-Month', 'Adding people to a late project makes it later.'],
     ['Luís Bettencourt and colleagues', '2007', '“Growth, innovation, scaling, and the pace of life in cities”, PNAS', 'Why bigger cities produce more per person.'],
+    ['Réka Albert, Hawoong Jeong and Albert-László Barabási', '2000', '“Error and attack tolerance of complex networks”, Nature', 'Hub networks shrug off random failures and collapse when a hub fails.'],
   ];
 </script>
 
 <article class="monday" aria-labelledby="{prefix}-chapter-title">
   <header class="head">
-    <div class="tkc-eyebrow">Chapter 9 of 9 · Playbook</div>
+    <div class="tkc-eyebrow">Chapter {total} of {total} · Playbook</div>
     <h2 class="tkc-display tkc-chapter-title" id="{prefix}-chapter-title">What to do on Monday</h2>
-    <p class="tkc-lede">Every chapter points to the same test. For each step in a process, ask two questions: does it add value, and can more than one person do it?</p>
+    <p class="tkc-lede">Keep the controls. Change their shape. For each step in a process, ask two questions: does it add value, and is there an alternative if it is unavailable?</p>
   </header>
 
   <div class="matrix" role="table" aria-label="Two-question test for a step in a process">
     <div class="corner" role="presentation"></div>
-    <div class="colhead" role="columnheader">More than one person can do it</div>
-    <div class="colhead" role="columnheader">Only one person can do it</div>
+    <div class="colhead" role="columnheader">There is an alternative</div>
+    <div class="colhead" role="columnheader">Only one person or system can do it</div>
 
     <div class="rowhead" role="rowheader">It adds value</div>
     <div class="cell good" role="cell">
       <span class="cell-name">Specialization</span>
-      <span>Good complexity. Protect it and feed it volume. <em>Example: a pool of credit analysts.</em></span>
+      <span>Good complexity. Protect it and give it volume. <em>Examples: a pool of credit analysts; a platform any team can use.</em></span>
     </div>
     <div class="cell" role="cell">
       <span class="cell-name">Key-person risk</span>
-      <span>Valuable but fragile. Train a second person. <em>Example: the only person who understands a legacy system.</em></span>
+      <span>Valuable but fragile. Train a second person, add a fallback. <em>Example: the one person who can fix a legacy system.</em></span>
     </div>
 
     <div class="rowhead" role="rowheader">It only checks</div>
     <div class="cell" role="cell">
       <span class="cell-name">Light control</span>
-      <span>Keep it fast and in proportion to the risk. <em>Example: a four-eyes check by any qualified colleague.</em></span>
+      <span>Keep it fast and automatic where you can. <em>Examples: a check as data is typed; a four-eyes check by any qualified colleague.</em></span>
     </div>
     <div class="cell bad" role="cell">
       <span class="cell-name">Bad complexity</span>
-      <span>Redesign this first. <em>Example: a named sign-off that everything waits for.</em></span>
+      <span>Redesign this first. <em>Examples: a named sign-off everything waits for; a form that re-keys data another system already has.</em></span>
     </div>
   </div>
 
   <div class="grid">
     <section class="moves" aria-labelledby="{prefix}-moves">
-      <h3 class="tkc-display moves-title" id="{prefix}-moves">Seven moves that keep the controls and lose the waiting</h3>
+      <h3 class="tkc-display moves-title" id="{prefix}-moves">Eight moves that keep the controls and lose the waiting</h3>
       <ol>
         {#each moves as move (move.title)}
           <li>
             <span class="move-title">{move.title}</span>
             <span class="move-text">{move.text}</span>
-            <button type="button" class="see" onclick={() => go(move.ch)}>See chapter {move.n}</button>
+            <button type="button" class="see" onclick={() => go(move.ch)}>See chapter {numberOf(move.ch)}</button>
           </li>
         {/each}
       </ol>
     </section>
 
     <div class="tool">
-      <Instrument title="Check a process you know" sub="Example values are filled in. Set them to match a real process.">
+      <Instrument title="Check a process you know" sub="Example values are filled in. Set them to match a real request.">
         <div class="tkc-controls">
-          <Slider id="m-gates" label="Sign-offs" bind:value={gates} min={1} max={10} />
-          <Slider id="m-stand" label="Stand-ins per sign-off" bind:value={standIns} min={0} max={3} />
+          <Slider id="m-n" label="Systems the request passes through" bind:value={systems} min={2} max={8} />
+          <Slider id="m-p" label="Chance a form has a problem" bind:value={problems} min={0} max={30} format={(v) => `${v}%`} />
           <Segmented
-            name="m-order"
-            label="Order"
-            bind:value={parallel}
+            name="m-info"
+            label="How systems get their data"
+            bind:value={info}
             options={[
-              { value: false, label: 'One after another' },
-              { value: true, label: 'All at once' },
+              { value: 'copies', label: 'Each copies the last' },
+              { value: 'shared', label: 'One shared record' },
+            ]}
+          />
+          <Segmented
+            name="m-appr"
+            label="Approvals"
+            bind:value={approvals}
+            options={[
+              { value: 'each', label: 'At every system' },
+              { value: 'end', label: 'Once, at the end' },
             ]}
           />
           <Slider id="m-avail" label="Approvers are in" bind:value={availability} min={60} max={99} format={(v) => `${v}% of days`} />
           <Slider id="m-busy" label="Approvers are busy" bind:value={busy} min={50} max={95} format={(v) => `${v}% of their time`} />
-          <Slider id="m-back" label="Chance each gate sends it back" bind:value={sendBack} min={0} max={25} format={(v) => `${v}%`} />
+          <Slider id="m-stand" label="Stand-ins per approver" bind:value={standIns} min={0} max={3} />
         </div>
 
         <div class="tkc-stats tkc-stats--4" aria-live="polite">
           <Stat label="Typical request" value="{shortDays(d.now.median, HORIZON)} days" sub="median, working days" />
           <Stat label="1 in 10 takes more than" value="{shortDays(d.now.p90, HORIZON)} days" />
+          <Stat label="Problems that slip through" value={pct(d.now.slipped, d.now.slipped < 0.1 ? 1 : 0)} />
           <Stat label="Within two weeks" value={pct(d.now.withinDeadline)} />
-          <Stat label="Time actually worked" value={pct(d.now.workShare, d.now.workShare < 0.1 ? 1 : 0)} />
         </div>
 
         <div class="tkc-chart" bind:clientWidth={width}>
@@ -154,11 +175,11 @@
             <summary>Numbers behind this chart</summary>
             <div class="tkc-scroll-x">
               <table class="tkc-table">
-                <thead><tr><th>Change</th><th>Typical (days)</th><th>1 in 10 longer than (days)</th></tr></thead>
+                <thead><tr><th>Change</th><th>Typical (days)</th><th>1 in 10 longer than (days)</th><th>Problems slip through</th></tr></thead>
                 <tbody>
-                  <tr><td>Today</td><td>{shortDays(d.now.median, HORIZON)}</td><td>{shortDays(d.now.p90, HORIZON)}</td></tr>
+                  <tr><td>Today</td><td>{shortDays(d.now.median, HORIZON)}</td><td>{shortDays(d.now.p90, HORIZON)}</td><td>{pct(d.now.slipped, 1)}</td></tr>
                   {#each rows as r (r.id)}
-                    <tr><td>{r.label}</td><td>{shortDays(r.median, HORIZON)}</td><td>{shortDays(r.p90, HORIZON)}</td></tr>
+                    <tr><td>{r.label}</td><td>{shortDays(r.median, HORIZON)}</td><td>{shortDays(r.p90, HORIZON)}</td><td>{pct(r.slipped, 1)}</td></tr>
                   {/each}
                 </tbody>
               </table>
@@ -167,8 +188,8 @@
         </div>
 
         {#snippet model()}
-          <p>The approval relay from chapter 3, with absences that last four days on average, plus busy approvers from chapter 4: a request waits in each approver’s queue behind other work averaging two hours, and stand-ins share that queue.</p>
-          <p>Each bar applies one change and re-runs the same 1,200 requests. The last bar applies every change except dropping a sign-off, so every control stays in place.</p>
+          <p>The linked-systems model from chapter 3, with approver absences of four days on average, plus busy approvers from chapter 4: a request waits in each approver’s queue behind other work, and stand-ins share that queue.</p>
+          <p>Each bar applies one change and re-runs the same 1,000 requests. The last bar applies every change except removing a system, so every system and every control stays in place.</p>
         {/snippet}
       </Instrument>
     </div>
@@ -180,8 +201,9 @@
       conditions. Scale multiplies whichever you have.
     </p>
     <p class="tkc-lede">
-      None of this argues for fewer controls. A bank needs its checks. It argues for controls shaped like options: any
-      qualified signer, in parallel, with slack, in proportion to the risk.
+      None of this argues for fewer controls. A bank needs its checks. It argues for controls shaped like options:
+      alternatives at every link, data entered once, one approval when the picture is complete, spare capacity, and
+      tools that take screens away instead of adding them.
     </p>
   </section>
 

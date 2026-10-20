@@ -1,7 +1,7 @@
 <script>
   import { getContext } from 'svelte';
 
-  let { name, label, options, value = $bindable() } = $props();
+  let { name, label, options, value = $bindable(), onchange = null } = $props();
   const prefix = getContext('tkc-id') ?? 'tkc';
 </script>
 
@@ -15,7 +15,7 @@
           id="{prefix}-{name}-{i}"
           name="{prefix}-{name}"
           checked={value === option.value}
-          onchange={() => (value = option.value)}
+          onchange={() => (onchange ? onchange(option.value) : (value = option.value))}
         />
         <span>{option.label}</span>
       </label>

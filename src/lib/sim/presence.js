@@ -28,6 +28,20 @@ export const ROLES = [
   'Head of desk',
 ];
 
+// The systems a normal working day leans on, all at the same time.
+export const DAY_SYSTEMS = [
+  'Remote access',
+  'Sign-in',
+  'Client file',
+  'Risk model',
+  'Market data',
+  'Booking platform',
+  'Document vault',
+  'Email',
+  'Reporting feed',
+  'Payments hub',
+];
+
 /**
  * One month of working days for each role. A role is covered on a day when
  * its named person or any of its stand-ins is in.

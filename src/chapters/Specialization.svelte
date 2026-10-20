@@ -45,7 +45,12 @@
   const linkW = $derived(Math.min(64, (chainW - linkGap * (shown.roles - 1)) / shown.roles));
 </script>
 
-<Chapter n={2} kicker="Specialization" title="Why longer chains get cheaper">
+<Chapter
+  n={2}
+  kicker="Specialization"
+  title="Why longer chains get cheaper"
+  lede="Specialists make long chains cheaper, but only when there is enough work to keep them busy and the work can reach any of them."
+>
   {#snippet setup()}
     <p>
       In 1776 Adam Smith described a pin workshop. One worker doing every step alone, he wrote, could perhaps make one
@@ -178,6 +183,11 @@
     <p>
       Every link has alternatives. A pencil maker depends on <em>a</em> graphite supplier, never on one particular
       mine. Specialization concentrates skill. It does not have to concentrate dependence.
+    </p>
+    <p>
+      Specialists also build systems. The risk team builds the tool that suits risk, the credit team the one that suits
+      credit. That is good complexity too, until a single client request has to pass through all of them. That is the
+      next chapter.
     </p>
   {/snippet}
 

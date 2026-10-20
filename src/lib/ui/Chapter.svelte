@@ -3,11 +3,12 @@
 
   let { n, kicker, title, lede = '', setup, figure, after, bank } = $props();
   const prefix = getContext('tkc-id') ?? 'tkc';
+  const total = getContext('tkc-total') ?? 12;
 </script>
 
 <article class="chapter" aria-labelledby="{prefix}-chapter-title">
   <header class="head">
-    <div class="tkc-eyebrow">Chapter {n} of 9 · {kicker}</div>
+    <div class="tkc-eyebrow">Chapter {n} of {total} · {kicker}</div>
     <h2 class="tkc-display tkc-chapter-title" id="{prefix}-chapter-title">{title}</h2>
     {#if lede}<p class="tkc-lede">{lede}</p>{/if}
   </header>

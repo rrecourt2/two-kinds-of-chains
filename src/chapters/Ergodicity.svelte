@@ -84,7 +84,12 @@
   ];
 </script>
 
-<Chapter n={5} kicker="Ergodicity" title="When the average lies">
+<Chapter
+  n={6}
+  kicker="Ergodicity"
+  title="When the average lies"
+  lede="When outcomes multiply, the average result is not what a typical person, team or bank lives through. Survival comes first."
+>
   {#snippet setup()}
     <p>
       Here is a game. Each round, flip a coin. Heads, your wealth grows by 50%. Tails, it shrinks by 40%. On average,

@@ -10,7 +10,9 @@
   let { theme = 'auto', syncHash = false, startAt } = $props();
 
   const prefix = instances++ ? `tkc${instances}` : 'tkc';
+  const total = CHAPTERS.length - 1;
   setContext('tkc-id', prefix);
+  setContext('tkc-total', total);
 
   function indexFromHash() {
     if (!syncHash) return -1;
@@ -98,7 +100,7 @@
           {/each}
         </ol>
         <span class="where tkc-num" aria-hidden="true">
-          {index === 0 ? 'Start' : `${index} / 9 · ${current.short}`}
+          {index === 0 ? 'Start' : `${index} / ${total} · ${current.short}`}
         </span>
       </nav>
     </div>
@@ -327,16 +329,22 @@
       grid-row: 1;
     }
   }
-  @container tkc (max-width: 400px) {
+  @container tkc (max-width: 460px) {
+    .home {
+      display: none;
+    }
+    .bar-inner {
+      justify-content: center;
+    }
     .link {
-      width: 28px;
+      width: 27px;
     }
     .link::before {
       left: 4px;
-      width: 20px;
+      width: 19px;
     }
     li + li {
-      margin-left: -4px;
+      margin-left: -3px;
     }
   }
 </style>

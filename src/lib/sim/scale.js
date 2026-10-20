@@ -7,9 +7,9 @@ export const TEAM_SIZE = 6;
 export const APPROVER_CAPACITY = 12; // one approver can sign off the work of about 12 people
 
 export const STRUCTURES = [
-  { id: 'mesh', label: 'Everyone depends on everyone' },
-  { id: 'hub', label: 'Everything goes through one approver' },
-  { id: 'teams', label: 'Small teams, clear interfaces' },
+  { id: 'mesh', label: 'Everyone depends on everyone', systems: 'Every system linked to every other' },
+  { id: 'hub', label: 'Everything goes through one approver', systems: 'Everything passes one central hub' },
+  { id: 'teams', label: 'Small teams, clear interfaces', systems: 'Small domains, clear interfaces' },
 ];
 
 function teamSizes(people) {
@@ -54,4 +54,13 @@ export function structure(kind, people) {
 
 export function outputCurve(kind, maxPeople = 60) {
   return Array.from({ length: maxPeople }, (_, i) => structure(kind, i + 1).output);
+}
+
+/** People (or systems) whose loss would cut the network in two: articulation points. */
+export function singlePoints(kind, people) {
+  if (people < 3) return 0;
+  if (kind === 'mesh') return 0;
+  if (kind === 'hub') return 1;
+  const teams = Math.ceil(people / TEAM_SIZE);
+  return teams > 1 ? teams : 0; // each team lead is the only bridge between their team and the rest
 }

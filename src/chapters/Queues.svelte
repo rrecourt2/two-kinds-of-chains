@@ -131,7 +131,12 @@
   ];
 </script>
 
-<Chapter n={4} kicker="Queues" title="Why full calendars make long queues">
+<Chapter
+  n={4}
+  kicker="Queues"
+  title="Why full calendars make long queues"
+  lede="An expert who is 95% busy is not efficient. They are a queue, and everyone else waits in it."
+>
   {#snippet setup()}
     <p>
       Even when approvers are in, they are busy. Organizations prize experts with full calendars. Queueing theory, the
@@ -268,7 +273,8 @@
     </p>
     <p>
       Spare capacity is what lets work flow. An expert at 95% utilization behaves like a queue, however talented they
-      are.
+      are. The same mathematics governs systems: a server running at 95% load answers slowly for everyone, which is why
+      engineers always keep headroom.
     </p>
   {/snippet}
 

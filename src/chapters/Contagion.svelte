@@ -94,7 +94,12 @@
   ];
 </script>
 
-<Chapter n={6} kicker="Contagion" title="2008: when links became conditions">
+<Chapter
+  n={7}
+  kicker="Contagion"
+  title="2008: when links became conditions"
+  lede="Links absorb small shocks and spread big ones. The more connected a system, the more it depends on its buffers and its hubs."
+>
   {#snippet setup()}
     <p>
       Before 2008, banks grew ever more connected through interbank loans, derivatives, repo funding and shared
@@ -222,7 +227,8 @@
     <p>
       Organizations have the same shape. A person that every process must pass through is a hub. Small, spread-out
       dependencies get absorbed. A dependency on one central approver is a single point of failure: when that person
-      is out, everything behind them stops.
+      is out, everything behind them stops. Systems are no different: when a shared service such as sign-in or the
+      client file goes down, every system that leans on it stops at once.
     </p>
   {/snippet}
 

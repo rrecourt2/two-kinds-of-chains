@@ -65,9 +65,18 @@
   ];
 </script>
 
-<Chapter n={7} kicker="Ecology" title="Why species go extinct">
+<Chapter
+  n={9}
+  kicker="Ecology"
+  title="Why species go extinct"
+  lede="Species rarely die out for being specialized. They die out for depending on one thing in a variable world."
+>
   {#snippet setup()}
-    <p>Ecologists have studied dependence for a century, and their findings will sound familiar.</p>
+    <p>
+      Ecologists have studied dependence for a century, and their findings will sound familiar. Some extinctions are
+      black swans: when an asteroid struck 66 million years ago, many of the survivors were small animals that could
+      live on many kinds of food. Most are slower.
+    </p>
     <p>
       The species most at risk are usually not the weakest. They are the ones that depend on something irreplaceable:
       one host, one food plant, one habitat. When that one thing goes, they go with it. Biologists call it
@@ -184,7 +193,7 @@
       <li><strong>Small populations die of bad luck</strong>, even when the average year is good. Start with 10 animals per island and watch.</li>
       <li>
         <strong>A population can grow on average and still be doomed.</strong> Richard Lewontin and Dan Cohen proved this
-        in 1969, decades before the coin game in chapter 5 became famous in economics. Desert plants hedge against it by
+        in 1969, decades before the coin game in chapter 6 became famous in economics. Desert plants hedge against it by
         never letting all their seeds germinate in the same year.
       </li>
     </ul>

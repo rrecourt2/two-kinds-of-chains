@@ -2,7 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { simulateMonth, coverageOdds } from '../src/lib/sim/presence.js';
-import { simulateRelay } from '../src/lib/sim/relay.js';
+import { simulateSystems } from '../src/lib/sim/systems.js';
+import { simulateMornings, checks } from '../src/lib/sim/breakfast.js';
+import { simulateHistory, worst, recordsAfter } from '../src/lib/sim/tails.js';
+import { DESIGNS, averagePayoff, chainSuccess } from '../src/lib/sim/convexity.js';
 import { erlangC, meanWait, LiveQueue } from '../src/lib/sim/queue.js';
 import { typicalFactor, expectedFactor, simulateCoin } from '../src/lib/sim/coin.js';
 import { cascade, sweep, buildNetwork, mostConnected } from '../src/lib/sim/network.js';
@@ -22,26 +25,6 @@ test('calendar matches the analytic coverage odds', () => {
     const share = possible / (months * 21);
     near(share, coverageOdds(roles, standIns, 0.9).allCovered, 0.03);
   }
-});
-
-test('relay: perfect availability gives one day per sequential gate', () => {
-  const base = { gates: 6, standIns: 0, availability: 0.999999, meanSpell: 4, sendBack: 0 };
-  assert.equal(simulateRelay({ ...base, parallel: false }, { requests: 50 }).median, 6);
-  assert.equal(simulateRelay({ ...base, parallel: true }, { requests: 50 }).median, 1);
-});
-
-test('relay: stand-ins and parallel review both cut lead time', () => {
-  const base = { gates: 6, standIns: 0, availability: 0.85, meanSpell: 4, sendBack: 0.1, parallel: false };
-  const now = simulateRelay(base);
-  const standIn = simulateRelay({ ...base, standIns: 1 });
-  const parallel = simulateRelay({ ...base, parallel: true });
-  console.log('relay default', { median: now.median, p90: now.p90, within: now.withinDeadline, work: now.workShare });
-  console.log('relay stand-in', { median: standIn.median, p90: standIn.p90 }, 'parallel', { median: parallel.median, p90: parallel.p90 });
-  assert.ok(standIn.median < now.median);
-  assert.ok(parallel.median < now.median);
-  // Without send-backs, expected time per sequential gate ≈ 0.85·1 + 0.15·(4+1) = 1.6 days.
-  const clean = simulateRelay({ ...base, sendBack: 0 }, { requests: 4000 });
-  near(clean.mean, 6 * 1.6, 0.5);
 });
 
 test('queue formulas', () => {
@@ -131,8 +114,60 @@ test('scale: mesh peaks then falls, hub plateaus, teams keep growing', () => {
   assert.ok(structure('teams', 60).output > 50);
 });
 
+test('systems: perfect conditions give the minimum lead times', () => {
+  const perfect = { systems: 6, problems: 0, availability: 0.999999, meanSpell: 4, standIns: 0 };
+  assert.equal(simulateSystems({ ...perfect, info: 'copies', approvals: 'each' }, { requests: 50 }).median, 12);
+  assert.equal(simulateSystems({ ...perfect, info: 'copies', approvals: 'end' }, { requests: 50 }).median, 7);
+  assert.equal(simulateSystems({ ...perfect, info: 'shared', approvals: 'each' }, { requests: 50 }).median, 2);
+  assert.equal(simulateSystems({ ...perfect, info: 'shared', approvals: 'end' }, { requests: 50 }).median, 2);
+});
+
+test('systems: one shared record and one late approval are faster and let fewer problems through', () => {
+  const base = { systems: 6, problems: 0.1, availability: 0.85, meanSpell: 4, standIns: 0 };
+  const now = simulateSystems({ ...base, info: 'copies', approvals: 'each' });
+  const best = simulateSystems({ ...base, info: 'shared', approvals: 'end' });
+  console.log('systems copies/each', now.median, now.p90, now.slipped.toFixed(3), '| shared/end', best.median, best.p90, best.slipped.toFixed(3));
+  assert.ok(best.median < now.median / 3);
+  assert.ok(best.slipped < now.slipped);
+  // With no problems at all, nothing slips and nothing stops.
+  const clean = simulateSystems({ ...base, problems: 0, info: 'copies', approvals: 'each' });
+  assert.equal(clean.slipped, 0);
+  assert.equal(clean.stopped, 0);
+});
+
+test('breakfast: Grove is right in the kitchen and wrong in the bank', () => {
+  const kitchen = simulateMornings({ bankness: 0 });
+  const bank = simulateMornings({ bankness: 1 });
+  const eggShare = (m) => m.filter((d) => d.slowest === 0).length / m.length;
+  const onTime = (m) => m.filter((d) => d.onTime).length / m.length;
+  console.log('breakfast egg slowest kitchen', eggShare(kitchen), 'bank', eggShare(bank), 'on time', onTime(kitchen), onTime(bank));
+  assert.equal(eggShare(kitchen), 1);
+  assert.equal(onTime(kitchen), 1);
+  assert.ok(eggShare(bank) < 0.8);
+  assert.ok(onTime(bank) < 0.7);
+  assert.ok(checks(0).early.caught > checks(0).late.caught);
+  assert.ok(checks(1).early.caught < checks(1).late.caught);
+});
+
+test('black swans: fat tails keep breaking records, thin tails do not', () => {
+  const h = simulateHistory({ years: 40, seed: 3 });
+  console.log('tails worst 10y thin/fat', worst(h.thin, 0, 10).toFixed(2), worst(h.fat, 0, 10).toFixed(2), 'next 30y', worst(h.thin, 10, 40).toFixed(2), worst(h.fat, 10, 40).toFixed(2), 'records after 10y', recordsAfter(h.thin, 10), recordsAfter(h.fat, 10));
+  assert.ok(worst(h.fat, 0, 40) > 2 * worst(h.thin, 0, 40));
+});
+
+test('convexity: variability helps a tool and hurts a gate', () => {
+  const [tool, rule, gate] = DESIGNS;
+  near(averagePayoff(rule, 2), 0.5, 0.01);
+  assert.ok(averagePayoff(tool, 2) > averagePayoff(tool, 0.5));
+  assert.ok(averagePayoff(gate, 2) < averagePayoff(gate, 0.5));
+  assert.ok(averagePayoff(gate, 2) < 0);
+  near(chainSuccess(20, 0.95), 0.358, 0.001);
+  console.log('convexity at spread 1.5', DESIGNS.map((d) => `${d.id}:${averagePayoff(d, 1.5).toFixed(2)}`).join(' '));
+});
+
 test('diagnosis levers', () => {
-  const d = diagnose({ gates: 6, standIns: 0, availability: 0.85, busy: 0.85, sendBack: 0.15, parallel: false });
-  console.log('diagnose now', d.now.median, d.now.p90, d.options.map((o) => `${o.id}:${o.median}`).join(' '), 'all', d.together.median);
+  const d = diagnose({ systems: 6, problems: 0.1, info: 'copies', approvals: 'each', availability: 0.85, busy: 0.85, standIns: 0 });
+  console.log('diagnose now', d.now.median, d.now.p90, d.options.map((o) => `${o.id}:${o.median}`).join(' '), 'together', d.together.median, d.together.slipped.toFixed(3));
   for (const o of d.options) assert.ok(o.median <= d.now.median);
+  assert.ok(d.together.median < d.now.median / 3);
 });
