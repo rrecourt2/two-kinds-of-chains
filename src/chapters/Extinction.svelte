@@ -5,15 +5,19 @@
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
-  import TryThis from '../lib/ui/TryThis.svelte';
+  import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { simulateIslands, longRunGrowth, CAPACITY } from '../lib/sim/species.js';
   import { linear, log10, line } from '../lib/scales.js';
   import { signedPct } from '../lib/format.js';
+  import { getContext } from 'svelte';
+
+  const game = getContext('tkc-game');
+  const done = $derived(!game.isOpen('extinction'));
 
   const ISLANDS = 40;
   const YEARS = 100;
-  let swing = $state(50); // ± percent change in a plant's food supply between good and bad years
+  let swing = $state(10); // ± percent change in a plant's food supply between good and bad years
   let start = $state(100);
   let seed = $state(21);
   let width = $state(560);
@@ -51,26 +55,33 @@
   const cx = $derived(linear(0, 70, cm.left, curveW - cm.right));
   const cy = linear(-0.24, 0.12, CH - cm.bottom, cm.top);
   const swings = Array.from({ length: 71 }, (_, i) => i);
-  const curve = (kind) => line(swings.map((s) => [cx(s), cy(longRunGrowth(kind, s / 100) - 1)]));
+  // Until the puzzle is done, the curves are drawn only as far as the swing the reader has tried.
+  const reach = $derived(done ? 70 : swing);
+  const curve = (kind) => line(swings.filter((s) => s <= reach).map((s) => [cx(s), cy(longRunGrowth(kind, s / 100) - 1)]));
   const crossing = swings.find((s) => longRunGrowth('specialist', s / 100) < longRunGrowth('generalist', s / 100));
+  // The first step of the slider at which the generalist is ahead.
+  const firstAhead = Math.ceil(crossing / 5) * 5;
 
   function onMove(e) {
     const box = e.currentTarget.getBoundingClientRect();
     hover = Math.max(0, Math.min(70, Math.round(cx.invert(e.clientX - box.left + cm.left))));
   }
 
-  const tries = [
-    { label: 'A calm world', apply: () => ((swing = 10), (start = 100)) },
-    { label: 'A volatile world', apply: () => ((swing = 60), (start = 100)) },
-    { label: 'Calm, but only 10 animals', apply: () => ((swing = 20), (start = 10)) },
-  ];
+  const puzzle = $derived({
+    goal: 'The specialist grows faster in a calm world. Make the years more variable: at what swing does the generalist start to grow faster?',
+    met: swing === firstAhead,
+    progress: gg > gs && swing > firstAhead ? 'The generalist is ahead here. Is it already ahead in a calmer world?' : '',
+    hints: ['Start from a calm world and make the years more variable, one step at a time.', 'Watch the two growth rates above the islands. The answer lies between ±25% and ±40%.'],
+    found: `At about ±${crossing}%: at ±30% the specialist is still just ahead, at ±35% the generalist leads. Beyond that the specialist’s growth collapses, and at ±50% it is gone from most islands within a century.`,
+  });
 </script>
 
 <Chapter
-  n={12}
+  n={11}
   kicker="Extinction"
   title="Why species go extinct"
-  lede="The species that die out are the ones that depend on a single thing when the world turns volatile."
+  lede="Efficiency or variety? The answer depends on how calm the world is, and the world is getting less calm."
+  puzzle="extinction"
 >
   {#snippet setup()}
     <p>
@@ -91,6 +102,7 @@
 
   {#snippet figure()}
     <Instrument title="Specialist or generalist?" sub="40 islands, 100 years, the same weather for both species.">
+      <Puzzle id="extinction" {...puzzle} onshow={() => (swing = firstAhead)} />
       <div class="tkc-controls">
         <Slider id="x-swing" label="How variable are the years?" bind:value={swing} min={0} max={70} step={5} format={(s) => `±${s}% food`} ends={['Calm', 'Volatile']} />
         <Segmented
@@ -138,17 +150,21 @@
 
       <div class="tkc-chart curve" bind:clientWidth={curveW}>
         <div class="tkc-fig-title small">Who grows faster in the long run?</div>
-        <svg width={curveW} height={CH} role="img" aria-label="Long-run growth of each species against how variable the years are. The generalist overtakes the specialist at about ±{crossing}% food.">
+        <svg width={curveW} height={CH} role="img" aria-label="Long-run growth of each species against how variable the years are{done ? `. The generalist overtakes the specialist at about ±${crossing}% food` : `, drawn up to ±${swing}% food`}.">
           {#each [-0.2, -0.1, 0, 0.1] as t}
             <line class={t === 0 ? 'tkc-base' : 'tkc-grid'} x1={cm.left} x2={curveW - cm.right} y1={cy(t)} y2={cy(t)} />
             <text class="tkc-axis-label" x={cm.left - 6} y={cy(t) + 4} text-anchor="end">{t > 0 ? '+' : t < 0 ? '−' : ''}{Math.abs(Math.round(t * 100))}%</text>
           {/each}
-          <rect x={cx(crossing)} y={cm.top} width={Math.max(0, cx(70) - cx(crossing))} height={CH - cm.top - cm.bottom} class="zone" />
-          <text class="tkc-axis-label" x={cx(crossing) + 6} y={cm.top + 12}>Generalist ahead</text>
+          {#if done}
+            <rect x={cx(crossing)} y={cm.top} width={Math.max(0, cx(70) - cx(crossing))} height={CH - cm.top - cm.bottom} class="zone" />
+            <text class="tkc-axis-label" x={cx(crossing) + 6} y={cm.top + 12}>Generalist ahead</text>
+          {/if}
           <path d={curve('specialist')} class="cv" style:stroke="var(--tkc-conditions)" />
           <path d={curve('generalist')} class="cv" style:stroke="var(--tkc-options)" />
-          <text class="tkc-label-2" x={curveW - cm.right + 6} y={cy(longRunGrowth('specialist', 0.7) - 1) + 4}>Specialist</text>
-          <text class="tkc-label-2" x={curveW - cm.right + 6} y={cy(longRunGrowth('generalist', 0.7) - 1) + 4}>Generalist</text>
+          {#if done}
+            <text class="tkc-label-2" x={curveW - cm.right + 6} y={cy(longRunGrowth('specialist', 0.7) - 1) + 4}>Specialist</text>
+            <text class="tkc-label-2" x={curveW - cm.right + 6} y={cy(longRunGrowth('generalist', 0.7) - 1) + 4}>Generalist</text>
+          {/if}
           <line class="now" x1={cx(swing)} x2={cx(swing)} y1={cm.top} y2={CH - cm.bottom} />
           <circle cx={cx(swing)} cy={cy(gs - 1)} r="5" class="pt" style:fill="var(--tkc-conditions)" />
           <circle cx={cx(swing)} cy={cy(gg - 1)} r="5" class="pt" style:fill="var(--tkc-options)" />
@@ -174,8 +190,6 @@
         </div>
       </div>
 
-      <TryThis items={tries} />
-
       {#snippet model()}
         <p>Each year, each of four plants independently has a good year (food × (1 + swing)) or a bad one (food × (1 − swing)). The specialist eats only the first plant and grows 10% in an average year; the generalist eats all four and grows 6%.</p>
         <p>Births and deaths are random (Poisson), so small populations can die out by chance. Each island holds at most {CAPACITY.toLocaleString('en-US')} animals. Long-run growth is the geometric mean, the growth rate that a single population actually experiences over time.</p>
@@ -187,11 +201,14 @@
     <p>
       In a calm world the specialist wins: it grows faster and fills its islands first. As the years get more
       variable, its one plant fails it again and again, and it disappears from island after island. The generalist is
-      not better at anything. It just never depends on a single plant.
+      not better at anything. It just never depends on a single plant. The change is not gradual, either: past the
+      crossing point, each extra bit of variability costs the specialist more than the last.
     </p>
     <p>
       A changing climate makes many years more variable. That is why it worries ecologists, farmers and lenders alike:
-      it punishes whoever depends on one crop, one region or one supplier.
+      it punishes whoever depends on one crop, one region or one supplier. A smallholder who grows one cash crop is the
+      specialist, with a better income in a normal year and nothing to fall back on in a drought. One who also keeps a
+      second crop and a few animals earns less in a good year, and is still farming after a bad one.
     </p>
     <p><strong>Small populations die of bad luck</strong>, even when the average year is good. Start with 10 animals per island and watch.</p>
     <p>

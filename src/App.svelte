@@ -6,6 +6,7 @@
   import { setContext, tick } from 'svelte';
   import { CHAPTERS } from './chapters/index.js';
   import { prefersReducedMotion } from './lib/motion.js';
+  import { createGame } from './lib/game.svelte.js';
 
   let { theme = 'auto', syncHash = false, startAt } = $props();
 
@@ -13,6 +14,9 @@
   const total = CHAPTERS.length - 1;
   setContext('tkc-id', prefix);
   setContext('tkc-total', total);
+  const game = createGame(CHAPTERS.map((c) => c.id));
+  setContext('tkc-game', game);
+  const solvedHere = (id) => game.entry(id).status === 'solved';
 
   function indexFromHash() {
     if (!syncHash) return -1;
@@ -116,14 +120,16 @@
                 class="link"
                 class:on={i === index}
                 class:seen={visited[i]}
+                class:solved={solvedHere(chapter.id)}
                 aria-current={i === index ? 'step' : undefined}
-                aria-label="{i === 0 ? 'Start' : `Chapter ${i}`}: {chapter.title}"
+                aria-label="{i === 0 ? 'Start' : `Chapter ${i}`}: {chapter.title}{solvedHere(chapter.id) ? ', puzzle solved' : ''}"
                 title={chapter.title}
                 onclick={() => go(i)}
               ></button>
             </li>
           {/each}
         </ol>
+        <span class="score tkc-num" title="Puzzle points" aria-label="Score: {game.score} of {game.max} points">★ {game.score}</span>
         <span class="where tkc-num" aria-hidden="true">
           {index === 0 ? 'Start' : `${index} / ${total} · ${current.short}`}
         </span>
@@ -140,7 +146,7 @@
             {#each CHAPTERS as chapter, i (chapter.id)}
               <li>
                 <button type="button" class:on={i === index} aria-current={i === index ? 'step' : undefined} onclick={() => (closeMenu(), go(i))}>
-                  <span class="menu-n tkc-num">{i === 0 ? '' : i}</span>{chapter.title}
+                  <span class="menu-n tkc-num">{i === 0 ? '' : i}</span><span class="menu-t">{chapter.title}</span>{#if solvedHere(chapter.id)}<span class="menu-ok" aria-label="puzzle solved">✓</span>{/if}
                 </button>
               </li>
             {/each}
@@ -315,12 +321,22 @@
   .link.seen::before {
     border-color: var(--tkc-ink-2);
   }
+  .link.solved::before {
+    border-color: var(--tkc-options);
+  }
   .link.on::before {
     border-color: var(--tkc-ink);
     background: var(--tkc-ink);
   }
   .link:hover::before {
     border-color: var(--tkc-ink);
+  }
+  .score {
+    flex: none;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--tkc-options-ink);
+    white-space: nowrap;
   }
   .where {
     font-size: 0.8125rem;
@@ -503,6 +519,16 @@
     .menu-list button.on {
       background: var(--tkc-ink);
       color: var(--tkc-page);
+    }
+    .menu-t {
+      flex: 1;
+    }
+    .menu-ok {
+      color: var(--tkc-options-ink);
+      font-weight: 700;
+    }
+    .menu-list button.on .menu-ok {
+      color: inherit;
     }
     .menu-n {
       min-width: 1.6em;

@@ -25,8 +25,8 @@ export const EXAMPLES = {
     pieces: [
       { id: 'data', label: 'Client data', time: 1, base: true },
       { id: 'credit', label: 'Credit analysis', time: 4 },
-      { id: 'legal', label: 'Legal documents', time: 3 },
-      { id: 'collateral', label: 'Collateral', time: 2 },
+      { id: 'es', label: 'E&S review', time: 3 },
+      { id: 'legal', label: 'Legal documents', time: 2 },
       { id: 'pricing', label: 'Pricing', time: 1 },
     ],
   },

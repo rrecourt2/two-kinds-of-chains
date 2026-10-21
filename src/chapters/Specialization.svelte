@@ -4,7 +4,7 @@
   import Slider from '../lib/ui/Slider.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
-  import TryThis from '../lib/ui/TryThis.svelte';
+  import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { ROLE_OPTIONS, MARKETS, workshop, bestDesign } from '../lib/sim/pins.js';
   import { linear, ticks, barUp } from '../lib/scales.js';
@@ -34,11 +34,15 @@
 
   const fmtMin = (v) => (v >= 100 ? int(v) : v >= 10 ? v.toFixed(0) : v.toFixed(1));
 
-  const tries = [
-    { label: 'A village: 10 pins a day', apply: () => (exponent = 1) },
-    { label: 'A city: 1,000 pins a day', apply: () => (exponent = 3) },
-    { label: '12 specialists for a village', apply: () => ((exponent = 1), (picked = { roles: 12, demand: 10 })) },
-  ];
+  // Twelve roles first become the cheapest design at 794 pins a day (exponent 2.9).
+  const FIRST_TWELVE = 794;
+  const puzzle = $derived({
+    goal: 'Twelve specialist roles make the cheapest pins of all, once the market is big enough. Find the smallest market at which they are the cheapest design.',
+    met: best.roles === 12 && demand <= FIRST_TWELVE,
+    progress: best.roles === 12 ? `Twelve roles win at ${int(demand)} pins a day. Do they still win in a smaller market?` : '',
+    hints: ['Start from a town and drag the market up slowly. Watch which bar turns green.', 'It lies between 700 and 900 pins a day.'],
+    found: 'About 800 pins a day, eighty times a village. Even there the twelve specialists are idle for almost half the day. In a smaller market the long chain costs more than it saves.',
+  });
 
   // The chain diagram for the design on show.
   const chainW = $derived(width);
@@ -50,7 +54,8 @@
   n={2}
   kicker="Specialization"
   title="Why longer chains get cheaper"
-  lede="Specialists make long chains cheaper, but only when there is enough work to keep them busy and the work can reach any of them."
+  lede="Specialists make work cheaper, which is why chains grow longer. But every extra link has to earn its place."
+  puzzle="specialization"
 >
   {#snippet setup()}
     <p>
@@ -64,13 +69,13 @@
     </p>
     <p>
       Smith added a condition that is easy to miss: <em>the division of labour is limited by the extent of the
-      market</em>. A specialist only pays off when there is enough work to keep them busy. That is the first way scale
-      matters.
+      market</em>.
     </p>
   {/snippet}
 
   {#snippet figure()}
     <Instrument title="The pin workshop" sub="How many specialist roles should the 12 operations be split into?">
+      <Puzzle id="specialization" {...puzzle} onshow={() => ((exponent = 2.9), (picked = null))} />
       <div class="tkc-controls tkc-controls--wide">
         <Slider
           id="p-market"
@@ -156,8 +161,6 @@
         <Stat label="Specialists busy" value={pct(shown.utilization)} sub={shown.utilization < 0.4 ? 'Mostly idle: the market is too small' : 'of each working day'} />
       </div>
 
-      <TryThis items={tries} />
-
       {#snippet model()}
         <p>A trained pin-maker working alone makes 10 pins a day. Split the 12 operations among n specialist roles and each specialist works n times faster at their share.</p>
         <p>Every role needs at least one whole person, so a small market leaves specialists idle. Worker-minutes per pin = everyone’s working time ÷ pins made. In this workshop the best number of roles grows with the square root of demand: four times the market supports twice as many specialists. Click a bar to see that design’s chain.</p>
@@ -167,10 +170,15 @@
 
   {#snippet after()}
     <p>
-      Drag the market from a village to a nation. The best design gets longer as the market grows: one generalist for
-      a village, a dozen specialist roles for a nation. This is why supply chains get longer as markets grow. Around 70% of
-      international trade now involves global value chains, in which parts cross borders several times before they
-      become a product (OECD).
+      Twelve roles only win once the market reaches about 800 pins a day. In a smaller market the long chain leaves its
+      specialists waiting for work, and one person who does everything is cheaper. A village has a family doctor; a
+      city can keep a heart surgeon busy.
+    </p>
+    <p>
+      This is why chains grow as markets grow. Around 70% of international trade now involves global value chains, in
+      which parts cross borders several times before they become a product (OECD). It is also how many economies have
+      grown: a country that could not yet build a whole car or phone can make one part of it well, and sell that part to
+      the world.
     </p>
     <h3>Chips: one of the longest chains, and one of the most inventive</h3>
     <p>
@@ -201,8 +209,8 @@
   {#snippet bank()}
     <BankNote ask="Where could one specialist team serve the whole bank, instead of each unit keeping its own?">
       <p>
-        A centre of expertise that serves the whole bank is specialization. A sign-off that only one named person can
-        give is dependence.
+        A shared team of specialists, in environmental and social risk, say, or in legal, that serves every deal is
+        specialization. A sign-off that only one named person can give is dependence.
       </p>
     </BankNote>
   {/snippet}

@@ -4,7 +4,7 @@
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
-  import TryThis from '../lib/ui/TryThis.svelte';
+  import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { simulateMarket, manyMarkets, FIRMS, CUSTOMERS } from '../lib/sim/market.js';
   import { linear, line } from '../lib/scales.js';
@@ -38,18 +38,26 @@
     return items;
   });
 
-  const tries = [
-    { label: 'Size does not help', apply: () => (size = 'none') },
-    { label: 'Size helps a lot', apply: () => (size = 'lots') },
-    { label: 'Give firm A a better product', apply: () => ((better = 'better'), (size = 'lots')) },
-  ];
+  const puzzle = {
+    goal: 'Firm A’s product is 20% better than every other firm’s. In which market does it most often end up the largest?',
+    choices: [
+      { value: 'none', label: 'Where size does not attract customers at all' },
+      { value: 'some', label: 'Where size helps somewhat' },
+      { value: 'lots', label: 'Where size helps a lot, so its lead grows fastest' },
+    ],
+    answer: 'none',
+    wrong: (v) => (v === 'lots' ? 'Size helps whoever is ahead, and early on that is mostly luck. Try it in the figure.' : 'Close, but not the most often. Compare all three in the figure.'),
+    hints: ['Set firm A’s product to 20% better, then compare the three markets.', 'The figure counts how often, in 100 histories, the better product came first.'],
+    found: 'Where size does not matter. There the better product comes first in about half of all histories; where size helps a lot, in only one in ten.',
+  };
 </script>
 
 <Chapter
-  n={13}
+  n={12}
   kicker="Winner-take-all"
   title="Why the winner takes most"
-  lede="When size itself attracts customers, small early leads grow into whole markets, and the winner is not always the best."
+  lede="In more and more markets, the biggest firm keeps getting bigger. Does the best product still win?"
+  puzzle="winners"
 >
   {#snippet setup()}
     <p>
@@ -64,6 +72,7 @@
 
   {#snippet figure()}
     <Instrument title="Twenty equal firms, one market" sub="Each line is one firm’s share of all customers so far.">
+      <Puzzle id="winners" {...puzzle} onshow={() => ((size = 'none'), (better = 'better'))} />
       <div class="tkc-controls">
         <Segmented
           name="w-size"
@@ -122,8 +131,6 @@
         {/if}
       </div>
 
-      <TryThis items={tries} />
-
       {#snippet model()}
         <p>Each firm starts with one customer. Every new customer picks a firm with a chance proportional to its number of customers raised to a power: 0 when size does not matter, 1 when every customer adds the same pull, 1.5 when big firms pull harder than their size alone. A better product multiplies a firm’s pull by 1.2.</p>
         <p>This is the urn model behind W. Brian Arthur’s work on increasing returns. The hundred histories behind the third figure use 1,500 customers each.</p>
@@ -138,13 +145,15 @@
       firm wins almost every time. Economists call this lock-in. The concentration emerges; nobody designs it.
     </p>
     <p>
-      Now give firm A a product that is 20% better. When size helps a lot, it comes first in only about one history in
-      ten. An early lead beats a better product.
+      Size rewards whoever is ahead early, and early on, being ahead is mostly luck. So the more size matters, the less
+      often the better product wins.
     </p>
     <p>
       We increasingly live in this world. Sales in most US industries have become more concentrated in fewer, larger
       “superstar” firms since the 1980s (Autor and colleagues, 2020). Search, cloud computing, payments and market data
-      are each served by a handful of providers.
+      are each served by a handful of providers. Mobile money shows both sides: in Kenya, M-Pesa reached most adults
+      within a few years of its launch in 2007, because every new user made it more useful to the rest, and the same
+      pull made it hard for any rival to catch up.
     </p>
     <h3>What it means</h3>
     <ul>

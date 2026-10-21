@@ -5,7 +5,7 @@
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
-  import TryThis from '../lib/ui/TryThis.svelte';
+  import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { EXAMPLES, schedule } from '../lib/sim/async.js';
   import { linear, barRight } from '../lib/scales.js';
@@ -48,28 +48,33 @@
   ]);
   const label = (p) => (narrow ? p.label.replace('Credit analysis', 'Credit').replace('Legal documents', 'Legal docs') : p.label);
 
-  const tries = $derived(
-    exampleId === 'breakfast'
-      ? [
-          { label: 'Make the coffee twice as fast', apply: () => (faster = ['coffee']) },
-          { label: 'Make the egg twice as fast', apply: () => (faster = ['egg']) },
-          { label: 'A bad egg, found at the table', apply: () => ((faster = []), (mistake = 'end')) },
-          { label: 'Now a client request', apply: () => setExample('request') },
-        ]
-      : [
-          { label: 'Speed up the pricing', apply: () => ((faster = ['pricing']), (mistake = 'none')) },
-          { label: 'Speed up the slowest piece', apply: () => ((faster = [par.slowest]), (mistake = 'none')) },
-          { label: 'A data mistake found at the end', apply: () => ((faster = []), (mistake = 'end')) },
-          { label: 'Catch it at the start', apply: () => ((faster = []), (mistake = 'start')) },
-        ],
-  );
+  const onRequest = $derived(exampleId === 'request');
+  const fair = $derived(onRequest && handoff === EXAMPLES.request.handoff && mistake === 'none');
+  const puzzle = $derived({
+    goal: 'In the client request, done in parallel, you can afford to make two pieces twice as fast. Which two bring it down the most?',
+    met: fair && faster.length === 2 && faster.includes('credit') && faster.includes('es'),
+    progress: !onRequest
+      ? ''
+      : !fair
+        ? 'Keep one day at each handoff and no mistakes, so only the speed-ups change.'
+        : faster.length > 2
+          ? 'The budget covers two pieces, not more.'
+          : `In parallel: ${amount(par.total)}.`,
+    hints: ['In parallel, one piece sets the total. Which one?', 'Once you speed up the slowest piece, another piece becomes the slowest.'],
+    found: 'Credit analysis and the E&S review: five days instead of seven. Speed up credit alone and the E&S review takes over as the slowest piece. Faster legal documents or pricing change nothing at all.',
+  });
+  const showAnswer = () => {
+    setExample('request');
+    faster = ['credit', 'es'];
+  };
 </script>
 
 <Chapter
   n={5}
   kicker="Asynchronous work"
   title="Don’t wait for each other"
-  lede="Work done one step after another adds up every step and every wait. Work done in parallel takes as long as its slowest piece."
+  lede="Much of the waiting in a long chain is for steps that are not needed yet. Take it out, and a different rule decides how fast the work goes."
+  puzzle="async"
 >
   {#snippet setup()}
     <p>
@@ -85,6 +90,7 @@
 
   {#snippet figure()}
     <Instrument title="The same work, two ways" sub="Each bar is one piece of work. Change the example, the waits and the mistakes, or speed a piece up.">
+      <Puzzle id="async" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls">
         <Segmented
           name="a-ex"
@@ -156,8 +162,6 @@
         <Stat label="In parallel" value={amount(par.total)} sub="{detail(par)}; slowest piece: {ex.pieces.find((p) => p.id === par.slowest)?.label.toLowerCase()}" />
       </div>
 
-      <TryThis items={tries} />
-
       {#snippet model()}
         <p>Each piece takes a fixed time. One after another, every piece waits for a handoff before someone picks it up, and the last one waits to be delivered. In parallel, the pieces start together and wait once to be brought together. In the client request, every piece is built on the client data, so it comes first in both designs.</p>
         <p>A mistake found at the end means the first piece is fixed and everything built on it is done again. Caught at the start, it costs a short check before any other work begins.</p>
@@ -167,9 +171,14 @@
 
   {#snippet after()}
     <p>
-      Now make a piece twice as fast. One after another, every speed-up helps a little. In parallel, only the slowest piece matters,
-      along with anything every piece waits for, such as the client data. Making any other piece faster changes nothing. Improving a part is not the same as improving the
-      whole, which is the subject of the next chapter.
+      One after another, the client request takes sixteen days, five of them spent waiting for handoffs, and every
+      speed-up helps a little. In parallel, only the slowest piece matters, along with anything every piece waits for,
+      such as the client data. Making any other piece faster changes nothing. Improving a part is not the same as
+      improving the whole, which is the subject of the next chapter.
+    </p>
+    <p>
+      A Formula 1 pit stop works the parallel way. About twenty people change four tyres in around two seconds, each
+      doing one task at the same moment. Nobody hands over to anybody, and the car leaves when the last wheel is on.
     </p>
     <h3>Four lessons from the breakfast factory</h3>
     <ul>

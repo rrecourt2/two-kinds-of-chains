@@ -5,7 +5,7 @@
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
-  import TryThis from '../lib/ui/TryThis.svelte';
+  import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { simulateSystems, histogram, SYSTEMS, HORIZON, DEADLINE, ENTER, FIX, AWAY, QUEUED, OK, STOP, IDLE } from '../lib/sim/systems.js';
   import { linear, ticks, barUp } from '../lib/scales.js';
@@ -52,36 +52,36 @@
   const journeyStops = $derived(journey.filter((d) => d.gates.includes(STOP) || d.final === STOP).length);
   const cellClass = { [ENTER]: 'enter', [FIX]: 'fix', [AWAY]: 'away', [QUEUED]: 'queued', [OK]: 'ok', [STOP]: 'stop' };
 
-  const tries = [
-    { label: 'One shared record', apply: () => (info = 'shared') },
-    { label: 'One approval, at the end', apply: () => (approvals = 'end') },
-    { label: 'Both', apply: () => ((info = 'shared'), (approvals = 'end')) },
-    { label: 'Problems in 20% of forms', apply: () => (problems = 20) },
-    {
-      label: 'Reset everything',
-      apply: () => {
-        systems = START.systems;
-        problems = START.problems;
-        info = START.info;
-        approvals = START.approvals;
-        availability = START.availability;
-        meanSpell = START.meanSpell;
-        standIns = START.standIns;
-      },
-    },
-  ];
+  const fast = $derived(result.median < 10);
+  const safe = $derived(result.slipped < 0.02);
+  const fair = $derived(systems >= START.systems && problems >= START.problems);
+  const puzzle = $derived({
+    goal: 'Without dropping any of the six systems, get the typical request under two weeks, with problems slipping through on fewer than 2% of requests.',
+    met: fair && fast && safe,
+    progress: !fair
+      ? 'Keep all six systems, and forms with problems at least 10% of the time: the work is what it is.'
+      : fast && !safe
+        ? 'Fast enough, but too many problems slip through.'
+        : !fast && safe
+          ? 'Safe enough, but still too slow.'
+          : '',
+    hints: ['Cutting checks is not the only way to speed things up. Look at how the systems get their data.', 'With one shared record, every approver sees the whole request, so the approvals can run side by side.'],
+    found: 'One shared record, with every approval kept: a typical request takes about a week, and almost no problems slip through. A single approval at the end is faster still, but lets more through.',
+  });
+  const showAnswer = () => ((systems = START.systems), (problems = START.problems), (info = 'shared'), (approvals = 'each'));
 </script>
 
 <Chapter
   n={3}
   kicker="Linked systems"
   title="When systems lean on each other"
-  lede="When systems copy data from each other, one wrong field stops the request everywhere it went. One shared record keeps the same approvals and makes requests several times faster."
+  lede="Six good systems can add up to one slow chain. Can it be made faster and safer at the same time?"
+  puzzle="systems"
 >
   {#snippet setup()}
     <p>
       Specialists build systems, and that is good complexity. The risk team builds the risk model, the credit team the
-      limits register, operations the booking platform. Each one is excellent at its job.
+      limits register, operations the loan booking system. Each one is excellent at its job.
     </p>
     <p>
       Then a client request arrives that needs all of them. Each system has its own form to fill in, its own approval
@@ -96,6 +96,7 @@
 
   {#snippet figure()}
     <Instrument title={`One request, ${systems} linked systems`} sub="1,500 simulated requests. Filling in a system takes a day, and so does each approval.">
+      <Puzzle id="systems" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls">
         <Slider id="s-n" label="Systems the request passes through" bind:value={systems} min={2} max={8} />
         <Slider id="s-p" label="Chance a form has a problem" bind:value={problems} min={0} max={30} format={(v) => `${v}%`} />
@@ -227,8 +228,6 @@
         </div>
       </div>
 
-      <TryThis items={tries} />
-
       {#snippet model()}
         <p>Filling in a system takes two hours of work, and each step takes a day because the next person picks it up the next day. Each form has a {problems}% chance of a hidden problem, such as a wrong date or a missing identifier.</p>
         <p>An approver at a system sees only that system’s data and spots each hidden problem in it half the time. With copies, that data includes every problem copied in from earlier systems. With one shared record, every approver sees the whole record and spots each problem half the time, independently of the others, so six together miss a problem about 1 time in 64. If approvers tend to miss the same problems, parallel reviews catch far fewer. One approver at the end sees the whole request and spots 90%. A spotted problem stops the request. With copies, it is corrected in the system where it started and in every later system it reached, and each of those is approved again. With one shared record, it is corrected once. Approvers are in {availability}% of days, and absences last {meanSpell} day{meanSpell > 1 ? 's' : ''} on average.</p>
@@ -238,29 +237,28 @@
 
   {#snippet after()}
     <p>
-      In this model, a chain of six systems with an approval at each takes more than three working weeks for a typical
-      request, and only about one hour in seven of that time is spent working on it. About one request in ten still carries a
-      hidden problem at the end, because a problem that enters late meets few checks.
+      The starting chain takes more than three working weeks for a typical request, and only about one hour in seven
+      of that time is spent working on it. One request in ten still carries a hidden problem at the end, because a
+      problem that enters late meets few checks.
     </p>
-    <h3>Why linked systems are harder than they look</h3>
-    <ul>
-      <li><strong>A problem stops everything.</strong> The request cannot continue until it is fixed, so one wrong field costs days, not minutes.</li>
-      <li>
-        <strong>Problems spread.</strong> When each system copies the last, the fix has to be made everywhere the data
-        has gone, and approved again.
-      </li>
-      <li><strong>Every new system adds a link.</strong> Each new tool brings its own form, its own approval and its own copy of the data.</li>
-    </ul>
+    <p>
+      Copying data from system to system is the party game of telephone: a message whispered down a line arrives
+      changed, and nobody can say where it changed. Each copy is a chance for a field to drift. Once a problem is
+      found, the request stops, and the fix has to be made in every system the problem reached and approved again.
+    </p>
     <h3>Same controls, different shape</h3>
     <p>
-      Switch to one shared record. Every system reads the same data, so it is entered once, a problem is fixed in one
-      place, and the approvals can run at the same time. The typical request falls from more than three weeks to about
-      one. If every approver checks the whole record, almost no problems slip through.
+      With one shared record, the data is entered once and a problem is fixed in one place. Every approver sees the
+      whole request, so the approvals can run at the same time. Nothing is removed, and the request is both faster and
+      safer.
     </p>
     <p>
-      Then try one approval at the end: the fastest design, a few days, and it still lets fewer problems through than a
-      chain of copies. Several parallel reviewers catch more, if each checks the whole record, so keep them for
-      decisions that cannot be undone.
+      One approval at the end is the fastest design, but lets more problems through than parallel reviews of a shared
+      record. That is a trade-off to make knowingly: one check for what can be undone, several for what cannot.
+    </p>
+    <p>
+      Every new tool brings its own form, its own approval and its own copy of the data. Each makes sense to the team
+      that built it. Together they make the chain longer, and every extra link makes the next problem costlier to fix.
     </p>
   {/snippet}
 

@@ -4,7 +4,7 @@
   import Slider from '../lib/ui/Slider.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
-  import TryThis from '../lib/ui/TryThis.svelte';
+  import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { DESIGNS, averagePayoff, density, MEAN_HELP } from '../lib/sim/convexity.js';
   import { linear, line } from '../lib/scales.js';
@@ -47,17 +47,26 @@
     hover = Math.max(X0, Math.min(X1, Math.round(v * 10) / 10));
   }
 
-  const tries = [
-    { label: 'A steady AI (±0.3 h)', apply: () => (spread = 0.3) },
-    { label: 'An erratic AI (±2.5 h)', apply: () => (spread = 2.5) },
-  ];
+  const puzzle = {
+    goal: 'The AI keeps saving 30 minutes per task on average, but becomes more erratic: bigger wins, bigger mistakes. What happens to the time a tool saves?',
+    choices: [
+      { value: 'falls', label: 'It falls: an erratic AI is worth less' },
+      { value: 'same', label: 'It stays the same: the average has not changed' },
+      { value: 'rises', label: 'It rises' },
+    ],
+    answer: 'rises',
+    wrong: (v) => (v === 'falls' ? 'That is what happens to the gate. Move the slider and watch the tool.' : 'Only the rule stays the same. Move the slider and compare.'),
+    hints: ['Move the slider and watch the tool’s average.', 'With a tool, a person keeps the good drafts and drops the bad ones. What does a bad draft cost?'],
+    found: 'It rises. People keep the good drafts and drop the bad ones, so more variety brings bigger wins and no bigger losses. Built in as a gate, the same erratic AI does the opposite.',
+  };
 </script>
 
 <Chapter
   n={7}
   kicker="AI and tools"
-  title="Tools before gates"
-  lede="AI that does the work behind the screens, with a person checking the result, is an option with a small downside. AI added as one more mandatory screen is a gate with a small upside."
+  title="Tool, rule or gate?"
+  lede="The same AI can remove a dozen screens, or become the thirteenth. It depends on where it sits in the chain."
+  puzzle="tools"
 >
   {#snippet setup()}
     <p>
@@ -74,10 +83,6 @@
       step, it is just one more screen.
     </p>
     <p>
-      A tool is like a bought option: a small, known downside and a large upside, so variability helps it. A gate is
-      like a sold option: the reverse.
-    </p>
-    <p>
       Below, an AI fills in the entries for a client request. On average it saves half an hour, but some drafts save a
       lot and some are wrong and cost time. There are three ways to build it into the work.
     </p>
@@ -90,6 +95,7 @@
 
   {#snippet figure()}
     <Instrument title="Same AI, three ways to use it" sub="Hours saved per request. The AI saves 30 minutes on average; how much that varies is up to you.">
+      <Puzzle id="tools" {...puzzle} onshow={() => (spread = 2.5)} />
       <div class="tkc-controls tkc-controls--wide">
         <Slider id="t-spread" label="How much the AI’s usefulness varies from task to task" bind:value={spread} min={0} max={2.5} step={0.1} format={(v) => `±${v.toFixed(1)} hours`} ends={['Steady', 'Erratic']} />
       </div>
@@ -147,8 +153,6 @@
         </div>
       </div>
 
-      <TryThis items={tries} />
-
       {#snippet model()}
         <p>On each task the AI’s answer is worth X hours, drawn from a normal distribution with an average of +0.5 hours and the spread you choose. A tool costs six minutes to look at and is used only when it helps: max(X, 0) − 0.1. A rule always uses the answer: X. A gate saves at most the half hour the process was designed around, and when it is wrong the work behind it waits as well, tripling the loss.</p>
         <p>The averages are exact expectations over that distribution.</p>
@@ -158,9 +162,13 @@
 
   {#snippet after()}
     <p>
-      With a steady AI, all three designs do about the same. As the AI gets more erratic, which it often is, the
-      tool gets more valuable, because people keep the good answers and drop the bad ones. The gate gets worse, because
-      every bad answer stops the work behind it while the good answers can only save what the process was built around.
+      With a steady AI, all three designs do about the same. As the AI gets more erratic, which it often is, the tool
+      gets more valuable, because people keep the good answers and drop the bad ones. The gate gets worse, because every
+      bad answer stops the work behind it, while the good answers can only save what the process was built around.
+    </p>
+    <p>
+      Anyone who has priced an option will recognise the shapes. A tool is a bought option: a small, known downside
+      and a large upside, so variability helps it. A gate is a sold option: the reverse.
     </p>
     <h3>AI agents have the same problem as approval chains</h3>
     <p>

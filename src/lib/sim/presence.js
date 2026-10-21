@@ -1,5 +1,5 @@
 // Absence model shared by the calendar (chapter 1) and the linked-systems
-// model (chapters 3 and 15). Each person is either in or away; absences come in
+// model (chapters 3 and 14). Each person is either in or away; absences come in
 // spells (a week of holiday, three days of training), not single random days.
 
 import { makeRng } from './rng.js';
@@ -16,16 +16,16 @@ export function nextState(isIn, rng, params) {
 }
 
 export const ROLES = [
-  'Relationship manager',
+  'Investment officer',
   'Credit analyst',
-  'Credit officer',
-  'Risk',
-  'Compliance',
+  'E&S specialist',
   'Legal',
+  'Compliance',
+  'Risk',
   'Treasury',
   'Operations',
-  'Product owner',
-  'Head of desk',
+  'Credit officer',
+  'Department head',
 ];
 
 // The systems a normal working day leans on, all at the same time.

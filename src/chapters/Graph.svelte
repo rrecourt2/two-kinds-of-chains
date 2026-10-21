@@ -5,7 +5,7 @@
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
-  import TryThis from '../lib/ui/TryThis.svelte';
+  import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { STRUCTURES, structure, outputCurve, singlePoints, TEAM_SIZE } from '../lib/sim/scale.js';
   import { watchmakers } from '../lib/sim/watchmakers.js';
@@ -95,19 +95,27 @@
     return years > 1000 ? 'almost never' : `one every ${Math.round(years)} years`;
   };
 
-  const tries = [
-    { label: 'Everyone linked, 50 nodes', apply: () => ((kind = 'mesh'), (nodes = 50)) },
-    { label: 'One central hub, 40 nodes', apply: () => ((kind = 'hub'), (nodes = 40)) },
-    { label: 'Small modules, 60 nodes', apply: () => ((kind = 'teams'), (nodes = 60)) },
-    { label: 'Show it as systems', apply: () => (what = 'systems') },
-  ];
+  const puzzle = {
+    goal: 'Sixty people must each work closely with all the others, and each of those links takes 2% of both people’s time. How much useful work do the sixty produce?',
+    choices: [
+      { value: '48', label: 'About 48 people’s worth: each link costs only 2%' },
+      { value: '25', label: 'About 25 people’s worth' },
+      { value: '12', label: 'About 12 people’s worth' },
+      { value: '0', label: 'Nothing at all' },
+    ],
+    answer: '0',
+    wrong: () => 'Count the links each person has, and what they cost. The figure can check it: everyone linked, 60 people.',
+    hints: ['Each person keeps up a link with every one of the other 59.', '59 links at 2% each: how much time is left for work?'],
+    found: 'Nothing at all. Each person has 59 colleagues to keep up with, and at 2% each that is more than all of their time. With everyone linked, output peaks at about 25 people and then falls.',
+  };
 </script>
 
 <Chapter
-  n={14}
+  n={13}
   kicker="Graph theory"
   title="The shape of the network"
   lede="Every chapter so far has been about a network. Its shape, more than its size, decides whether growth makes an organization smarter or slower."
+  puzzle="graph"
 >
   {#snippet setup()}
     <p>
@@ -125,6 +133,7 @@
 
   {#snippet figure()}
     <Instrument title="Grow the network" sub="Each required link costs both ends 2% of their capacity.">
+      <Puzzle id="graph" {...puzzle} onshow={() => ((kind = 'mesh'), (nodes = 60), (what = 'people'))} />
       <div class="tkc-controls">
         <Segmented
           name="g-what"
@@ -194,8 +203,6 @@
         </div>
       </div>
 
-      <TryThis items={tries} />
-
       {#snippet model()}
         <p>Every required link costs each end 2% of its capacity. In the first shape every pair is linked. In the second, every node links to one centre, which can handle the work of about 12 nodes. In the third, nodes form modules of about {TEAM_SIZE} that are fully linked inside, and one node per module links to the other modules.</p>
         <p>A single point of failure is a node whose loss would cut the network in two. In the modular shape each module has one bridge to the rest; giving each module two bridges would remove them, at the cost of a few more links.</p>
@@ -218,6 +225,12 @@
     <p>
       A single central hub keeps links low, but output stops growing at whatever the centre can handle, and the centre is
       a single point of failure. Small modules with clear interfaces keep growing almost in proportion.
+    </p>
+    <p>
+      Ships are built the same way. A hull divided into watertight compartments survives a breach that would sink an
+      open one. The Titanic had sixteen, and could stay afloat with its first four flooded. The iceberg opened five, and
+      the walls between compartments stopped short of the top, so the water spilled from one into the next. Modules
+      protect only if the walls between them hold.
     </p>
     <h3>Simon’s watchmakers: why modular means flexible</h3>
     <p>

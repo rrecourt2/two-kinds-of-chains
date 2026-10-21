@@ -1,4 +1,4 @@
-// Winner-take-all markets (chapter 14), after W. Brian Arthur's increasing
+// Winner-take-all markets (chapter 12), after W. Brian Arthur's increasing
 // returns (1989) and the Pólya urn. Twenty identical firms start with one
 // customer each. Every new customer picks a firm with a chance proportional to
 // quality × customers^returns. With returns below 1, size helps less and less;

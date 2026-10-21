@@ -1,9 +1,12 @@
 <script>
   import { getContext } from 'svelte';
 
-  let { n, kicker, title, lede = '', setup, figure, after, bank } = $props();
+  let { n, kicker, title, lede = '', puzzle = null, setup, figure, after, bank } = $props();
   const prefix = getContext('tkc-id') ?? 'tkc';
   const total = getContext('tkc-total') ?? 12;
+  const game = getContext('tkc-game');
+  // The explanation waits until the chapter's puzzle is solved or its answer shown.
+  const unlocked = $derived(!puzzle || !game || !game.isOpen(puzzle));
 </script>
 
 <article class="chapter" aria-labelledby="{prefix}-chapter-title">
@@ -16,10 +19,18 @@
   <div class="grid">
     <div class="setup tkc-prose">{@render setup()}</div>
     <div class="fig">{@render figure()}</div>
-    {#if after}<div class="after tkc-prose">{@render after()}</div>{/if}
+    {#if after}
+      <div class="after tkc-prose">
+        {#if unlocked}
+          {@render after()}
+        {:else}
+          <p class="locked">What the puzzle shows is explained here once you have solved it, or chosen “Show me the answer”.</p>
+        {/if}
+      </div>
+    {/if}
   </div>
 
-  {#if bank}{@render bank()}{/if}
+  {#if bank && unlocked}{@render bank()}{/if}
 </article>
 
 <style>
@@ -48,6 +59,13 @@
   }
   .after {
     grid-area: after;
+  }
+  .locked {
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px dashed var(--tkc-rule);
+    color: var(--tkc-muted);
+    font-size: 0.9375rem;
   }
   @container tkc (min-width: 1000px) {
     .grid {

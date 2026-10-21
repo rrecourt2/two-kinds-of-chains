@@ -5,7 +5,7 @@
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
-  import TryThis from '../lib/ui/TryThis.svelte';
+  import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { simulateMonth, coverageOdds, ROLES, DAY_SYSTEMS } from '../lib/sim/presence.js';
   import { pct } from '../lib/format.js';
@@ -49,7 +49,7 @@
   const height = $derived(stacked ? rowY(count) - 12 : rowY(count) + 8);
   const label = (r) => {
     const name = mode.names[r];
-    return narrow && !stacked ? name.replace('Relationship manager', 'Rel. manager').replace('Product owner', 'Product').replace('Booking platform', 'Booking') : name;
+    return narrow && !stacked ? name.replace('Investment officer', 'Investment').replace('E&S specialist', 'E&S').replace('Department head', 'Dept. head').replace('Booking platform', 'Booking') : name;
   };
 
   const formula = $derived.by(() => {
@@ -58,26 +58,27 @@
     return `Each link is covered ${pct(odds.roleCovered, 1)} of the time; ${pct(odds.roleCovered, 1)} multiplied ${count} times = ${pct(odds.allCovered)}`;
   });
 
-  const tries = $derived(
-    sys
-      ? [
-          { label: 'Ten systems, no backups', apply: () => ((count = 10), (backups = 0)) },
-          { label: 'Now give each a backup', apply: () => ((count = 10), (backups = 1)) },
-          { label: 'Systems up 95% of the time', apply: () => (availability = 95) },
-        ]
-      : [
-          { label: 'Ten roles, no stand-ins', apply: () => ((count = 10), (backups = 0)) },
-          { label: 'Now add one stand-in each', apply: () => ((count = 10), (backups = 1)) },
-          { label: 'People in 80% of the time', apply: () => (availability = 80) },
-        ],
-  );
+  const puzzle = {
+    goal: 'Six people must all be in for a decision, and each is in on 90% of days. Which change gives the most days on which the decision can be made?',
+    choices: [
+      { value: 'attend', label: 'Better planning lifts everyone’s attendance from 90% to 97%' },
+      { value: 'standin', label: 'Each of the six gets one qualified stand-in, who is also in on 90% of days' },
+      { value: 'same', label: 'Both help about equally' },
+    ],
+    answer: 'standin',
+    wrong: (v) => (v === 'attend' ? 'Six people at 97% are all in together on about 83% of days. Set the sliders to compare.' : 'They differ more than it seems. Set the sliders to compare.'),
+    hints: ['When everyone must be in, the chances multiply: 0.97 six times over.', 'With a stand-in, a role is uncovered only when both people are out, on about 1 day in 100.'],
+    found: 'The stand-ins win: decisions on 94% of days, against 83%. Twice the people, far less waiting.',
+  };
+  const showAnswer = () => ((what = 'people'), (count = 6), (availability = 90), (backups = 1));
 </script>
 
 <Chapter
   n={1}
   kicker="The riddle"
   title="A riddle about chains"
-  lede="When work needs everyone at once, it waits for whoever is missing. Give every role an alternative and the waiting disappears."
+  lede="When work needs everyone at once, it waits for whoever is missing. What is the cheapest way to stop waiting?"
+  puzzle="riddle"
 >
   {#snippet setup()}
     <p>
@@ -85,16 +86,17 @@
       from another, rubber, brass, paint and glue from others. Nobody runs the whole chain, and nobody waits for
       anybody. The pencil costs less than a coffee.
     </p>
-    <p>A request inside a large organization can need six colleagues and six systems in one building, and take weeks.</p>
+    <p>A loan that needs six colleagues and six systems in one building can take weeks.</p>
     <p>Both are chains, and the pencil’s chain is far longer. Why does it work so much better?</p>
     <p>
-      The opening showed the arithmetic: when every link must hold, the risks multiply. Some work needs every link on the same day: a committee, a joint review, a same-day cut-off, or
-      simply a working day that needs remote access, sign-in, the client file and the risk model all at once.
+      Some work needs every link on the same day: a credit committee, a joint site visit, a same-day payment cut-off,
+      or simply a working day that needs remote access, sign-in, the client file and the risk model all at once.
     </p>
   {/snippet}
 
   {#snippet figure()}
     <Instrument title={sys ? 'What is up this month?' : 'Who is in this month?'} sub={sys ? 'Each square is one working day. Systems fail in incidents and maintenance windows.' : 'Each square is one working day. Absences come in runs: a week of holiday, a few days of training.'}>
+      <Puzzle id="riddle" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls">
         <Segmented
           name="r-what"
@@ -149,8 +151,6 @@
         <button type="button" class="tkc-btn tkc-btn--small" onclick={() => (seed += 1)}>Simulate another month</button>
       </div>
 
-      <TryThis items={tries} />
-
       {#snippet model()}
         <p>Each {sys ? 'system is up' : 'person is in'} on {availability}% of days in the long run. {sys ? 'Outages last about a day.' : 'Absences last three days on average, so they cluster the way holidays and training do.'}</p>
         <p>A link is covered on a day when its main {sys ? 'system' : 'person'} or any {sys ? 'backup' : 'stand-in'} is available. The work needs every link covered on the same day. Over many months that happens on {pct(odds.allCovered)} of days: {formula}.</p>
@@ -161,19 +161,24 @@
 
   {#snippet after()}
     <p>
-      With six people who are each in 90% of the time, the work can be done on only about half of all days. And the
-      blocked days come in stretches: one person’s week of holiday stops everything that needs them.
+      Better attendance helps less than it seems: six people at 97% are all in together on only 83% of days. A stand-in
+      changes the arithmetic. A role is covered unless both people are out, so each link holds on 99 days in 100, and all
+      six hold on 94% of days. Twice as many people, and far less waiting.
     </p>
     <p>
-      Now give every role one qualified stand-in. Twice as many people are involved, which sounds like more complexity,
-      yet the work is possible on almost every day. Systems behave the same way: switch the figure and give each system
-      a backup.
+      The danger is how fast a chain of ANDs falls apart. Add four more named roles and the decision is possible on one
+      day in three. The blocked days come in stretches, too: one person’s week of holiday stops everything that needs
+      them.
     </p>
     <p>
-      That is the answer to the riddle. In the pencil’s chain, every link has many possible suppliers. If one graphite
-      mine floods, the factory buys from another. Each link is an <span class="tkc-or">OR</span>: this supplier, or
-      that one. In a chain of named people and single systems, each link is an <span class="tkc-and">AND</span>: this
-      person, and this system, and this person. ORs make a chain stronger. ANDs make it weaker.
+      Old Christmas lights were wired the same way. One dead bulb and the whole string went dark, and finding it meant
+      testing every bulb. Newer bulbs carry a small bypass, so the string stays lit when one fails.
+    </p>
+    <p>
+      That is the answer to the riddle. In the pencil’s chain, every link has many possible suppliers: if one graphite
+      mine floods, the factory buys from another. Each link is an <span class="tkc-or">OR</span>. In a chain of named
+      people and single systems, each link is an <span class="tkc-and">AND</span>. ORs make a chain stronger as it
+      grows. ANDs make it weaker, and past a point it is blocked more often than it is open.
     </p>
   {/snippet}
 

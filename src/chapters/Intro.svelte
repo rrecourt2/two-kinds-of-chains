@@ -8,31 +8,31 @@
   const total = CHAPTERS.length - 1;
 
   const contents = {
-    riddle: 'Why a pencil’s long supply chain beats a short chain of sign-offs.',
-    specialization: 'Adam Smith’s pin workshop, the chip industry, and splitting at the right level.',
-    systems: 'One request, six linked systems: how a missing field becomes a week.',
-    queues: 'Why busy experts slow everyone down, and how one shared line fixes it.',
-    async: 'The breakfast factory: start what can start, and keep bad inputs out first.',
-    emergence: 'A new road that makes every journey slower, and the risk of optimizing locally.',
-    tools: 'UI fatigue, and AI as a tool that works the screens or as one more gate.',
-    ergodicity: 'A coin game in which average wealth soars while the typical player goes broke.',
-    contagion: 'How a network of banks absorbs small shocks and spreads big ones.',
-    'black-swans': 'The turkey problem: why the data hides the risks that matter most.',
-    survivors: 'Where to armour a bomber, and what the missing data would have said.',
-    extinction: 'Specialists, generalists, and the danger of depending on one thing.',
-    graph: 'Why a network’s shape, not its size, decides whether growth helps.',
-    winners: 'Twenty equal firms, one winner: how small leads become whole markets.',
-    monday: 'A two-question test for every step, and a tool to check a process you know.',
+    riddle: 'Why can a pencil’s chain of thousands beat a loan’s chain of six?',
+    specialization: 'When does adding specialists make things cheaper, and not just longer?',
+    systems: 'One loan, six linked systems, and a wrong field that travels.',
+    queues: 'Four busy experts and one stream of reviews: where does the waiting come from?',
+    async: 'A breakfast, a pit stop and a loan: what really sets the pace?',
+    emergence: 'Rush hour and no money for new roads: how do you speed up every journey?',
+    tools: 'Three ways to add the same AI: which one survives its bad days?',
+    ergodicity: 'A bet that wins on average and still ruins most players.',
+    contagion: 'Forty-eight banks, five failures at once: how much capital holds the line?',
+    'black-swans': 'Four project files and one claim to test: which do you open?',
+    extinction: 'Two species, forty islands, and the year the weather turns.',
+    winners: 'Twenty equal firms and one market: does the best one win?',
+    graph: 'Sixty people who must all work with each other: how much gets done?',
+    monday: 'One last puzzle: speed up a slow process without removing a single control.',
   };
 
 </script>
 
 <section class="intro" aria-labelledby="{prefix}-story-title">
   <header class="masthead">
-    <div class="tkc-eyebrow">An interactive story · 15 short chapters · every chart is live</div>
+    <div class="tkc-eyebrow">An interactive story in {total + 1} puzzles · every chart is live</div>
     <h1 class="tkc-display title" id="{prefix}-story-title" tabindex="-1">Two Kinds of Chains</h1>
     <p class="deck">
-      Why some complexity makes a bank smarter, some makes it stall, and why scale amplifies whichever kind you have.
+      Why some complexity makes a bank smarter, some makes it stall, and why the stall, when it comes, comes all at
+      once.
     </p>
   </header>
 
@@ -43,10 +43,14 @@
     <p role="listitem"><span class="tkc-and">Bad complexity</span> multiplies conditions.</p>
     <p role="listitem"><span class="scale">Scale</span> multiplies whichever you have.</p>
   </div>
+  <p class="howto">
+    Each chapter is a short puzzle about one problem: what happens as a chain of conditions grows long and rigid. Solve
+    it unaided for two points, with a hint for one. The explanation opens once it is solved.
+  </p>
 
   <div class="start">
     <button type="button" class="tkc-btn tkc-btn--primary big" onclick={() => go(1)}>Start the story →</button>
-    <span class="tkc-small">{total} short chapters. Use the chain at the top to jump anywhere.</span>
+    <span class="tkc-small">Chapters can be taken in any order from the top of the page.</span>
   </div>
 
   <ol class="toc">
@@ -115,6 +119,13 @@
   .scale {
     text-decoration-line: underline;
     text-decoration-color: var(--tkc-ink);
+  }
+  .howto {
+    max-width: 40rem;
+    font-size: 1.0625rem;
+    line-height: 1.55;
+    color: var(--tkc-ink-2);
+    margin-top: -12px;
   }
   .start {
     display: flex;

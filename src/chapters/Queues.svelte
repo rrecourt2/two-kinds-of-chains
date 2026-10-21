@@ -6,7 +6,7 @@
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
-  import TryThis from '../lib/ui/TryThis.svelte';
+  import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { LiveQueue, meanWait } from '../lib/sim/queue.js';
   import { makeRng } from '../lib/sim/rng.js';
@@ -125,40 +125,43 @@
     hover = Math.max(0.5, Math.min(0.98, Math.round(r * 100) / 100));
   }
 
-  const tries = [
-    { label: 'Approvers 95% busy', apply: () => (busy = 95) },
-    { label: 'Approvers 70% busy', apply: () => (busy = 70) },
-    { label: 'One shared line', apply: () => (mode = 'pooled') },
-  ];
+  const wait = $derived(mode === 'pooled' ? pooled : named);
+  const puzzle = $derived({
+    goal: 'There is no budget for a fifth reviewer, so the four must stay at least 80% busy. Can you get the average wait for a review under one hour?',
+    met: busy >= 80 && wait < 1,
+    progress: busy < 80 ? 'Below 80% busy the budget would need another reviewer. Keep them at 80% or more.' : `Average wait now: ${hours(wait)}.`,
+    hints: ['How busy they are is only half of it. Look at how requests reach the reviewers.', 'With named lines, a request can wait behind one reviewer’s backlog while another reviewer is free.'],
+    found: 'One shared line does it. At 80% busy, the same four people cut the average wait from four hours to 45 minutes.',
+  });
 </script>
 
 <Chapter
   n={4}
   kicker="Queues"
   title="Why full calendars make long queues"
-  lede="An expert who is 95% busy has become a queue, and everyone else waits in it."
+  lede="A full calendar looks like productivity. To everyone waiting for it, it is a queue."
+  puzzle="queues"
 >
   {#snippet setup()}
     <p>
-      Even when approvers are in, they are busy. A full calendar looks like productivity. Queueing theory, the
-      mathematics of waiting lines, says that full calendars are exactly what makes everyone else wait.
+      Even when the right people are in, they are busy. Say four specialists review every new deal for environmental
+      and social risk, and each review takes about an hour. Queueing theory, the mathematics of waiting lines, says that
+      how busy they are decides how long everyone else waits.
     </p>
-    <p>
-      The surprise is the shape. Waiting time does not grow in proportion to how busy someone is. It explodes as they
-      approach 100%.
-    </p>
+    <p>The surprise is the shape. Waiting does not grow in step with how busy someone is.</p>
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="Four approvers, one stream of requests" sub="Each review takes an hour on average. Requests arrive at random.">
+    <Instrument title="Four reviewers, one stream of requests" sub="Each review takes an hour on average. Requests arrive at random.">
+      <Puzzle id="queues" {...puzzle} onshow={() => ((mode = 'pooled'), (busy = 80))} />
       <div class="tkc-controls">
-        <Slider id="q-busy" label="How busy are the approvers?" bind:value={busy} min={50} max={98} format={(v) => `${v}% of their time`} />
+        <Slider id="q-busy" label="How busy are the reviewers?" bind:value={busy} min={50} max={98} format={(v) => `${v}% of their time`} />
         <Segmented
           name="q-mode"
           label="How requests are assigned"
           bind:value={mode}
           options={[
-            { value: 'named', label: 'To a named approver' },
+            { value: 'named', label: 'To a named reviewer' },
             { value: 'pooled', label: 'To whoever is free next' },
           ]}
         />
@@ -198,12 +201,12 @@
           {/each}
         </svg>
         <p class="tkc-caption">
-          {#if !running && !prefersReducedMotion()}The animation pauses while it is off screen.{:else if snap.idleNeeded > 0}{snap.idleNeeded} approver{snap.idleNeeded > 1 ? 's are' : ' is'} idle while requests wait in other lines.{:else}{snap.waiting} request{snap.waiting === 1 ? '' : 's'} waiting.{/if}
+          {#if !running && !prefersReducedMotion()}The animation pauses while it is off screen.{:else if snap.idleNeeded > 0}{snap.idleNeeded} reviewer{snap.idleNeeded > 1 ? 's are' : ' is'} idle while requests wait in other lines.{:else}{snap.waiting} request{snap.waiting === 1 ? '' : 's'} waiting.{/if}
         </p>
       </div>
 
       <div class="tkc-stats tkc-stats--3" use:announce>
-        <Stat label="Average wait, named approver" value={hours(named)} sub="before work starts" swatch="var(--tkc-conditions)" line={true} />
+        <Stat label="Average wait, named reviewer" value={hours(named)} sub="before work starts" swatch="var(--tkc-conditions)" line={true} />
         <Stat label="Average wait, shared line" value={hours(pooled)} sub="same people, same workload" swatch="var(--tkc-options)" line={true} />
         <Stat
           quiet
@@ -214,7 +217,7 @@
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
-        <svg {width} height={H} role="img" aria-label="Average wait against how busy the approvers are, for named approvers and for a shared line.">
+        <svg {width} height={H} role="img" aria-label="Average wait against how busy the reviewers are, for named reviewers and for a shared line.">
           {#each ticks(0, Y_MAX, 4) as t}
             <line class="tkc-grid" x1={m.left} x2={width - m.right} y1={y(t)} y2={y(t)} />
             <text class="tkc-axis-label" x={m.left - 6} y={y(t) + 4} text-anchor="end">{t}h</text>
@@ -237,7 +240,7 @@
           {#if hover !== null}
             <line class="cross" x1={x(hover)} x2={x(hover)} y1={m.top} y2={y(0)} />
           {/if}
-          <text class="tkc-axis-title" x={m.left + (width - m.left - m.right) / 2} y={H - 4} text-anchor="middle">How busy the approvers are</text>
+          <text class="tkc-axis-title" x={m.left + (width - m.left - m.right) / 2} y={H - 4} text-anchor="middle">How busy the reviewers are</text>
           <text class="tkc-axis-title" x={m.left - 34} y={m.top - 12}>Average wait for a one-hour review</text>
           <rect x={m.left} y={m.top} width={Math.max(0, width - m.left - m.right)} height={H - m.top - m.bottom} fill="transparent" role="presentation" onpointermove={onMove} onpointerleave={() => (hover = null)} />
         </svg>
@@ -249,12 +252,10 @@
           </div>
         {/if}
         <div class="tkc-legend">
-          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span>Each request waits for a named approver</span>
+          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span>Each request waits for a named reviewer</span>
           <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-options)"></span>One shared line for all four</span>
         </div>
       </div>
-
-      <TryThis items={tries} />
 
       {#snippet model()}
         <p>Requests arrive at random, and review times vary the way an exponential distribution does: an hour on average, sometimes much longer. The named line is the classic single-server queue: average wait = busy ÷ (1 − busy) × work time. At 90% busy that is 0.9 ÷ 0.1 = 9 hours. Reviews that always took exactly one hour would halve the waits. Kingman (1961) showed that, approximately, any single-server queue near full load has this shape, scaled by how variable the arrivals and the work are.</p>
@@ -266,16 +267,19 @@
   {#snippet after()}
     <p>
       At 50% busy, a one-hour review waits about an hour. At 80% it waits four hours, at 90% nine, and at 95% nineteen.
-      The last few points of utilization cost the most waiting.
+      The last few points of utilization cost the most waiting. Hospitals aim to keep roughly one bed in seven free for
+      the same reason: above about 85% occupancy, emergency patients start to find no bed.
     </p>
     <p>
-      Now switch to “whoever is free next”. Same four people, same workload, and the wait collapses. With named lines,
-      your request can sit behind one colleague’s backlog while another colleague who could approve it is idle. Bank
-      branches learned this long ago: one shared line for all the tellers beats a line per teller.
+      A shared line changes the arithmetic. With named lines, a request can sit behind one colleague’s backlog while
+      another colleague who could do it is idle. Bank branches learned this long ago: one line for all the tellers beats
+      a line per teller.
     </p>
     <p>
-      Spare capacity is what lets work flow. The same mathematics governs systems: a server running at 95% load answers slowly for everyone, which is why
-      engineers always keep headroom.
+      In a long chain, the waits add up. A request that passes six named reviewers, each 95% busy, waits about nineteen
+      hours at each: nearly three working weeks of waiting for six hours of work. That is how a chain in which everyone
+      works flat out can still deliver slowly. Spare capacity is what lets work flow, in people and in IT systems alike:
+      a server at 95% load answers slowly for everyone, which is why engineers keep headroom.
     </p>
   {/snippet}
 

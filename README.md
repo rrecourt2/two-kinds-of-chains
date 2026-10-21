@@ -1,27 +1,34 @@
 # Two Kinds of Chains
 
 An interactive learning story about good complexity (specialization), bad complexity (dependence) and how scale
-amplifies both. Fifteen short chapters, each with a live model the reader can change. Built with Svelte 5 and Vite.
-Everything ships as one file, with no external requests, so it can run inside a locked-down bank intranet.
+amplifies both, and about how a long, rigid chain of conditions tips into failure. Fourteen short chapters, each
+built around a puzzle with a live model the reader can change. Built with Svelte 5 and Vite. Everything ships as
+one file, with no external requests, so it can run inside a locked-down bank intranet.
 
-| # | Chapter | Live model |
-|---|---------|------------|
-| 0 | Two Kinds of Chains | The hook: guess how many of 100 requests survive six systems, then watch them flow |
-| 1 | A riddle about chains | A month calendar of people or systems: how long work waits for everyone to be in (AND vs OR) |
-| 2 | Why longer chains get cheaper | Adam Smith's pin workshop; the chip industry's long chain; splitting firms at the right level |
-| 3 | When systems lean on each other | One request through linked systems: forms, approvals, and problems that stop the work and spread |
-| 4 | Why full calendars make long queues | Four approvers, named lines vs one shared line, waiting vs utilization |
-| 5 | Don't wait for each other | Asynchronous work: the same pieces one after another or in parallel; the slowest piece; bad inputs caught early or late |
-| 6 | When every part does its best | Emergence and Braess's paradox: a new road that makes every journey slower |
-| 7 | Tools before gates | UI fatigue and AI: convex tools versus concave gates |
-| 8 | When the average lies | Ole Peters' coin game: ergodicity, staking less, pooling |
-| 9 | 2008: when links became conditions | A 48-bank interbank network you can push into contagion |
-| 10 | What the data cannot show | Black swans, the turkey, and thin versus fat tails in 40 years of data |
-| 11 | The planes that came back | Survivorship bias: where to armour a bomber, from the holes on the planes that returned |
-| 12 | Why species go extinct | Specialist vs generalist on 40 islands, in calm and volatile worlds |
-| 13 | The shape of the graph | Graph theory: mesh, hub and modules as the network grows; Simon's watchmakers; Gall's law |
-| 14 | Why the winner takes most | Twenty equal firms and increasing returns: lock-in, and a better product that loses |
-| 15 | What to do on Monday | Two-question test, eight moves, and a tool to check a real request |
+| # | Chapter | Puzzle and live model |
+|---|---------|------------------------|
+| 0 | Two Kinds of Chains | Guess how many of 100 loans clear six checks, then watch them flow |
+| 1 | A riddle about chains | Better attendance or a stand-in per role? A month calendar of people or systems (AND vs OR) |
+| 2 | Why longer chains get cheaper | The smallest market in which twelve specialists pay off; the chip industry; splitting firms at the right level |
+| 3 | When systems lean on each other | Make a request faster and safer without dropping a system: copies vs one shared record, approvals at every system or once |
+| 4 | Why full calendars make long queues | Get the wait under an hour with reviewers at least 80% busy: named lines vs one shared line |
+| 5 | Don't wait for each other | Which two speed-ups help most when the work runs in parallel; bad inputs caught early or late |
+| 6 | When every part does its best | Braess's paradox: get every journey under 70 minutes without building anything |
+| 7 | Tool, rule or gate? | What a more erratic AI does to a tool, a rule and a gate |
+| 8 | When the average lies | Ole Peters' coin game: get the typical player growing at 2.5% a round |
+| 9 | 2008: when links became conditions | A stress test on a 48-bank network: the lowest capital that contains five failures at once |
+| 10 | How to find a black swan | Wason's selection task with four project files; Popper, the turkey, fire drills and reverse stress tests |
+| 11 | Why species go extinct | Where the generalist overtakes the specialist as the years get more volatile |
+| 12 | Why the winner takes most | Where a better product most often wins, among twenty equal firms |
+| 13 | The shape of the network | What sixty fully linked people produce; mesh, hub and modules; Simon's watchmakers; Gall's law |
+| 14 | What to do on Monday | A final challenge on the check-up tool, nine moves, and the reader's score |
+
+### Puzzles and score
+
+Every chapter opens with one puzzle. Solving it unaided earns two points, solving it after a hint or a wrong try
+earns one, and "Show me the answer" sets the figure and earns none. The explanation below each figure opens once
+its puzzle is solved or shown. Scores are kept in the reader's own browser (`localStorage`, key
+`two-chains-puzzles-v1`); nothing is sent anywhere. The playbook shows the total and a button to start again.
 
 ## Run it
 

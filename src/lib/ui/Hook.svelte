@@ -1,14 +1,15 @@
 <script>
-  // The opening hook: guess, then watch 100 requests flow through a chain of systems.
+  // The opening puzzle: guess, then watch 100 loans flow through a chain of checks.
   import { getContext, onDestroy, tick } from 'svelte';
   import { makeRng } from '../sim/rng.js';
   import { prefersReducedMotion } from '../motion.js';
 
   const prefix = getContext('tkc-id') ?? 'tkc';
   const go = getContext('tkc-go');
+  const game = getContext('tkc-game');
   const total = getContext('tkc-total') ?? 12;
-  const NAMES = ['Client file', 'Risk model', 'Limits', 'Pricing', 'Booking', 'Reporting', 'Documents', 'Collateral', 'Sanctions', 'Accounting', 'Archive', 'Access'];
-  const REASONS = ['missing field', 'data mismatch', 'approver away', 'system down', 'awaiting sign-off', 'wrong format', 'old version', 'stale value', 'false alert', 'posting error', 'retention flag', 'access expired'];
+  const NAMES = ['Client file', 'Credit', 'E&S review', 'Legal', 'Limits', 'Payments', 'Sanctions', 'Collateral', 'Impact', 'Treasury', 'Archive', 'Access'];
+  const REASONS = ['missing document', 'data mismatch', 'approver away', 'system down', 'awaiting sign-off', 'wrong format', 'old version', 'stale value', 'false alert', 'posting error', 'retention flag', 'access expired'];
   const RELIABILITY = 0.95;
   const REQUESTS = 100;
 
@@ -135,7 +136,7 @@
     flow = plan(gates, pass, seed);
     prepareSlots();
     phase = 'run';
-    announce = `Sending 100 requests through ${describe({ gates, backups })}.`;
+    announce = `Sending 100 loans through ${describe({ gates, backups })}.`;
     const reduced = prefersReducedMotion();
     await tick();
     statusEl?.focus({ preventScroll: true });
@@ -167,6 +168,13 @@
     t = totalTime();
     phase = 'done';
     runs = [...runs, { gates, backups, through: flow.through, guess }];
+    // The opening guess is the first puzzle: two points within 5, one within 10.
+    if (runs.length === 1 && game?.isOpen('start')) {
+      const off = Math.abs(guess - flow.through);
+      if (off <= 5) game.solve('start');
+      else if (off <= 10) (game.help('start'), game.solve('start'));
+      else game.show('start');
+    }
     announce = `${flow.through} of 100 got through ${describe({ gates, backups })}.${runs.length === 1 ? ` You guessed ${guess}.` : ''}`;
     await tick();
     resultEl?.focus({ preventScroll: true });
@@ -193,14 +201,19 @@
 
   const first = $derived(runs[0]);
   const latest = $derived(runs[runs.length - 1]);
-  const describe = (r) => `${r.gates === 6 ? 'six' : r.gates === 12 ? 'twelve' : r.gates} systems${r.backups ? ', each with a backup' : ''}`;
+  const describe = (r) => `${r.gates === 6 ? 'six' : r.gates === 12 ? 'twelve' : r.gates} checks${r.backups ? ', each with a backup' : ''}`;
+  const pointsText = $derived.by(() => {
+    const e = game?.entry('start');
+    if (!e || e.status === 'open') return '';
+    return e.points ? `Puzzle: ${e.points} point${e.points === 1 ? '' : 's'}` : 'Puzzle: no points this time';
+  });
   const arithmetic = $derived(
     latest ? `${latest.backups ? '0.9975' : '0.95'} multiplied ${latest.gates} times ≈ ${Math.round(100 * (latest.backups ? 0.9975 : 0.95) ** latest.gates)}%` : '',
   );
   const picLabel = $derived(
     phase === 'ask'
-      ? `${REQUESTS} requests waiting to pass through ${gates} systems. Your guess, ${guess}, is drawn in the tray.`
-      : `${REQUESTS} requests flow through ${gates} systems; ${flow.through} get through.`,
+      ? `${REQUESTS} loans waiting to pass ${gates} checks. Your guess, ${guess}, is drawn in the tray.`
+      : `${REQUESTS} loans pass ${gates} checks; ${flow.through} get through.`,
   );
 </script>
 
@@ -208,9 +221,9 @@
   <div class="grid">
     <div class="tkc-eyebrow head">Before you start: a quick guess</div>
     <p class="q" id="{prefix}-hook-q">
-      A client request has to pass through <strong>six systems</strong>. At each one, it goes through cleanly
-      <strong>95% of the time</strong>: no missing field, no approver away. Out of 100 requests, how many get all the way
-      through?
+      A loan has to pass <strong>six checks</strong> before the money can be paid out. Each check clears it without a hitch
+      <strong>95% of the time</strong>: no missing document, no approver away. Out of 100 loans, how many get through all
+      six?
     </p>
 
     {#if phase === 'ask'}
@@ -220,18 +233,18 @@
           <input id="{prefix}-guess" type="range" min="0" max="100" bind:value={guess} bind:this={guessEl} aria-describedby="{prefix}-hook-q" style:--pct="{guess}%" />
           <output for="{prefix}-guess" class="guess-value tkc-num">{guess}</output>
         </div>
-        <button type="button" class="tkc-btn tkc-btn--primary go" onclick={() => send()}>Send 100 requests</button>
+        <button type="button" class="tkc-btn tkc-btn--primary go" onclick={() => send()}>Send 100 loans</button>
       </div>
     {:else if phase === 'run'}
       <p class="ask running" tabindex="-1" bind:this={statusEl}>
-        {runs.length === 0 ? `You guessed ${guess}. ` : ''}Sending 100 requests through {describe({ gates, backups })}…
+        {runs.length === 0 ? `You guessed ${guess}. ` : ''}Sending 100 loans through {describe({ gates, backups })}…
       </p>
     {/if}
 
     <div class="pic tkc-chart" bind:clientWidth={width} bind:this={picEl}>
       <svg {width} height={H} role="img" aria-label={picLabel}>
         <rect x={inboxX} y={laneY - 5 * ip - 4} width={ip * 10 + 4} height={ip * 10 + 8} rx="6" class="inbox" />
-        <text class="tkc-axis-label" x={inboxX} y={laneY - 5 * ip - 12}>{REQUESTS} requests</text>
+        <text class="tkc-axis-label" x={inboxX} y={laneY - 5 * ip - 12}>{REQUESTS} loans</text>
         <line x1={laneStart} x2={endX} y1={laneY} y2={laneY} class="lane" />
         {#each Array(gates) as _, k}
           {@const x = gateX(k)}
@@ -274,28 +287,30 @@
         {#if runs.length === 1}
           <p class="lead">
             You guessed {first.guess}.
-            {#if Math.abs(first.guess - first.through) <= 4}
-              Good guess. Each system looks safe on its own, yet one request in four gets stuck: {arithmetic}.
+            {#if Math.abs(first.guess - first.through) <= 5}
+              Spot on. Each check looks safe on its own, yet one loan in four gets stuck: {arithmetic}.
             {:else if first.guess > first.through}
-              Each system looks safe on its own, yet one request in four gets stuck. The chances multiply: {arithmetic}.
+              Most people guess higher. Each check looks safe on its own, yet one loan in four gets stuck, because the
+              chances multiply: {arithmetic}.
             {:else}
-              It is better than that: {arithmetic}. Still, one request in four gets stuck.
+              Fewer get stuck than that: {arithmetic}. Still, one loan in four does.
             {/if}
+            {#if pointsText}<span class="points">{pointsText}</span>{/if}
           </p>
         {:else if latest.backups}
           <p class="lead">
-            Same six systems, same 95%. The only change: every step has an alternative, a stand-in or a second system, so
-            it is stuck only when both fail. Links that must all hold multiply the risk; links with alternatives divide it.
+            Same six checks, same 95%. The only change: each has a backup, a second person or a second system, so a loan
+            is stuck only when both fail. Conditions multiply the risk; alternatives divide it.
           </p>
         {:else}
-          <p class="lead">Twice the systems, and almost half the requests get stuck: {arithmetic}. Every new link multiplies in another 95%.</p>
+          <p class="lead">Twice the checks, and almost half the loans get stuck: {arithmetic}. Every new condition multiplies in another 95%.</p>
         {/if}
         <div class="tkc-row">
           {#if !(latest.gates === 12 && !latest.backups)}
-            <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: 12, backups: false })}>Now try twelve systems</button>
+            <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: 12, backups: false })}>Now try twelve checks</button>
           {/if}
           {#if !latest.backups}
-            <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: 6, backups: true })}>Give every step a backup</button>
+            <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: 6, backups: true })}>Give every check a backup</button>
           {/if}
           <button type="button" class="tkc-btn tkc-btn--small" onclick={again}>Start over</button>
         </div>
@@ -308,7 +323,7 @@
         {/if}
         <div class="next">
           <button type="button" class="tkc-btn tkc-btn--primary" onclick={() => go?.(1)}>Start the story →</button>
-          <span class="tkc-small">{total} short chapters on why this happens, and what to change.</span>
+          <span class="tkc-small">{total} more puzzles about why this happens, and what to change.</span>
         </div>
       </div>
     {/if}
@@ -516,6 +531,16 @@
   .lead {
     max-width: 42rem;
     text-wrap: pretty;
+  }
+  .points {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--tkc-options-ink);
+    background: var(--tkc-options-wash);
   }
   .history {
     margin: 0;

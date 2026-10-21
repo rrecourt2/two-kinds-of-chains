@@ -6,7 +6,7 @@
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
-  import TryThis from '../lib/ui/TryThis.svelte';
+  import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { buildNetwork, layout, cascade, pickSeeds, mostConnected, sweep } from '../lib/sim/network.js';
   import { makeRng } from '../lib/sim/rng.js';
@@ -87,19 +87,27 @@
   const jitter = Array.from({ length: 40 }, (_, i) => ((i * 0.61803) % 1) - 0.5);
   const mean = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
 
-  const tries = [
-    { label: 'One counterparty each', apply: () => ((shape = 'random'), (links = 1)) },
-    { label: 'Ten counterparties each', apply: () => ((shape = 'random'), (links = 10)) },
-    { label: 'A few giants, 6% capital', apply: () => ((shape = 'hubs'), (links = 4), (capital = 6)) },
-    { label: 'Capital at 8%', apply: () => (capital = 8) },
-  ];
+  // The stress test: five banks fail at once in networks with about ten counterparties per bank.
+  const STRESS_LINKS = 10;
+  const stressed = $derived(mean(five[STRESS_LINKS - 1].shares));
+  const lowestSafe = 6; // the lowest capital at which fewer than a quarter fail, on average
+  const puzzle = $derived({
+    goal: 'A stress test: five banks fail at once, and each bank has about ten counterparties. Find the lowest capital at which, on average, fewer than a quarter of all banks go down.',
+    met: capital === lowestSafe && stressed < 0.25,
+    progress:
+      `At ${capital}% capital, five failures bring down ${Math.round(stressed * 100)}% of banks on average.` +
+      (stressed < 0.25 && capital > lowestSafe ? ' Does a lower capital still hold?' : ''),
+    hints: ['Read the panel “After five fail at once”, at ten counterparties.', 'It lies between 5% and 8%.'],
+    found: '6%. At 5% capital, five failures at once bring down about two-thirds of the banks; at 6%, a fifth. One point of capital separates a contained crisis from a collapse.',
+  });
 </script>
 
 <Chapter
   n={9}
   kicker="Contagion"
   title="2008: when links became conditions"
-  lede="Links absorb small shocks and spread big ones. The more connected a system, the more it depends on its buffers and its hubs."
+  lede="The links between banks were meant to spread risk thinly. A stress test shows what they really do."
+  puzzle="contagion"
 >
   {#snippet setup()}
     <p>
@@ -115,6 +123,7 @@
 
   {#snippet figure()}
     <Instrument title="An interbank network" sub="Click any bank to make it fail, or use the buttons. Failures spread in rounds.">
+      <Puzzle id="contagion" {...puzzle} onshow={() => ((capital = lowestSafe), (links = STRESS_LINKS), (shape = 'random'))} />
       <div class="tkc-controls">
         <Slider id="c-links" label="Counterparties per bank" bind:value={links} min={1} max={12} format={(v) => `about ${v}`} />
         <Slider id="c-capital" label="Capital" bind:value={capital} min={2} max={10} format={(v) => `${v}% of assets`} />
@@ -197,8 +206,6 @@
         </div>
       </div>
 
-      <TryThis items={tries} />
-
       {#snippet model()}
         <p>Each bank lends 20% of its assets to other banks, split evenly across its counterparties, and holds capital of {capital}% of assets. A failed counterparty’s loan is lost in full, so a bank with k counterparties fails once more than {capital} ÷ 20 × k of them have failed.</p>
         <p>“Many similar banks” is a random network. “A few giants” grows by preferential attachment: newcomers link to banks that already have many links. This follows Watts (2002) and Gai and Kapadia (2010).</p>
@@ -218,6 +225,11 @@
       at once, the way a fall in house prices hit everyone holding the same mortgage securities. The same links that
       absorbed one failure carry five to every bank. Andrew Haldane of the Bank of England called the system “robust
       yet fragile”.
+    </p>
+    <p>
+      Climbers roped together know the pattern. On easy ground, the rope lets the others hold one who slips. On a
+      steep face, one fall can pull the whole team off. And the buffer does not work like a dial: below a certain
+      level of capital, the system does not bend a little more. It breaks.
     </p>
     <p>
       Switch to <em>A few giants</em>, set about four counterparties per bank and raise capital to 6%. Fail a few random banks: most failures stay small,

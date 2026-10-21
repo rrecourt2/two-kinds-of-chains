@@ -6,7 +6,7 @@
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
-  import TryThis from '../lib/ui/TryThis.svelte';
+  import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { simulateCoin, typicalFactor, expectedFactor } from '../lib/sim/coin.js';
   import { linear, log10, line } from '../lib/scales.js';
@@ -78,18 +78,21 @@
     hover = Math.max(0, Math.min(end, Math.round(x.invert(e.clientX - box.left + m.left))));
   }
 
-  const tries = [
-    { label: 'Stake only 25% each round', apply: () => ((stake = 25), (pool = 1)) },
-    { label: 'Pool with four others', apply: () => ((stake = 100), (pool = 5)) },
-    { label: 'Everything, alone', apply: () => ((stake = 100), (pool = 1)) },
-  ];
+  const puzzle = $derived({
+    goal: 'The coin cannot change. Get the typical player growing by at least 2.5% a round.',
+    met: growthMine >= 1.025,
+    progress: growthMine > 1 && growthMine < 1.025 ? `Growing now, by ${signedPct(growthMine)} a round. Can you do better without changing the coin?` : '',
+    hints: ['Staking less stops the slide. But how fast can a player on their own grow?', 'Players can also share their results.'],
+    found: 'Pool with others. Five players who share every result can stake everything and grow about 3% a round. On their own, the best a typical player can manage is about 0.6%.',
+  });
 </script>
 
 <Chapter
   n={8}
   kicker="Ergodicity"
   title="When the average lies"
-  lede="When outcomes multiply, the average result is not what a typical person, team or bank lives through. Survival comes first."
+  lede="A game that makes the average player richer every round, and most players poorer. What would you change?"
+  puzzle="ergodicity"
 >
   {#snippet setup()}
     <p>
@@ -102,6 +105,7 @@
 
   {#snippet figure()}
     <Instrument title="The coin game" sub="Heads: +50%. Tails: −40%. Each grey line is one player.">
+      <Puzzle id="ergodicity" {...puzzle} onshow={() => ((stake = 100), (pool = 5))} />
       <div class="tkc-controls">
         <Slider id="e-stake" label="Share of wealth staked each round" bind:value={stake} min={10} max={100} step={5} format={(v) => `${v}%`} />
         <Segmented
@@ -176,8 +180,6 @@
         {/if}
       </div>
 
-      <TryThis items={tries} />
-
       {#snippet model()}
         <p>2,000 players flip independent fair coins. With a stake below 100%, only that share of wealth rides on each flip. Pooled players add up their results every round and split the total equally.</p>
         <p>The average line is the expected value, 1.05 to the power of the round (at full stake). The typical player is the median of all 2,000. Long-run growth for a typical player alone is √(1.5 × 0.6) − 1 = −5.1% a round.</p>
@@ -197,16 +199,24 @@
       outcomes multiply. Nassim Taleb puts it this way: a hundred people going to a casino once is not the same as one
       person going a hundred times. If that one person goes bust on day 28, there is no day 29.
     </p>
+    <p>
+      Every round is a link in a chain that multiplies, like the checks in the opening. That is why a long run of
+      rounds is so unforgiving: one bust, and the chain ends.
+    </p>
     <h3>Two classic remedies</h3>
     <ul>
-      <li><strong>Stake less.</strong> At a 25% stake, the typical player grows. Giving up some average return removes the path to ruin.</li>
+      <li><strong>Stake less.</strong> At a quarter of their wealth, the typical player grows, slowly. Giving up some average return removes the path to ruin.</li>
       <li>
-        <strong>Pool.</strong> Let players share everything each round. A pair is not enough: two players still shrink
-        slightly. In a pool of five, the typical player grows about 3% a round; in a pool of twenty, 4.5%, almost as fast
-        as the average. This is the logic of insurance, of mutual funds and of banks themselves.
+        <strong>Pool.</strong> Let players share everything each round. A pair is not enough: two players who stake
+        everything still shrink slightly. In a pool of five, the typical player grows about 3% a round; in a pool of
+        twenty, 4.5%, almost as fast as the average. This is the logic of insurance, of a portfolio spread over many
+        countries and sectors, and of banks themselves.
       </li>
     </ul>
-    <p>Pooling is interdependence too, of the good kind. It shares risk instead of chaining it.</p>
+    <p>
+      Pooling is interdependence too, of the good kind. It shares risk instead of chaining it. The next chapter shows
+      what happens when the links run the other way.
+    </p>
   {/snippet}
 
   {#snippet bank()}

@@ -1,4 +1,4 @@
-// Interlinked systems (chapter 3, and the check-up tool in chapter 15).
+// Interlinked systems (chapter 3, and the check-up tool in chapter 14).
 //
 // A request has to be entered into a chain of systems, each built by a different
 // specialist team. Entering it into one system takes a day of work and can leave
@@ -35,12 +35,12 @@ const REVIEW_HOURS = 1;
 export const SYSTEMS = [
   'Client file',
   'Risk model',
+  'E&S register',
   'Limits register',
   'Pricing tool',
-  'Booking platform',
-  'Collateral tracker',
+  'Loan booking',
   'Document vault',
-  'Reporting feed',
+  'Impact reporting',
 ];
 
 // Cell states in a journey log.

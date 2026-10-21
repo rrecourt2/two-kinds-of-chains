@@ -9,7 +9,6 @@ import Tools from './Tools.svelte';
 import Ergodicity from './Ergodicity.svelte';
 import Contagion from './Contagion.svelte';
 import BlackSwans from './BlackSwans.svelte';
-import Survivors from './Survivors.svelte';
 import Extinction from './Extinction.svelte';
 import Graph from './Graph.svelte';
 import Winners from './Winners.svelte';
@@ -24,11 +23,10 @@ export const CHAPTERS = [
   { id: 'queues', short: 'Queues', title: 'Why full calendars make long queues', component: Queues },
   { id: 'async', short: 'Asynchronous work', title: 'Don’t wait for each other', component: Async },
   { id: 'emergence', short: 'Emergence', title: 'When every part does its best', component: Local },
-  { id: 'tools', short: 'AI and tools', title: 'Tools before gates', component: Tools },
+  { id: 'tools', short: 'AI and tools', title: 'Tool, rule or gate?', component: Tools },
   { id: 'ergodicity', short: 'Ergodicity', title: 'When the average lies', component: Ergodicity },
   { id: 'contagion', short: 'Contagion', title: '2008: when links became conditions', component: Contagion },
-  { id: 'black-swans', short: 'Black swans', title: 'What the data cannot show', component: BlackSwans },
-  { id: 'survivors', short: 'Survivorship bias', title: 'The planes that came back', component: Survivors },
+  { id: 'black-swans', short: 'Black swans', title: 'How to find a black swan', component: BlackSwans },
   { id: 'extinction', short: 'Extinction', title: 'Why species go extinct', component: Extinction },
   { id: 'winners', short: 'Winner-take-all', title: 'Why the winner takes most', component: Winners },
   { id: 'graph', short: 'Networks', title: 'The shape of the network', component: Graph },

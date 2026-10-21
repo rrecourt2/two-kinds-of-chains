@@ -5,9 +5,7 @@ import { simulateMonth, coverageOdds } from '../src/lib/sim/presence.js';
 import { simulateSystems } from '../src/lib/sim/systems.js';
 import { EXAMPLES, schedule } from '../src/lib/sim/async.js';
 import { equilibrium, bestForAll } from '../src/lib/sim/braess.js';
-import { simulateRaid } from '../src/lib/sim/planes.js';
 import { manyMarkets } from '../src/lib/sim/market.js';
-import { simulateHistory, worst, recordsAfter } from '../src/lib/sim/tails.js';
 import { DESIGNS, averagePayoff, chainSuccess } from '../src/lib/sim/convexity.js';
 import { erlangC, meanWait, LiveQueue } from '../src/lib/sim/queue.js';
 import { typicalFactor, expectedFactor, simulateCoin } from '../src/lib/sim/coin.js';
@@ -152,6 +150,13 @@ test('asynchronous work: parallel takes the slowest piece, a late mistake double
   assert.ok(run('request', { mode: 'sequence', faster: ['pricing'] }) < 16);
   assert.equal(run('request', { mode: 'parallel', faster: ['pricing'] }), 7);
   assert.ok(run('request', { mode: 'parallel', faster: ['credit'] }) < 7);
+  // The chapter's puzzle: of all pairs of speed-ups, credit and the E&S review give the fastest parallel request.
+  const ids = EXAMPLES.request.pieces.map((p) => p.id);
+  const pairs = ids.flatMap((a, i) => ids.slice(i + 1).map((b) => [a, b]));
+  const best = Math.min(...pairs.map((f) => run('request', { mode: 'parallel', faster: f })));
+  assert.equal(run('request', { mode: 'parallel', faster: ['credit', 'es'] }), 5);
+  assert.equal(best, 5);
+  assert.equal(pairs.filter((f) => run('request', { mode: 'parallel', faster: f }) === 5).length, 1);
 });
 
 test('Braess: the new link makes every journey slower in rush hour', () => {
@@ -162,16 +167,6 @@ test('Braess: the new link makes every journey slower in rush hour', () => {
   assert.ok(equilibrium(5000, true).time > equilibrium(5000, false).time);
 });
 
-test('planes: deadly parts look safe on the planes that came back', () => {
-  const calm = simulateRaid({ vital: 0, planes: 2000 });
-  const raid = simulateRaid({ vital: 0.6, planes: 2000 });
-  const ratio = (r, zone) => r.density[zone].returned / r.density.body.returned;
-  console.log('planes engines/body on returners', ratio(calm, 'engines').toFixed(2), ratio(raid, 'engines').toFixed(2));
-  near(ratio(calm, 'engines'), 1, 0.3);
-  assert.ok(ratio(raid, 'engines') < 0.6);
-  assert.ok(raid.density.engines.lost > raid.density.body.lost);
-});
-
 test('winner-take-all: size that attracts customers concentrates the market and beats a better product', () => {
   const flat = manyMarkets({ returns: 0, better: 0.2 });
   const steep = manyMarkets({ returns: 1.5, better: 0.2 });
@@ -179,12 +174,6 @@ test('winner-take-all: size that attracts customers concentrates the market and 
   assert.ok(flat.medianLeader < 0.12);
   assert.ok(steep.medianLeader > 0.6);
   assert.ok(steep.betterWins < flat.betterWins / 2);
-});
-
-test('black swans: the fat-tailed world has far worse worst days', () => {
-  const h = simulateHistory({ years: 40, seed: 3 });
-  console.log('tails worst 10y thin/fat', worst(h.thin, 0, 10).toFixed(2), worst(h.fat, 0, 10).toFixed(2), 'next 30y', worst(h.thin, 10, 40).toFixed(2), worst(h.fat, 10, 40).toFixed(2), 'records after 10y', recordsAfter(h.thin, 10), recordsAfter(h.fat, 10));
-  assert.ok(worst(h.fat, 0, 40) > 2 * worst(h.thin, 0, 40));
 });
 
 test('convexity: variability helps a tool and hurts a gate', () => {

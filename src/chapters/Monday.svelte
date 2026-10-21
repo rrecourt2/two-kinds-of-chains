@@ -5,6 +5,7 @@
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
+  import Puzzle from '../lib/ui/Puzzle.svelte';
   import { diagnose } from '../lib/sim/diagnose.js';
   import { HORIZON } from '../lib/sim/systems.js';
   import { CHAPTERS } from './index.js';
@@ -12,6 +13,7 @@
   import { pct, shortDays } from '../lib/format.js';
 
   const go = getContext('tkc-go');
+  const game = getContext('tkc-game');
   const prefix = getContext('tkc-id') ?? 'tkc';
   const total = getContext('tkc-total') ?? 12;
   const numberOf = (id) => CHAPTERS.findIndex((c) => c.id === id);
@@ -35,6 +37,37 @@
     return () => clearTimeout(id);
   });
   const d = $derived(diagnose(inputs));
+
+  // The final challenge: the example process, made fast and safe without removing anything.
+  const fair = $derived(inputs.systems >= 6 && inputs.problems >= 0.1 && inputs.availability <= 0.85);
+  const fast = $derived(d.now.median <= 5);
+  const safe = $derived(d.now.slipped < 0.02);
+  const puzzle = $derived({
+    goal: 'Final challenge. Keep all six systems, a problem in one form in ten, and approvers in on 85% of days. Get the typical request to five working days or fewer, with fewer than 2% of problems slipping through.',
+    met: fair && fast && safe,
+    progress: !fair
+      ? 'Keep all six systems, problems in at least 10% of forms, and approvers in on no more than 85% of days.'
+      : fast && !safe
+        ? 'Fast enough, but too many problems slip through.'
+        : safe && !fast
+          ? 'Safe enough, but still slower than five days.'
+          : '',
+    hints: ['Three earlier chapters each hold part of the answer: the riddle, linked systems and queues.', 'One shared record with every approval kept, then stand-ins or spare capacity for the approvers.'],
+    found: 'One shared record, every approval kept and run side by side, and stand-ins or spare capacity for the approvers. The same six systems and the same checks, in about a fifth of the time.',
+  });
+  const showAnswer = () => ((systems = 6), (problems = 10), (availability = 85), (info = 'shared'), (approvals = 'each'), (standIns = 1), (busy = 70));
+
+  // The reader's score across every puzzle in the story.
+  const entries = $derived(game.ids.map((id) => ({ id, ...game.entry(id) })));
+  const unaided = $derived(entries.filter((e) => e.status === 'solved' && e.points === 2).length);
+  const stillOpen = $derived(entries.filter((e) => e.status === 'open' && e.id !== 'monday'));
+  const nameOf = (id) => (id === 'start' ? 'The opening' : `${numberOf(id)}. ${CHAPTERS[numberOf(id)].short}`);
+  let confirming = $state(false);
+  function startAgain() {
+    confirming = false;
+    game.reset();
+    go('start');
+  }
   const rows = $derived([...d.options, { id: 'together', label: d.together.label, median: d.together.median, p90: d.together.p90, slipped: d.together.slipped, together: true }]);
 
   // Lever chart: horizontal bars of the typical lead time. On a phone each label sits above its bar.
@@ -53,7 +86,8 @@
     { title: 'Measure the whole', text: 'Give every team the same end-to-end measure, from request to answer, and pair each measure with its counterpart: speed with errors, volume with quality.', ch: 'emergence' },
     { title: 'Care in proportion to the risk', text: 'Small, reversible decisions get light checks, or a sample checked while the work flows on. Decisions that cannot be undone get several reviewers working at the same time.', ch: 'ergodicity' },
     { title: 'Tools before gates', text: 'Bring in AI and automation as tools that carry the complexity for people. Judge them by the screens and steps they remove.', ch: 'tools' },
-    { title: 'Look for what the data misses', text: 'Measure waiting, rework and abandoned requests alongside incidents. Study failures as well as successes, and ask the people who left.', ch: 'survivors' },
+    { title: 'Try to prove yourself wrong', text: 'Run fire drills and reverse stress tests, and keep the near misses. Count waiting, rework and abandoned requests alongside incidents, so the cost of a control is as visible as its reason.', ch: 'black-swans' },
+    { title: 'Build in modules', text: 'Small teams and systems with clear interfaces, each able to finish its part and hand over a stable result, so trouble in one stays in one.', ch: 'graph' },
   ];
 
   const sources = [
@@ -64,6 +98,7 @@
     ['Chris Miller', '2022', 'Chip War', 'How the semiconductor industry split into a long chain of specialists.'],
     ['George Labovitz and Yu Sang Chang', '1992', 'The 1-10-100 rule', 'A data error costs far more to fix the longer it survives. The rule is commonly attributed to them; we found no primary publication.'],
     ['J. F. C. Kingman', '1961', '“The single server queue in heavy traffic”, Proceedings of the Cambridge Philosophical Society', 'Why waiting explodes near full utilization.'],
+    ['Adrian Bagust, Michael Place and John Posnett', '1999', '“Dynamics of bed use in accommodating emergency admissions”, BMJ', 'Why hospitals run into bed crises above about 85% occupancy.'],
     ['Donald Reinertsen', '2009', 'The Principles of Product Development Flow', 'Queues, utilization and batch size in knowledge work.'],
     ['Andrew S. Grove', '1983', 'High Output Management', 'The breakfast factory: the limiting step, catching problems at the lowest-value stage, gates and monitors, paired indicators.'],
     ['Yuki Sugiyama and colleagues', '2008', '“Traffic jams without bottlenecks”, New Journal of Physics', 'A jam that emerges on a circular track with no cause but the drivers themselves.'],
@@ -76,17 +111,18 @@
     ['Andrew Haldane', '2009', '“Rethinking the financial network”, speech, Amsterdam', 'The financial system as robust yet fragile.'],
     ['Andrew Haldane and Robert May', '2011', '“Systemic risk in banking ecosystems”, Nature', 'A central banker and an ecologist on banks as an ecosystem.'],
     ['Karl Popper', '1959', 'The Logic of Scientific Discovery', 'Theories can be falsified, never proven by examples.'],
-    ['Nassim Nicholas Taleb', '2007, 2012, 2018', 'The Black Swan; Antifragile; Skin in the Game', 'Rare events, convexity, and one person at the casino a hundred times.'],
+    ['Peter C. Wason', '1966', '“Reasoning”, in New Horizons in Psychology', 'The selection task: most people test a rule by looking for cases that agree with it.'],
+    ['Bertrand Russell', '1912', 'The Problems of Philosophy, chapter 6', 'The chicken fed every day of its life.'],
+    ['Gary Klein', '2007', '“Performing a project premortem”, Harvard Business Review', 'Imagine the project has failed, then ask why.'],
+    ['Nassim Nicholas Taleb', '2012, 2018', 'Antifragile; Skin in the Game', 'Convexity, and one person at the casino a hundred times.'],
     ['Microsoft', '2024', 'Statement on the CrowdStrike incident, 20 July', 'About 8.5 million Windows devices affected.'],
-    ['Abraham Wald', '1943', '“A Method of Estimating Plane Vulnerability Based on Damage of Survivors”, Statistical Research Group, Columbia University', 'The planes that came back.'],
-    ['Edwin Elton, Martin Gruber and Christopher Blake', '1996', '“Survivorship Bias and Mutual Fund Performance”, Review of Financial Studies', 'How dropping closed funds flatters the average.'],
-    ['Phil Rosenzweig', '2007', 'The Halo Effect', 'Why studies of successful companies mislead.'],
     ['Lian Pin Koh and colleagues', '2004', '“Species coextinctions and the biodiversity crisis”, Science', 'Species that disappear with the species they depend on.'],
     ['Herbert A. Simon', '1962', '“The Architecture of Complexity”, Proceedings of the American Philosophical Society', 'The watchmakers Hora and Tempus, and why modular systems survive.'],
     ['John Gall', '1975', 'General Systemantics', 'A complex system that works has evolved from a simple system that worked.'],
     ['Frederick P. Brooks', '1975', 'The Mythical Man-Month', 'Adding people to a late project makes it later.'],
     ['Luís Bettencourt and colleagues', '2007', '“Growth, innovation, scaling, and the pace of life in cities”, PNAS', 'Why bigger cities produce more per person.'],
     ['W. Brian Arthur', '1989', '“Competing Technologies, Increasing Returns, and Lock-In by Historical Events”, Economic Journal', 'Markets that tip to a winner decided by early luck.'],
+    ['William Jack and Tavneet Suri', '2014', '“Risk Sharing and Transactions Costs: Evidence from Kenya’s Mobile Money Revolution”, American Economic Review', 'How fast M-Pesa spread, and what it did for households.'],
     ['David Autor and colleagues', '2020', '“The Fall of the Labor Share and the Rise of Superstar Firms”, Quarterly Journal of Economics', 'Sales concentrating in fewer, larger firms.'],
     ['Réka Albert, Hawoong Jeong and Albert-László Barabási', '2000', '“Error and attack tolerance of complex networks”, Nature', 'Hub networks shrug off random failures and collapse when a hub fails.'],
   ];
@@ -131,7 +167,7 @@
 
   <div class="grid">
     <section class="moves" aria-labelledby="{prefix}-moves">
-      <h3 class="tkc-display moves-title" id="{prefix}-moves">Eight moves</h3>
+      <h3 class="tkc-display moves-title" id="{prefix}-moves">Nine moves</h3>
       <ol>
         {#each moves as move (move.title)}
           <li>
@@ -145,6 +181,7 @@
 
     <div class="tool">
       <Instrument title="Check a process you know" sub="Example values are filled in. Set them to match a real request.">
+        <Puzzle id="monday" {...puzzle} onshow={showAnswer} />
         <div class="tkc-controls">
           <Slider id="m-n" label="Systems the request passes through" bind:value={systems} min={2} max={8} />
           <Slider id="m-p" label="Chance a form has a problem" bind:value={problems} min={0} max={30} format={(v) => `${v}%`} />
@@ -224,6 +261,30 @@
     <p class="tkc-lede">
       A bank needs its checks. Simplicity is not fewer controls; it is fewer conditions.
     </p>
+  </section>
+
+  <section class="score-card" aria-labelledby="{prefix}-score">
+    <h3 class="tkc-eyebrow" id="{prefix}-score">Your score</h3>
+    <p class="score-big tkc-num">{game.score} <span>of {game.max} points</span></p>
+    <p class="tkc-small">
+      {game.solved} of {game.ids.length} puzzles solved{unaided ? `, ${unaided} of them without help` : ''}.
+      {stillOpen.length ? 'Still open:' : game.isOpen('monday') ? 'Only the final challenge is left.' : 'Every puzzle is done.'}
+    </p>
+    {#if stillOpen.length}
+      <ul class="open-list">
+        {#each stillOpen as e (e.id)}
+          <li><button type="button" class="see" onclick={() => go(e.id)}>{nameOf(e.id)}</button></li>
+        {/each}
+      </ul>
+    {/if}
+    <div class="tkc-row">
+      {#if confirming}
+        <button type="button" class="tkc-btn tkc-btn--small" onclick={startAgain}>Yes, clear my score</button>
+        <button type="button" class="see" onclick={() => (confirming = false)}>Keep it</button>
+      {:else}
+        <button type="button" class="tkc-btn tkc-btn--small" onclick={() => (confirming = true)}>Start again</button>
+      {/if}
+    </div>
   </section>
 
   <section class="sources" aria-labelledby="{prefix}-sources">
@@ -433,6 +494,37 @@
     font-weight: 600;
     text-decoration-thickness: 4px;
     text-underline-offset: 6px;
+  }
+  .score-card {
+    display: grid;
+    gap: 8px;
+    justify-items: start;
+    max-width: 40rem;
+    padding: 20px 22px;
+    border-radius: 14px;
+    border: 1px solid var(--tkc-hair);
+    border-left: 4px solid var(--tkc-options);
+    background: var(--tkc-surface);
+  }
+  .score-big {
+    font-family: var(--tkc-font-display);
+    font-size: 2.25rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--tkc-ink);
+  }
+  .score-big span {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--tkc-muted);
+  }
+  .open-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
   }
   .sources {
     display: grid;
