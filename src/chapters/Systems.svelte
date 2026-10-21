@@ -238,36 +238,31 @@
 
   {#snippet after()}
     <p>
-      With six linked systems and an approval at each, the typical request takes more than three working weeks, and
-      only about one hour in seven of that time is real work. Worse, about one request in ten still carries a hidden
-      problem at the end, after six approvals. Each approver sees only their own system, so a problem that enters late
-      meets few checks.
+      In this model, a chain of six systems with an approval at each takes more than three working weeks for a typical
+      request, and only about one hour in seven of that time is real work. About one request in ten still carries a
+      hidden problem at the end, because a problem that enters late meets few checks.
     </p>
-    <h3>Three things make linked systems worse than they look</h3>
+    <h3>Why linked systems are harder than they look</h3>
     <ul>
       <li><strong>A problem stops everything.</strong> The request cannot continue until it is fixed, so one wrong field costs days, not minutes.</li>
       <li>
-        <strong>Problems spread.</strong> Because each system copies the last, the fix has to be made in every system the
-        data has reached, and each of those is approved again. Quality engineers have a rule of thumb for this, the
-        1-10-100 rule: a problem that costs 1 to prevent at entry costs 10 to correct later and 100 if it reaches the
-        client.
+        <strong>Problems spread.</strong> When each system copies the last, the fix has to be made everywhere the data
+        has gone, and approved again. Quality engineers sum this up in the 1-10-100 rule: a problem that costs 1 to
+        prevent at entry costs 10 to correct later and 100 if it reaches the client.
       </li>
-      <li><strong>Every new system adds a link.</strong> Each specialist team’s new tool brings its own form, its own approval, its own copy of the data and its own screen to learn. People feel the sum of those screens as UI fatigue.</li>
+      <li><strong>Every new system adds a link.</strong> Each new tool brings its own form, its own approval, its own copy of the data and its own screen to learn. People feel the sum of those screens as UI fatigue.</li>
     </ul>
-    <h3>Faster and safer at the same time</h3>
-    <p>
-      Today’s chain is the worst of both worlds: the slowest design and the one that lets the most problems through.
-    </p>
+    <h3>Same controls, different shape</h3>
     <p>
       Switch to one shared record. Every system reads the same data, so it is entered once, a problem is fixed in one
-      place, and the approvals can happen at the same time instead of one after another. The typical request falls from
-      more than three weeks to about one. If every approver checks the whole record, almost no problems slip through.
+      place, and the approvals can run at the same time. The typical request falls from more than three weeks to about
+      one. If every approver checks the whole record, almost no problems slip through.
     </p>
     <p>
-      Then try one approval at the end. It is the fastest design, a few days, and it lets fewer problems through than
-      today’s chain. Several parallel reviews can catch more, but only if each reviewer checks the whole record and they
-      do not all miss the same things. That is a choice to make by risk: one approval for standard requests, several
-      reviewers working in parallel for the ones that cannot be undone.
+      Then try one approval at the end. It is the fastest design, a few days, and it still lets fewer problems through
+      than a chain of copies. Several parallel reviews can catch more, but only if each reviewer checks the whole record
+      and they do not all miss the same things. The choice follows the risk: one approval for standard requests, several
+      reviewers in parallel for decisions that cannot be undone.
     </p>
   {/snippet}
 

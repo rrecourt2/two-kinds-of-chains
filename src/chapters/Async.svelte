@@ -1,0 +1,286 @@
+<script>
+  import Chapter from '../lib/ui/Chapter.svelte';
+  import Instrument from '../lib/ui/Instrument.svelte';
+  import Slider from '../lib/ui/Slider.svelte';
+  import Segmented from '../lib/ui/Segmented.svelte';
+  import Stat from '../lib/ui/Stat.svelte';
+  import { announce } from '../lib/ui/announce.js';
+  import TryThis from '../lib/ui/TryThis.svelte';
+  import BankNote from '../lib/ui/BankNote.svelte';
+  import { EXAMPLES, schedule } from '../lib/sim/async.js';
+  import { linear, barRight } from '../lib/scales.js';
+
+  let exampleId = $state('breakfast');
+  let handoff = $state(EXAMPLES.breakfast.handoff);
+  let mistake = $state('none');
+  let faster = $state([]);
+  let width = $state(560);
+
+  const ex = $derived(EXAMPLES[exampleId]);
+  const seq = $derived(schedule(ex, { mode: 'sequence', handoff, faster, mistake }));
+  const par = $derived(schedule(ex, { mode: 'parallel', handoff, faster, mistake }));
+
+  function setExample(id) {
+    exampleId = id;
+    handoff = EXAMPLES[id].handoff;
+    mistake = 'none';
+    faster = [];
+  }
+  const toggleFaster = (id) => (faster = faster.includes(id) ? faster.filter((f) => f !== id) : [...faster, id]);
+
+  const num = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
+  const amount = (v) => `${num(v)} ${v === 1 ? ex.unit.replace(/s$/, '') : ex.unit}`;
+  const detail = (r) => (r.rework ? `${num(r.rework)} of them redoing work` : r.waiting ? `${num(r.waiting)} of them waiting for handoffs` : 'no waiting');
+
+  // Two Gantt panels on one time scale.
+  const narrow = $derived(width < 460);
+  const labelW = $derived(narrow ? 92 : 124);
+  const rowH = 22;
+  const panelH = $derived(ex.pieces.length * rowH + 30);
+  const H = $derived(2 * panelH + 30);
+  const tMax = $derived(Math.max(seq.total, par.total) * 1.06);
+  const x = $derived(linear(0, tMax, labelW, width - 10));
+  const step = $derived(tMax > 24 ? 4 : tMax > 10 ? 2 : 1);
+  const tickVals = $derived(Array.from({ length: Math.floor(tMax / step) + 1 }, (_, i) => i * step));
+  const panels = $derived([
+    { id: 'sequence', title: 'One after another', run: seq, y0: 0 },
+    { id: 'parallel', title: 'In parallel, meeting at the end', run: par, y0: panelH },
+  ]);
+  const label = (p) => (narrow ? p.label.replace('Credit analysis', 'Credit').replace('Legal documents', 'Legal docs') : p.label);
+
+  const tries = $derived(
+    exampleId === 'breakfast'
+      ? [
+          { label: 'Make the coffee twice as fast', apply: () => (faster = ['coffee']) },
+          { label: 'Make the egg twice as fast', apply: () => (faster = ['egg']) },
+          { label: 'A bad egg, found at the table', apply: () => ((faster = []), (mistake = 'end')) },
+          { label: 'Now a client request', apply: () => setExample('request') },
+        ]
+      : [
+          { label: 'Speed up the pricing', apply: () => ((faster = ['pricing']), (mistake = 'none')) },
+          { label: 'Speed up the slowest piece', apply: () => ((faster = [par.slowest]), (mistake = 'none')) },
+          { label: 'A data mistake found at the end', apply: () => ((faster = []), (mistake = 'end')) },
+          { label: 'Catch it at the start', apply: () => ((faster = []), (mistake = 'start')) },
+        ],
+  );
+</script>
+
+<Chapter
+  n={5}
+  kicker="Asynchronous work"
+  title="Don’t wait for each other"
+  lede="Work done one step after another adds up every step and every wait. Work done in parallel takes as long as its slowest piece."
+>
+  {#snippet setup()}
+    <p>
+      Andrew Grove, who ran Intel, taught management with a breakfast: a boiled egg, toast and coffee, all ready at the
+      same moment. A good cook does not boil the egg, then make the toast, then the coffee. They start everything that
+      can start, and the pieces come together once, at the end.
+    </p>
+    <p>
+      That is asynchronous work. Nobody waits for anybody, and no piece waits for a step it does not need. Its opposite
+      is work in lockstep, where each step waits for the one before it and for someone to pick it up.
+    </p>
+  {/snippet}
+
+  {#snippet figure()}
+    <Instrument title="The same work, two ways" sub="Each bar is one piece of work. Change the example, the waits and the mistakes, or speed a piece up.">
+      <div class="tkc-controls">
+        <Segmented
+          name="a-ex"
+          label="Example"
+          value={exampleId}
+          options={[
+            { value: 'breakfast', label: 'Breakfast' },
+            { value: 'request', label: 'A client request' },
+          ]}
+          onchange={setExample}
+        />
+        <Segmented
+          name="a-mistake"
+          label={ex.mistake}
+          bind:value={mistake}
+          options={[
+            { value: 'none', label: 'None' },
+            { value: 'end', label: 'Found late' },
+            { value: 'start', label: 'Caught early' },
+          ]}
+        />
+        {#if exampleId === 'request'}
+          <Slider id="a-handoff" label="Wait at each handoff" bind:value={handoff} min={0} max={3} format={(v) => (v === 0 ? 'none' : `${v} day${v > 1 ? 's' : ''}`)} />
+        {/if}
+      </div>
+
+      <div class="speed" role="group" aria-label="Make a piece twice as fast">
+        <span class="speed-label">Make a piece twice as fast:</span>
+        {#each ex.pieces as p (p.id)}
+          <button type="button" class="chip" aria-pressed={faster.includes(p.id)} onclick={() => toggleFaster(p.id)}>{p.label}</button>
+        {/each}
+      </div>
+
+      <div class="tkc-chart" bind:clientWidth={width}>
+        <svg {width} height={H} role="img" aria-label="One after another: {amount(seq.total)}. In parallel: {amount(par.total)}.">
+          {#each panels as panel (panel.id)}
+            {@const top = panel.y0 + 22}
+            <text class="tkc-label" x="0" y={panel.y0 + 14}>{panel.title}</text>
+            <text class="tkc-label total" x={width - 10} y={panel.y0 + 14} text-anchor="end">{amount(panel.run.total)}</text>
+            {#each ex.pieces as p, r (p.id)}
+              <text class="tkc-label-2" x="0" y={top + r * rowH + 15}>{label(p)}</text>
+              <line class="tkc-grid" x1={labelW} x2={width - 10} y1={top + r * rowH + rowH - 1} y2={top + r * rowH + rowH - 1} />
+            {/each}
+            {#each panel.run.bars as b, i (i)}
+              <path d={barRight(x(b.start), top + b.row * rowH + 4, Math.max(1.5, x(b.end) - x(b.start) - 1), rowH - 8, 3)} class="bar {b.kind}" />
+            {/each}
+            <line class="end" x1={x(panel.run.total)} x2={x(panel.run.total)} y1={top - 2} y2={top + ex.pieces.length * rowH} />
+            {#if panel.id === 'parallel' && !narrow}
+              {@const sp = ex.pieces.findIndex((p) => p.id === panel.run.slowest)}
+              {@const sb = panel.run.bars.filter((b) => b.row === sp && b.kind === 'work').at(-1)}
+              {#if sb}<text class="tkc-axis-label tkc-halo" x={x(sb.end) + 6} y={top + sp * rowH + 15}>slowest: sets the pace</text>{/if}
+            {/if}
+          {/each}
+          {#each tickVals as t}
+            <text class="tkc-axis-label" x={x(t)} y={H - 6} text-anchor="middle">{t}</text>
+          {/each}
+          <text class="tkc-axis-label" x="0" y={H - 6}>{ex.unit}</text>
+        </svg>
+        <div class="tkc-legend">
+          <span><span class="tkc-swatch sw-work"></span>Work</span>
+          {#if seq.waiting > 0}<span><span class="tkc-swatch sw-wait"></span>Waiting for a handoff</span>{/if}
+          {#if mistake === 'end'}<span><span class="tkc-swatch sw-redo"></span>Redoing work</span>{/if}
+          {#if mistake === 'start'}<span><span class="tkc-swatch sw-check"></span>Checking the input first</span>{/if}
+        </div>
+      </div>
+
+      <div class="tkc-stats" use:announce>
+        <Stat label="One after another" value={amount(seq.total)} sub={detail(seq)} swatch="var(--tkc-conditions)" />
+        <Stat label="In parallel" value={amount(par.total)} sub={detail(par)} swatch="var(--tkc-options)" />
+      </div>
+
+      <TryThis items={tries} />
+
+      {#snippet model()}
+        <p>Each piece takes a fixed time. One after another, every piece waits for a handoff before someone picks it up, and the last one waits to be delivered. In parallel, the pieces start together and wait once to be brought together. In the client request, every piece is built on the client data, so it comes first in both designs.</p>
+        <p>A mistake found at the end means the first piece is fixed and everything built on it is done again. Caught at the start, it costs a short check before any other work begins.</p>
+      {/snippet}
+    </Instrument>
+  {/snippet}
+
+  {#snippet after()}
+    <p>
+      One after another, the times add up, and so do the waits between them. In parallel, the work takes as long as its
+      slowest piece.
+    </p>
+    <p>
+      Now make a piece twice as fast. One after another, every speed-up helps a little. In parallel, only the slowest
+      piece matters: making anything else faster changes nothing. Improving a part is not the same as improving the
+      whole, which is the subject of the next chapter.
+    </p>
+    <h3>Four lessons from the breakfast factory</h3>
+    <ul>
+      <li>
+        <strong>Find the slowest step.</strong> It sets the pace for everything, so put the effort there. Expect it to
+        move: real work varies, so the slowest piece changes from one request to the next.
+      </li>
+      <li>
+        <strong>Keep bad inputs out first.</strong> Check the egg before you boil it. Work adds value at every step, so
+        a problem costs least at the start. Found at the end, it means doing the work twice. In parallel work this
+        matters even more, because every piece starts from the same record.
+      </li>
+      <li>
+        <strong>Monitor where you can; stop the line only where you must.</strong> A gate holds all work until it has
+        been checked. A monitoring step checks samples while the work flows on, and checks less often while quality is
+        good.
+      </li>
+      <li>
+        <strong>Pair every measure with its counterpart.</strong> Count speed together with errors, and volume together
+        with quality, so that improving one number cannot quietly damage another.
+      </li>
+    </ul>
+    <p>
+      Parallel work needs pieces that do not depend on each other. Many steps wait for one another only out of habit,
+      or because the data they need sits in someone else’s system. One shared record (chapter 3) lets them start at
+      once, and the one approval comes at the end, when the pieces meet.
+    </p>
+  {/snippet}
+
+  {#snippet bank()}
+    <BankNote ask="Which steps wait for a step they do not actually need, and where are bad inputs found late?">
+      <p>
+        Take a common request and mark, for each step, which earlier result it truly needs. Start everything else at
+        once from one shared record. Move the cheap checks to the start, where a problem costs least, and keep one
+        approval for when the pieces come together.
+      </p>
+    </BankNote>
+  {/snippet}
+</Chapter>
+
+<style>
+  .speed {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+  }
+  .speed-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-right: 2px;
+  }
+  .chip {
+    min-height: 32px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--tkc-rule);
+    background: var(--tkc-surface);
+    color: var(--tkc-ink);
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+  .chip[aria-pressed='true'] {
+    background: var(--tkc-options-wash);
+    border-color: var(--tkc-options);
+    color: var(--tkc-options-ink);
+    font-weight: 600;
+  }
+  .chip[aria-pressed='true']::before {
+    content: '×2 ';
+  }
+  .chip:focus-visible {
+    outline: 2px solid var(--tkc-focus);
+    outline-offset: 2px;
+  }
+  .total {
+    font-weight: 700;
+  }
+  .bar.work {
+    fill: var(--tkc-ink-2);
+  }
+  .bar.wait {
+    fill: var(--tkc-sunken);
+    stroke: var(--tkc-rule);
+    stroke-dasharray: 3 2;
+  }
+  .bar.redo {
+    fill: var(--tkc-conditions);
+  }
+  .bar.check {
+    fill: var(--tkc-options);
+  }
+  .end {
+    stroke: var(--tkc-ink);
+    stroke-width: 1.5;
+  }
+  .sw-work {
+    background: var(--tkc-ink-2);
+  }
+  .sw-wait {
+    background: var(--tkc-sunken);
+    border: 1px dashed var(--tkc-rule);
+  }
+  .sw-redo {
+    background: var(--tkc-conditions);
+  }
+  .sw-check {
+    background: var(--tkc-options);
+  }
+</style>

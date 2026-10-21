@@ -46,25 +46,31 @@
   const x = $derived(linear(0, xMax, labelW, width - 44));
 
   const moves = [
-    { title: 'Alternatives everywhere', text: 'Every approval can be given by more than one person with the right delegated authority, and every critical system has a tested fallback. No link depends on one name.', ch: 'riddle' },
-    { title: 'Enter it once', text: 'One shared record that every system reads, instead of copies that each need re-keying, checking and correcting. Run it as a protected hub with a tested fallback.', ch: 'systems' },
-    { title: 'Check data as it is typed', text: 'Automatic checks at entry stop a problem before it spreads into other systems. That is where Grove was right.', ch: 'breakfast' },
-    { title: 'Approve in parallel, or once at the end', text: 'No approval waits for another. Standard requests get one approval when the picture is complete; requests that cannot be undone get several reviewers working at the same time.', ch: 'systems' },
+    { title: 'Alternatives everywhere', text: 'Every approval can be given by more than one qualified person, and every critical system has a tested fallback. No link depends on one name.', ch: 'riddle' },
+    { title: 'Enter it once, check it as it is typed', text: 'One shared record that every system reads, with automatic checks at entry, so a problem is caught before anything is built on it.', ch: 'systems' },
+    { title: 'Work in parallel, approve once', text: 'Start every piece that can start. Standard requests get one approval when the pieces come together; decisions that cannot be undone get several reviewers working at the same time.', ch: 'async' },
     { title: 'Spare capacity', text: 'Keep key reviewers and key systems below about 80% loaded, and give them one shared queue.', ch: 'queues' },
+    { title: 'Measure the whole', text: 'Give every team the same end-to-end measure, from request to answer, and pair each measure with its counterpart: speed with errors, volume with quality.', ch: 'emergence' },
     { title: 'Care in proportion to the risk', text: 'Small, reversible decisions get light, fast checks. The most care goes where mistakes cannot be undone.', ch: 'ergodicity' },
-    { title: 'Tools before gates', text: 'Bring in AI and automation as tools that work the screens for people. Judge them by the screens and steps they remove.', ch: 'tools' },
-    { title: 'Count the silent costs', text: 'Measure waiting, re-keying and abandoned requests alongside incidents, and track one number: the share of a request’s time that is actual work.', ch: 'black-swans' },
+    { title: 'Tools before gates', text: 'Bring in AI and automation as tools that carry the complexity for people. Judge them by the screens and steps they remove.', ch: 'tools' },
+    { title: 'Look for what the data misses', text: 'Measure waiting, rework and abandoned requests alongside incidents. Study failures as well as successes, and ask the people who left.', ch: 'survivors' },
   ];
 
   const sources = [
     ['Adam Smith', '1776', 'The Wealth of Nations, Book I, chapters 1 and 3', 'The pin workshop; the division of labour is limited by the extent of the market.'],
     ['Leonard E. Read', '1958', '“I, Pencil”', 'No single person knows how to make a pencil.'],
     ['OECD', '', 'Global value chains and trade', 'About 70% of international trade involves global value chains.'],
+    ['Ronald Coase', '1937', '“The Nature of the Firm”, Economica', 'Why firms exist, and where their boundaries fall.'],
+    ['Chris Miller', '2022', 'Chip War', 'How the semiconductor industry split into a long chain of specialists.'],
     ['Michael Kremer', '1993', '“The O-Ring Theory of Economic Development”, Quarterly Journal of Economics', 'When every task must succeed, small differences in reliability multiply.'],
     ['George Labovitz and Yu Sang Chang', '1992', 'The 1-10-100 rule', 'A data error costs far more to fix the longer it survives. The rule is commonly attributed to them; we found no primary publication.'],
     ['J. F. C. Kingman', '1961', '“The single server queue in heavy traffic”, Proceedings of the Cambridge Philosophical Society', 'Why waiting explodes near full utilization.'],
     ['Donald Reinertsen', '2009', 'The Principles of Product Development Flow', 'Queues, utilization and batch size in knowledge work.'],
-    ['Andrew S. Grove', '1983', 'High Output Management', 'The breakfast factory and the limiting step.'],
+    ['Andrew S. Grove', '1983', 'High Output Management', 'The breakfast factory: the limiting step, catching problems at the lowest-value stage, gates and monitors, paired indicators.'],
+    ['Yuki Sugiyama and colleagues', '2008', '“Traffic jams without bottlenecks”, New Journal of Physics', 'A jam that emerges on a circular track with no cause but the drivers themselves.'],
+    ['Dietrich Braess', '1968', '“Über ein Paradoxon aus der Verkehrsplanung”, Unternehmensforschung', 'Adding a road can make every journey slower.'],
+    ['Gina Kolata', '1990', '“What if they closed 42d Street and nobody noticed?”, The New York Times, 25 December', 'Braess’s paradox in Manhattan.'],
+    ['Eliyahu M. Goldratt and Jeff Cox', '1984', 'The Goal', 'The Theory of Constraints: only the bottleneck sets the pace.'],
     ['Ole Peters', '2019', '“The ergodicity problem in economics”, Nature Physics', 'The coin game, and time averages versus ensemble averages.'],
     ['Ole Peters and Alexander Adamou', '2015', '“An evolutionary advantage of cooperation”', 'Pooling raises the growth rate a typical member experiences.'],
     ['Duncan J. Watts', '2002', '“A simple model of global cascades on random networks”, PNAS', 'Cascade windows and robust-yet-fragile networks.'],
@@ -74,12 +80,19 @@
     ['Karl Popper', '1959', 'The Logic of Scientific Discovery', 'Theories can be falsified, never proven by examples.'],
     ['Nassim Nicholas Taleb', '2007, 2012, 2018', 'The Black Swan; Antifragile; Skin in the Game', 'Rare events, convexity, and one person at the casino a hundred times.'],
     ['Microsoft', '2024', 'Statement on the CrowdStrike incident, 20 July', 'About 8.5 million Windows devices affected.'],
+    ['Abraham Wald', '1943', '“A Method of Estimating Plane Vulnerability Based on Damage of Survivors”, Statistical Research Group, Columbia University', 'The planes that came back.'],
+    ['Edwin Elton, Martin Gruber and Christopher Blake', '1996', '“Survivor Bias and Mutual Fund Performance”, Review of Financial Studies', 'How dropping closed funds flatters the average.'],
+    ['Phil Rosenzweig', '2007', 'The Halo Effect', 'Why studies of successful companies mislead.'],
     ['Richard Lewontin and Dan Cohen', '1969', '“On population growth in a randomly varying environment”, PNAS', 'A population can grow on average and still go extinct.'],
     ['Lian Pin Koh and colleagues', '2004', '“Species coextinctions and the biodiversity crisis”, Science', 'Species that disappear with the species they depend on.'],
     ['Herbert A. Simon', '1962', '“The Architecture of Complexity”, Proceedings of the American Philosophical Society', 'The watchmakers Hora and Tempus, and why modular systems survive.'],
+    ['John Gall', '1975', 'Systemantics', 'A complex system that works has evolved from a simple system that worked.'],
     ['Melvin Conway', '1968', '“How Do Committees Invent?”', 'Organizations design systems that copy their communication structure.'],
     ['Frederick P. Brooks', '1975', 'The Mythical Man-Month', 'Adding people to a late project makes it later.'],
     ['Luís Bettencourt and colleagues', '2007', '“Growth, innovation, scaling, and the pace of life in cities”, PNAS', 'Why bigger cities produce more per person.'],
+    ['Sherwin Rosen', '1981', '“The Economics of Superstars”, American Economic Review', 'Why small differences in talent become huge differences in reward.'],
+    ['W. Brian Arthur', '1989', '“Competing Technologies, Increasing Returns, and Lock-In by Historical Events”, Economic Journal', 'Markets that tip to a winner decided by early luck.'],
+    ['David Autor and colleagues', '2020', '“The Fall of the Labor Share and the Rise of Superstar Firms”, Quarterly Journal of Economics', 'Sales concentrating in fewer, larger firms.'],
     ['Réka Albert, Hawoong Jeong and Albert-László Barabási', '2000', '“Error and attack tolerance of complex networks”, Nature', 'Hub networks shrug off random failures and collapse when a hub fails.'],
   ];
 </script>
@@ -175,7 +188,7 @@
           <p class="tkc-small">Typical lead time after each single change, from the same simulated requests.</p>
           <svg {width} height={H} role="img" aria-label="Typical lead time after each change.">
             <line class="today" x1={x(d.now.median)} x2={x(d.now.median)} y1="4" y2={H - 22} />
-            <text class="tkc-axis-label" x={x(d.now.median)} y={H - 6} text-anchor="middle">Today: {shortDays(d.now.median, HORIZON)} days</text>
+            <text class="tkc-axis-label" x={x(d.now.median)} y={H - 6} text-anchor="middle">As set: {shortDays(d.now.median, HORIZON)} days</text>
             {#each rows as r, i (r.id)}
               {@const yy = 8 + i * rowH}
               {@const by = stacked ? yy + 18 : yy + 4}
@@ -190,7 +203,7 @@
               <table class="tkc-table">
                 <thead><tr><th>Change</th><th>Typical (days)</th><th>1 in 10 longer than (days)</th><th>Problems slip through</th></tr></thead>
                 <tbody>
-                  <tr><td>Today</td><td>{shortDays(d.now.median, HORIZON)}</td><td>{shortDays(d.now.p90, HORIZON)}</td><td>{pct(d.now.slipped, 1)}</td></tr>
+                  <tr><td>As set</td><td>{shortDays(d.now.median, HORIZON)}</td><td>{shortDays(d.now.p90, HORIZON)}</td><td>{pct(d.now.slipped, 1)}</td></tr>
                   {#each rows as r (r.id)}
                     <tr><td>{r.label}</td><td>{shortDays(r.median, HORIZON)}</td><td>{shortDays(r.p90, HORIZON)}</td><td>{pct(r.slipped, 1)}</td></tr>
                   {/each}
@@ -214,8 +227,9 @@
       conditions. Scale multiplies whichever you have.
     </p>
     <p class="tkc-lede">
-      A bank needs its checks. Give them the shape of options: alternatives at every link, data entered once, approvals
-      that run in parallel or once at the end, spare capacity, and tools that take screens away instead of adding them.
+      A bank needs its checks. Simplicity is not fewer controls; it is fewer conditions. Give the controls the shape of
+      options: alternatives at every link, data entered once, work that runs in parallel and meets once, spare capacity,
+      one measure for the whole journey, and tools that take screens away instead of adding them.
     </p>
   </section>
 

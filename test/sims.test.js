@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 
 import { simulateMonth, coverageOdds } from '../src/lib/sim/presence.js';
 import { simulateSystems } from '../src/lib/sim/systems.js';
-import { simulateMornings, checks } from '../src/lib/sim/breakfast.js';
+import { EXAMPLES, schedule } from '../src/lib/sim/async.js';
+import { equilibrium, bestForAll } from '../src/lib/sim/braess.js';
+import { simulateRaid } from '../src/lib/sim/planes.js';
+import { manyMarkets } from '../src/lib/sim/market.js';
 import { simulateHistory, worst, recordsAfter } from '../src/lib/sim/tails.js';
 import { DESIGNS, averagePayoff, chainSuccess } from '../src/lib/sim/convexity.js';
 import { erlangC, meanWait, LiveQueue } from '../src/lib/sim/queue.js';
@@ -135,21 +138,50 @@ test('systems: one shared record and one late approval are faster and let fewer 
   assert.equal(clean.stopped, 0);
 });
 
-test('breakfast: Grove is right in the kitchen and wrong in the bank', () => {
-  const kitchen = simulateMornings({ bankness: 0 });
-  const bank = simulateMornings({ bankness: 1 });
-  const eggShare = (m) => m.filter((d) => d.slowest === 0).length / m.length;
-  const onTime = (m) => m.filter((d) => d.onTime).length / m.length;
-  console.log('breakfast egg slowest kitchen', eggShare(kitchen), 'bank', eggShare(bank), 'on time', onTime(kitchen), onTime(bank));
-  assert.equal(eggShare(kitchen), 1);
-  assert.equal(onTime(kitchen), 1);
-  assert.ok(eggShare(bank) < 0.8);
-  assert.ok(onTime(bank) < 0.7);
-  assert.ok(checks(0).early.caught > checks(0).late.caught);
-  assert.ok(checks(1).early.caught < checks(1).late.caught);
+test('asynchronous work: parallel takes the slowest piece, a late mistake doubles the work', () => {
+  const run = (ex, o) => schedule(EXAMPLES[ex], o).total;
+  assert.equal(run('breakfast', { mode: 'sequence' }), 5);
+  assert.equal(run('breakfast', { mode: 'parallel' }), 3);
+  assert.equal(run('request', { mode: 'sequence' }), 16);
+  assert.equal(run('request', { mode: 'parallel' }), 7);
+  for (const mode of ['sequence', 'parallel']) {
+    assert.equal(run('request', { mode, mistake: 'end' }), 2 * run('request', { mode }));
+    assert.equal(run('request', { mode, mistake: 'start' }), run('request', { mode }) + 0.5);
+  }
+  // Speeding up a piece that is not the slowest helps one after another, and not at all in parallel.
+  assert.ok(run('request', { mode: 'sequence', faster: ['pricing'] }) < 16);
+  assert.equal(run('request', { mode: 'parallel', faster: ['pricing'] }), 7);
+  assert.ok(run('request', { mode: 'parallel', faster: ['credit'] }) < 7);
 });
 
-test('black swans: fat tails keep breaking records, thin tails do not', () => {
+test('Braess: the new link makes every journey slower in rush hour', () => {
+  assert.equal(equilibrium(4000, false).time, 65);
+  assert.equal(equilibrium(4000, true).time, 80);
+  assert.ok(bestForAll(4000) <= 65);
+  assert.ok(equilibrium(2000, true).time < equilibrium(2000, false).time);
+  assert.ok(equilibrium(5000, true).time > equilibrium(5000, false).time);
+});
+
+test('planes: deadly parts look safe on the planes that came back', () => {
+  const calm = simulateRaid({ vital: 0, planes: 2000 });
+  const raid = simulateRaid({ vital: 0.6, planes: 2000 });
+  const ratio = (r, zone) => r.density[zone].returned / r.density.body.returned;
+  console.log('planes engines/body on returners', ratio(calm, 'engines').toFixed(2), ratio(raid, 'engines').toFixed(2));
+  near(ratio(calm, 'engines'), 1, 0.3);
+  assert.ok(ratio(raid, 'engines') < 0.6);
+  assert.ok(raid.density.engines.lost > raid.density.body.lost);
+});
+
+test('winner-take-all: size that attracts customers concentrates the market and beats a better product', () => {
+  const flat = manyMarkets({ returns: 0, better: 0.2 });
+  const steep = manyMarkets({ returns: 1.5, better: 0.2 });
+  console.log('market median leader', flat.medianLeader.toFixed(2), steep.medianLeader.toFixed(2), 'better firm wins', flat.betterWins, steep.betterWins);
+  assert.ok(flat.medianLeader < 0.12);
+  assert.ok(steep.medianLeader > 0.6);
+  assert.ok(steep.betterWins < flat.betterWins / 2);
+});
+
+test('black swans: the fat-tailed world has far worse worst days', () => {
   const h = simulateHistory({ years: 40, seed: 3 });
   console.log('tails worst 10y thin/fat', worst(h.thin, 0, 10).toFixed(2), worst(h.fat, 0, 10).toFixed(2), 'next 30y', worst(h.thin, 10, 40).toFixed(2), worst(h.fat, 10, 40).toFixed(2), 'records after 10y', recordsAfter(h.thin, 10), recordsAfter(h.fat, 10));
   assert.ok(worst(h.fat, 0, 40) > 2 * worst(h.thin, 0, 40));

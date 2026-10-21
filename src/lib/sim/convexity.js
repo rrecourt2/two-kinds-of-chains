@@ -1,4 +1,4 @@
-// Three ways to add the same AI to a process (chapter 6). On each task the AI's
+// Three ways to add the same AI to a process (chapter 7). On each task the AI's
 // answer is worth X hours: positive when it helps, negative when it is wrong.
 // X is normally distributed around MEAN_HELP with the given spread.
 

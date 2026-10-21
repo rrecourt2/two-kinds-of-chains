@@ -1,4 +1,4 @@
-// Waiting-line mathematics for chapter 4 and the busy-approver part of chapter 9.
+// Waiting-line mathematics for chapter 4 and the busy approvers in the check-up tool (chapter 15).
 
 import { exponential } from './rng.js';
 

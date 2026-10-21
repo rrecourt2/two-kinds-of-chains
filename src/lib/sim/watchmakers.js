@@ -1,4 +1,4 @@
-// Herbert Simon's watchmakers (chapter 11), from "The Architecture of Complexity" (1962).
+// Herbert Simon's watchmakers (chapter 13), from "The Architecture of Complexity" (1962).
 // Both build watches of 1,000 parts and are interrupted with some chance each time
 // they add a part. Tempus builds the whole watch in one go, so an interruption
 // loses everything assembled so far. Hora builds stable modules of ten parts

@@ -103,7 +103,7 @@
 </script>
 
 <Chapter
-  n={11}
+  n={13}
   kicker="Graph theory"
   title="The shape of the graph"
   lede="Every chapter so far has been about a network. Its shape, more than its size, decides whether growth makes an organization smarter or slower."
@@ -249,6 +249,11 @@
       modules with few links between them. That is what flexible means in graph terms. It is why regulators ring-fence
       parts of banks, why payment systems settle through a few heavily protected hubs, and why AI agents work best when a
       big task is broken into small steps whose results are saved.
+    </p>
+    <p>
+      John Gall, a doctor who wrote about why systems fail, turned the same idea into a law in 1975: a complex system
+      that works is invariably found to have evolved from a simple system that worked. Complex systems designed from
+      scratch rarely work. Start simple, make it work, and let it grow.
     </p>
   {/snippet}
 

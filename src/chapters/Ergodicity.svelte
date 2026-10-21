@@ -86,14 +86,14 @@
 </script>
 
 <Chapter
-  n={7}
+  n={8}
   kicker="Ergodicity"
   title="When the average lies"
   lede="When outcomes multiply, the average result is not what a typical person, team or bank lives through. Survival comes first."
 >
   {#snippet setup()}
     <p>
-      The chapters so far were about speed. The next four are about survival, which is why a bank has controls at all.
+      So far this story has been about speed. The next chapters are about survival, which is why a bank has controls at all.
       Start with a game. Each round, flip a coin. Heads, your wealth grows by 50%. Tails, it shrinks by 40%. On average,
       each round makes you 5% richer. Would you play it every round, with everything you own?
     </p>

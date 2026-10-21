@@ -35,6 +35,12 @@
   let visited = $state(CHAPTERS.map((_, i) => i === index));
   let top = $state();
   let root = $state();
+  let menuEl = $state();
+  function closeMenu(refocus = false) {
+    if (!menuEl?.open) return;
+    menuEl.open = false;
+    if (refocus) menuEl.querySelector('summary')?.focus();
+  }
 
   const headingId = (i) => (i === 0 ? `${prefix}-story-title` : `${prefix}-chapter-title`);
   function focusHeading() {
@@ -88,7 +94,7 @@
   }
 </script>
 
-<svelte:window onkeydown={onKey} onhashchange={onHashChange} />
+<svelte:window onkeydown={onKey} onhashchange={onHashChange} onclick={(e) => menuEl?.open && !menuEl.contains(e.target) && closeMenu()} />
 
 <div class="tkc" data-theme={theme === 'auto' ? undefined : theme} bind:this={root}>
   <header class="bar">
@@ -119,6 +125,19 @@
         <span class="where tkc-num" aria-hidden="true">
           {index === 0 ? 'Start' : `${index} / ${total} · ${current.short}`}
         </span>
+        <!-- On a phone the chain gives way to a compact chapter menu. -->
+        <details class="menu" bind:this={menuEl} onkeydown={(e) => e.key === 'Escape' && closeMenu(true)}>
+          <summary class="tkc-num">{index === 0 ? 'Start' : `${index} / ${total}`} · {current.short}</summary>
+          <ol class="menu-list">
+            {#each CHAPTERS as chapter, i (chapter.id)}
+              <li>
+                <button type="button" class:on={i === index} aria-current={i === index ? 'step' : undefined} onclick={() => (closeMenu(), go(i))}>
+                  <span class="menu-n tkc-num">{i === 0 ? '' : i}</span>{chapter.title}
+                </button>
+              </li>
+            {/each}
+          </ol>
+        </details>
       </nav>
     </div>
   </header>
@@ -363,15 +382,20 @@
     margin-top: -24px;
   }
 
-  @container tkc (max-width: 760px) {
+  .menu {
+    display: none;
+  }
+  @container tkc (max-width: 900px) {
     .where {
       display: none;
     }
   }
-  @container tkc (max-width: 560px) {
+  @container tkc (max-width: 680px) {
     .home-name {
       display: none;
     }
+  }
+  @container tkc (max-width: 560px) {
     .pager {
       grid-template-columns: 1fr;
     }
@@ -380,39 +404,101 @@
       grid-row: 1;
     }
   }
-  @container tkc (max-width: 460px) {
-    .home {
+  /* Phones and narrow web-part columns: a chapter menu instead of the chain. */
+  @container tkc (max-width: 480px) {
+    .links {
+      flex: 1;
+      min-width: 0;
+    }
+    .links > ol {
       display: none;
     }
-    .bar-inner {
-      justify-content: center;
+    .menu {
+      display: block;
+      flex: 1;
+      min-width: 0;
     }
-    .link {
-      width: 27px;
+    .menu summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 44px;
+      padding: 0 4px;
+      font-weight: 600;
+      font-size: 0.9375rem;
+      color: var(--tkc-ink);
+      cursor: pointer;
+      list-style: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .link::before {
-      left: 4px;
-      width: 19px;
+    .menu summary::-webkit-details-marker {
+      display: none;
     }
-    li + li {
-      margin-left: -3px;
+    .menu summary::after {
+      content: 'Chapters';
+      flex: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--tkc-rule);
+      font-size: 0.8125rem;
     }
-  }
-  /* Narrowest screens and web-part columns: the links share the full width. */
-  @container tkc (max-width: 380px) {
-    .bar {
-      padding-left: max(8px, env(safe-area-inset-left, 0px));
-      padding-right: max(8px, env(safe-area-inset-right, 0px));
+    .menu[open] summary::after {
+      content: 'Close';
     }
-    .link {
-      width: min(27px, calc((100cqi - 16px) / var(--links)));
+    .menu summary:focus-visible {
+      outline: 2px solid var(--tkc-focus);
+      outline-offset: 2px;
+      border-radius: 6px;
     }
-    .link::before {
-      left: 3px;
-      width: calc(100% - 6px);
+    .menu-list {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      z-index: 30;
+      margin: 0;
+      padding: 6px;
+      list-style: none;
+      display: grid;
+      gap: 2px;
+      max-height: min(70vh, 560px);
+      overflow-y: auto;
+      background: var(--tkc-surface);
+      border: 1px solid var(--tkc-hair);
+      border-radius: 0 0 12px 12px;
+      box-shadow: var(--tkc-shadow);
     }
-    li + li {
-      margin-left: 0;
+    .menu-list button {
+      width: 100%;
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      min-height: 40px;
+      padding: 8px 10px;
+      border: 0;
+      border-radius: 8px;
+      background: none;
+      color: var(--tkc-ink);
+      font: inherit;
+      font-size: 0.9375rem;
+      text-align: left;
+      cursor: pointer;
+    }
+    .menu-list button:hover {
+      background: var(--tkc-sunken);
+    }
+    .menu-list button.on {
+      background: var(--tkc-ink);
+      color: var(--tkc-page);
+    }
+    .menu-n {
+      min-width: 1.6em;
+      font-weight: 700;
+      color: inherit;
+      opacity: 0.7;
     }
   }
 </style>

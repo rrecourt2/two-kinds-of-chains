@@ -1,4 +1,4 @@
-// Interbank contagion (chapter 8), after Watts (2002) and Gai & Kapadia (2010).
+// Interbank contagion (chapter 9), after Watts (2002) and Gai & Kapadia (2010).
 // Each bank lends 20% of its balance sheet to its counterparties, split
 // evenly. A failed counterparty's loan is lost in full. A bank fails when its
 // losses exceed its capital.

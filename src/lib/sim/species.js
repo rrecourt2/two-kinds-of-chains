@@ -1,4 +1,4 @@
-// Specialist versus generalist (chapter 10). Each year, each of four food
+// Specialist versus generalist (chapter 12). Each year, each of four food
 // plants has a good year (×(1+v)) or a bad year (×(1−v)), where v is how
 // variable the years are. The specialist eats one plant and converts it
 // efficiently; the generalist eats all four, less efficiently.

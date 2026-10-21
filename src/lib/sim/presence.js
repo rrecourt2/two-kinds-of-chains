@@ -1,5 +1,5 @@
-// Absence model shared by the calendar (chapter 1) and the approval relay
-// (chapters 3 and 9). Each person is either in or away; absences come in
+// Absence model shared by the calendar (chapter 1) and the linked-systems
+// model (chapters 3 and 15). Each person is either in or away; absences come in
 // spells (a week of holiday, three days of training), not single random days.
 
 import { makeRng } from './rng.js';
@@ -62,7 +62,14 @@ export function simulateMonth({ roles, standIns, availability, meanSpell = 3, da
     grid.push(row);
   }
   const allIn = Array.from({ length: days }, (_, d) => grid.every((row) => row[d].covered));
-  return { grid, allIn, possibleDays: allIn.filter(Boolean).length };
+  // The longest run of working days on which the work had to wait for someone.
+  let longestWait = 0;
+  let run = 0;
+  for (const ok of allIn) {
+    run = ok ? 0 : run + 1;
+    longestWait = Math.max(longestWait, run);
+  }
+  return { grid, allIn, possibleDays: allIn.filter(Boolean).length, longestWait };
 }
 
 /** Long-run share of days on which every role is covered. */

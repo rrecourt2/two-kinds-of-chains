@@ -1,4 +1,4 @@
-// Ole Peters' coin game (chapter 7). Heads: wealth grows 50%. Tails: it
+// Ole Peters' coin game (chapter 8). Heads: wealth grows 50%. Tails: it
 // shrinks 40%. Players may stake only part of their wealth, and may pool:
 // a pool shares everything equally after every round.
 

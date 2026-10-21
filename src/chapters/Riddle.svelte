@@ -77,7 +77,7 @@
   n={1}
   kicker="The riddle"
   title="A riddle about chains"
-  lede="A chain whose links must all hold is weaker than any of its links. Give every link an alternative and the chain becomes stronger than any single link."
+  lede="When work needs everyone at once, it waits for whoever is missing. Give every role an alternative and the waiting disappears."
 >
   {#snippet setup()}
     <p>
@@ -85,12 +85,12 @@
       from another, rubber, brass, paint and glue from others. Nobody runs the whole chain, and nobody waits for
       anybody. The pencil costs less than a coffee.
     </p>
-    <p>The credit request on your desk needs six colleagues and six systems in one building. It will take weeks.</p>
+    <p>A request inside a large organization can need six colleagues and six systems in one building, and take weeks.</p>
     <p>Both are chains, and the pencil’s chain is far longer. Why does it work so much better?</p>
     <p>
-      Start with the simplest version: a piece of work that needs every link below on the same day. For people, think
-      of a committee, a joint review or a same-day payment cut-off. For systems, think of an ordinary working day that
-      needs remote access, sign-in, the client file and the risk model all at once.
+      The opening showed the arithmetic: when every link must hold, the risks multiply. Here is what that means for
+      people’s time. Some work needs every link on the same day: a committee, a joint review, a same-day cut-off, or
+      simply a working day that needs remote access, sign-in, the client file and the risk model all at once.
     </p>
   {/snippet}
 
@@ -138,7 +138,12 @@
 
       <div class="tkc-stats" use:announce>
         <Stat label="Days this month the work could be done" value="{month.possibleDays} of {DAYS}" sub={month.possibleDays < DAYS / 2 ? 'Less than half the month' : ''} />
-        <Stat label="Long-run share of days" value={pct(odds.allCovered)} sub={formula} />
+        <Stat
+          label="Longest wait for everyone to be {sys ? 'up' : 'in'}"
+          value={month.longestWait === 0 ? 'No wait' : `${month.longestWait} working day${month.longestWait === 1 ? '' : 's'}`}
+          sub={month.longestWait > 0 ? 'in a row with something missing' : 'the work never had to wait'}
+          swatch="var(--tkc-conditions)"
+        />
       </div>
 
       <div class="tkc-row">
@@ -149,7 +154,7 @@
 
       {#snippet model()}
         <p>Each {sys ? 'system is up' : 'person is in'} on {availability}% of days in the long run. {sys ? 'Outages last about a day.' : 'Absences last three days on average, so they cluster the way holidays and training do.'}</p>
-        <p>A link is covered on a day when its main {sys ? 'system' : 'person'} or any {sys ? 'backup' : 'stand-in'} is available. The work needs every link covered on the same day.</p>
+        <p>A link is covered on a day when its main {sys ? 'system' : 'person'} or any {sys ? 'backup' : 'stand-in'} is available. The work needs every link covered on the same day. Over many months that happens on {pct(odds.allCovered)} of days: {formula}.</p>
         <p>{sys ? 'Each system fails independently of the others. A backup that shares its main system’s weak points, such as the same network or the same update, would help less.' : 'Each person’s absences are independent of everyone else’s. Stand-ins who take the same holidays as the people they cover would help less.'}</p>
       {/snippet}
     </Instrument>
@@ -157,30 +162,24 @@
 
   {#snippet after()}
     <p>
-      With six named people who are each in 90% of the time, the decision can be made on only about half of all days.
-      Every extra role multiplies in another 90%. With ten roles it is about one day in three.
+      With six people who are each in 90% of the time, the work can be done on only about half of all days. And the
+      blocked days come in stretches: one person’s week of holiday stops everything that needs them.
     </p>
     <p>
-      Go back to six roles and add one qualified stand-in per role. You have doubled the number of people involved, which
-      sounds like more complexity. Yet the decision is now possible on 94% of days, and on 90% even with ten roles.
-    </p>
-    <p>
-      Systems follow the same arithmetic. Switch the figure to systems: six systems that are each up 97% of the time are
-      all up together on only 83% of days, roughly one day in six with something in the chain down. A backup for each
-      brings that close to 100%.
+      Now give every role one qualified stand-in. Twice as many people are involved, which sounds like more complexity,
+      yet the work is possible on almost every day. Systems behave the same way: switch the figure and give each system
+      a backup.
     </p>
     <p>
       That is the answer to the riddle. In the pencil’s chain, every link has many possible suppliers. If one graphite
       mine floods, the factory buys from another. Each link is an <span class="tkc-or">OR</span>: this supplier, or
-      that one, or that one. In the bank’s chain, each link is an <span class="tkc-and">AND</span>: this person, and
-      this system, and this person.
+      that one. In a chain of named people and single systems, each link is an <span class="tkc-and">AND</span>: this
+      person, and this system, and this person. ORs make a chain stronger. ANDs make it weaker.
     </p>
     <p>
-      Adding ORs makes a system more reliable. Adding ANDs makes it less reliable. Engineers call this components in
-      parallel versus components in series. The economist Michael Kremer built a theory of economic development on the
-      same arithmetic and named it after the O-ring, the small seal whose failure destroyed the space shuttle
-      Challenger in 1986: when every part must work, small differences in reliability multiply into large differences in
-      output.
+      The economist Michael Kremer built a theory of economic development on this arithmetic and named it after the
+      O-ring, the small seal whose failure destroyed the space shuttle Challenger in 1986: when every part must work,
+      small differences in reliability multiply into large differences in output.
     </p>
   {/snippet}
 

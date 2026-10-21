@@ -1,4 +1,4 @@
-// "Check a process you know" (chapter 12): the interlinked-systems model from
+// "Check a process you know" (chapter 15): the interlinked-systems model from
 // chapter 3 plus busy approvers from chapter 4, and the effect of each single change.
 
 import { simulateSystems } from './systems.js';

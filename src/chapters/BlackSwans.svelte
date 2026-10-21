@@ -81,7 +81,7 @@
 </script>
 
 <Chapter
-  n={9}
+  n={10}
   kicker="Black swans"
   title="What the data cannot show"
   lede="The risks that matter most are the ones least visible in your data, and the costs of caution are the ones nobody records."
@@ -185,6 +185,11 @@
         started, or the week a request spent waiting for a sign-off. An incident, by contrast, gets an investigation, a
         report and a new control. Over time controls pile up, each justified by a visible failure, while their costs stay
         invisible.
+      </li>
+      <li>
+        <strong>The past may not be a guide.</strong> Loss histories come from yesterday’s climate, yesterday’s systems
+        and yesterday’s clients. When the world itself changes, even a long, clean record says little about what comes
+        next.
       </li>
       <li>
         <strong>Linked systems hide their dependencies.</strong> On 19 July 2024 a faulty update to one security product

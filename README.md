@@ -1,24 +1,27 @@
 # Two Kinds of Chains
 
 An interactive learning story about good complexity (specialization), bad complexity (dependence) and how scale
-amplifies both. Twelve short chapters, each with a live model the reader can change. Built with Svelte 5 and Vite.
+amplifies both. Fifteen short chapters, each with a live model the reader can change. Built with Svelte 5 and Vite.
 Everything ships as one file, with no external requests, so it can run inside a locked-down bank intranet.
 
 | # | Chapter | Live model |
 |---|---------|------------|
 | 0 | Two Kinds of Chains | The hook: guess how many of 100 requests survive six systems, then watch them flow |
-| 1 | A riddle about chains | A month calendar of people or systems: how often everything you need is available (AND vs OR) |
-| 2 | Why longer chains get cheaper | Adam Smith's pin workshop: the best number of specialists grows with the market |
+| 1 | A riddle about chains | A month calendar of people or systems: how long work waits for everyone to be in (AND vs OR) |
+| 2 | Why longer chains get cheaper | Adam Smith's pin workshop; the chip industry's long chain; splitting firms at the right level |
 | 3 | When systems lean on each other | One request through linked systems: forms, approvals, and problems that stop the work and spread |
 | 4 | Why full calendars make long queues | Four approvers, named lines vs one shared line, waiting vs utilization |
-| 5 | The breakfast factory | Andrew Grove's kitchen slid towards a bank: variable steps, a limiting step that moves, and where checks belong |
-| 6 | Tools before gates | UI fatigue and AI: convex tools versus concave gates |
-| 7 | When the average lies | Ole Peters' coin game: ergodicity, staking less, pooling |
-| 8 | 2008: when links became conditions | A 48-bank interbank network you can push into contagion |
-| 9 | What the data cannot show | Black swans, the turkey, and thin versus fat tails in 40 years of data |
-| 10 | Why species go extinct | Specialist vs generalist on 40 islands, in calm and volatile worlds |
-| 11 | The shape of the graph | Graph theory: mesh, hub and modules as the network grows; Simon's watchmakers |
-| 12 | What to do on Monday | Two-question test, eight moves, and a tool to check a real request |
+| 5 | Don't wait for each other | Asynchronous work: the same pieces one after another or in parallel; the slowest piece; bad inputs caught early or late |
+| 6 | When every part does its best | Emergence and Braess's paradox: a new road that makes every journey slower |
+| 7 | Tools before gates | UI fatigue and AI: convex tools versus concave gates |
+| 8 | When the average lies | Ole Peters' coin game: ergodicity, staking less, pooling |
+| 9 | 2008: when links became conditions | A 48-bank interbank network you can push into contagion |
+| 10 | What the data cannot show | Black swans, the turkey, and thin versus fat tails in 40 years of data |
+| 11 | The planes that came back | Survivorship bias: where to armour a bomber, from the holes on the planes that returned |
+| 12 | Why species go extinct | Specialist vs generalist on 40 islands, in calm and volatile worlds |
+| 13 | The shape of the graph | Graph theory: mesh, hub and modules as the network grows; Simon's watchmakers; Gall's law |
+| 14 | Why the winner takes most | Twenty equal firms and increasing returns: lock-in, and a better product that loses |
+| 15 | What to do on Monday | Two-question test, eight moves, and a tool to check a real request |
 
 ## Run it
 
@@ -35,7 +38,7 @@ Node 20.19+ or 22.12+ is required (Vite 8).
 
 | File | Use it for |
 |------|------------|
-| `dist/index.html` | The whole story in one self-contained file (about 320 KB, 130 KB compressed, fonts included). Open it from disk, host it on any static web server, embed it in an iframe, or wrap it as a SCORM package. |
+| `dist/index.html` | The whole story in one self-contained file (about 350 KB, 140 KB compressed, fonts included). Open it from disk, host it on any static web server, embed it in an iframe, or wrap it as a SCORM package. |
 | `dist-lib/two-chains.js` | An ES module exporting `mountStory(element, options)`. Used by the SharePoint Framework web part in `sharepoint/spfx/`. Styles travel inside the bundle. |
 
 `mountStory(el, { theme, syncHash, startAt })`

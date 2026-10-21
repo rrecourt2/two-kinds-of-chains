@@ -160,7 +160,7 @@
 
       {#snippet model()}
         <p>A trained pin-maker working alone makes 10 pins a day. Split the 12 operations among n specialist roles and each specialist works n times faster at their share.</p>
-        <p>Every role needs at least one whole person, so a small market leaves specialists idle. Worker-minutes per pin = everyone’s working time ÷ pins made. Click a bar to see that design’s chain.</p>
+        <p>Every role needs at least one whole person, so a small market leaves specialists idle. Worker-minutes per pin = everyone’s working time ÷ pins made. In this workshop the best number of roles grows with the square root of demand: four times the market supports twice as many specialists. Click a bar to see that design’s chain.</p>
       {/snippet}
     </Instrument>
   {/snippet}
@@ -168,22 +168,34 @@
   {#snippet after()}
     <p>
       Drag the market from a village to a nation. The best design gets longer as the market grows: one generalist for
-      a village, a dozen specialists for a nation. In this workshop the useful number of specialist roles grows with
-      the square root of demand, so quadrupling the market lets you afford twice as many.
+      a village, a dozen specialists for a nation. This is why supply chains get longer as markets grow. Around 70% of
+      international trade now involves global value chains, in which parts cross borders several times before they
+      become a product (OECD).
+    </p>
+    <h3>Chips: one of the longest chains, and one of the most inventive</h3>
+    <p>
+      Until the late 1980s, almost every chip company designed and made its own chips. In 1987 Morris Chang founded TSMC
+      in Taiwan to do one thing only: make chips that other companies design. Designers such as Nvidia and Qualcomm no longer needed
+      a factory of their own. Arm licenses chip blueprints, a handful of firms write the design software, and ASML in
+      the Netherlands builds the machines that print the circuits. Each link specializes, and the chain has been one of
+      the most innovative in industry.
     </p>
     <p>
-      This is why supply chains get longer as markets grow, and why each new link tends to make the product cheaper.
-      Around 70% of international trade now involves global value chains, in which parts cross borders several
-      times before they become a product (OECD).
+      Its weak spots are the links without an alternative. TSMC makes most of the world’s most advanced chips, and only
+      ASML builds the most advanced printing machines. Specialization concentrates skill. It does not have to
+      concentrate dependence, but here it does.
+    </p>
+    <h3>Splitting at the right level</h3>
+    <p>
+      In 1937 the economist Ronald Coase asked why firms exist at all. His answer: because coordinating inside one firm
+      is sometimes cheaper than buying from others. When working across firms gets easier, the best size of a firm
+      shrinks. It is part of the reason many conglomerates have broken up. GE split into three companies in 2023 and
+      2024, and Johnson &amp; Johnson separated its consumer brands as Kenvue in 2023.
     </p>
     <p>
-      Specialization is also where innovation comes from. Ten specialties can be paired in 45 ways; a hundred in
-      4,950. Every pairing is a chance to combine know-how in a new way.
-    </p>
-    <h3>What keeps a long chain safe</h3>
-    <p>
-      Every link has alternatives. A pencil maker depends on <em>a</em> graphite supplier, never on one particular
-      mine. Specialization concentrates skill. It does not have to concentrate dependence.
+      Splitting reduces complexity when the cut is in the right place. Each part becomes simpler to run, and the parts
+      deal with each other through a clear interface, the way a customer deals with a supplier. Cut in the wrong place,
+      and the interface itself becomes a long chain of handoffs.
     </p>
     <p>
       Specialists also build systems. The risk team builds the tool that suits risk, the credit team the one that suits

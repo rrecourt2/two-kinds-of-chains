@@ -56,7 +56,7 @@
 </script>
 
 <Chapter
-  n={6}
+  n={7}
   kicker="AI and convexity"
   title="Tools before gates"
   lede="AI that does the work behind the screens, with a person checking the result, is an option with a small downside. AI added as one more mandatory screen is a gate with a small upside."
@@ -65,9 +65,12 @@
     <p>
       Every specialist team that builds a system also builds a screen. Serving one client can mean a dozen logins, a
       dozen forms and a dozen versions of the client’s name. People call it UI fatigue, and every new system adds to it.
+      The computer scientist Larry Tesler, who helped invent cut-and-paste, put the underlying rule simply: every task
+      has some complexity that cannot be removed, only moved. Either the system carries it, or the person at the screen
+      does.
     </p>
     <p>
-      AI can work in the opposite direction. Today’s AI models can use software tools: they can read a request written
+      AI can work in the opposite direction. Modern AI models can use software tools: they can read a request written
       in plain language, fill in the systems behind it, and show a person what they did. Used that way, the systems
       become the AI’s tools, and the banker deals with one conversation instead of twelve screens. Added the wrong way,
       the AI is just one more screen.
@@ -158,7 +161,7 @@
 
   {#snippet after()}
     <p>
-      With a steady AI, all three designs do about the same. As the AI gets more erratic, which today’s AI often is, the
+      With a steady AI, all three designs do about the same. As the AI gets more erratic, which it often is, the
       tool gets more valuable, because people keep the good answers and drop the bad ones. The gate gets worse, because
       every bad answer stops the work behind it while the good answers can only save what the process was built around.
     </p>
@@ -184,7 +187,7 @@
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="How many screens does it take to serve one client today, and which of our AI initiatives would remove one?">
+    <BankNote ask="How many screens does it take to serve one client, and which AI initiatives would remove one?">
       <p>
         Count the screens a banker touches to serve one client, and treat each as a cost. Introduce AI as a tool that
         fills in and checks those screens, with a person confirming the result, and judge it by the screens, fields and

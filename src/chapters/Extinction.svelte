@@ -67,7 +67,7 @@
 </script>
 
 <Chapter
-  n={10}
+  n={12}
   kicker="Ecology"
   title="Why species go extinct"
   lede="The species that die out are the ones that depend on a single thing when the world turns volatile."
@@ -186,15 +186,19 @@
   {#snippet after()}
     <p>
       In a calm world the specialist wins: it grows faster and fills its islands first. As the years get more
-      variable, its one plant fails it again and again, and it disappears from island after island. The generalist is not better at anything.
-      It just never depends on a single plant.
+      variable, its one plant fails it again and again, and it disappears from island after island. The generalist is
+      not better at anything. It just never depends on a single plant.
+    </p>
+    <p>
+      A changing climate makes many years more variable. That is why it worries ecologists, farmers and lenders alike:
+      it punishes whoever depends on one crop, one region or one supplier.
     </p>
     <h3>Two more results</h3>
     <ul>
       <li><strong>Small populations die of bad luck</strong>, even when the average year is good. Start with 10 animals per island and watch.</li>
       <li>
         <strong>A population can grow on average and still be doomed.</strong> Richard Lewontin and Dan Cohen proved this
-        in 1969, decades before the coin game in chapter 7 became famous in economics. Desert plants hedge against it by
+        in 1969, decades before the coin game in chapter 8 became famous in economics. Desert plants hedge against it by
         never letting all their seeds germinate in the same year.
       </li>
     </ul>
