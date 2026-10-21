@@ -85,9 +85,9 @@
 >
   {#snippet setup()}
     <p>
-      Ecologists have studied dependence for a century, and their findings will sound familiar. Some extinctions are
-      black swans: when an asteroid struck 66 million years ago, many of the survivors were small animals that could
-      live on many kinds of food. Most extinctions are slower.
+      Ecologists have studied dependence for a century, and their findings will sound familiar. Some extinctions come
+      out of a clear sky: when an asteroid struck 66 million years ago, many of the survivors were small animals that
+      could live on many kinds of food. Most extinctions are slower.
     </p>
     <p>
       The species most at risk are usually not the weakest. They are the ones that depend on something irreplaceable:
@@ -202,7 +202,8 @@
       In a calm world the specialist wins: it grows faster and fills its islands first. As the years get more
       variable, its one plant fails it again and again, and it disappears from island after island. The generalist is
       not better at anything. It just never depends on a single plant. The change is not gradual, either: past the
-      crossing point, each extra bit of variability costs the specialist more than the last.
+      crossing point, each extra bit of variability costs the specialist more than the last. A chain of named people and
+      single systems is a specialist many times over: it needs every one of its plants to have a good year at once.
     </p>
     <p>
       A changing climate makes many years more variable. That is why it worries ecologists, farmers and lenders alike:

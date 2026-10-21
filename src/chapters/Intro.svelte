@@ -45,7 +45,7 @@
   </div>
   <p class="howto">
     Each chapter is a short puzzle about one problem: what happens as a chain of conditions grows long and rigid. Solve
-    it unaided for two points, with a hint for one. The explanation opens once it is solved.
+    it unaided for two points, or after a hint or a wrong try for one. Stuck? Ask for the answer and read on.
   </p>
 
   <div class="start">

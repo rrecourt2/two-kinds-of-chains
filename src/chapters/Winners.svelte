@@ -1,4 +1,5 @@
 <script>
+  import { getContext } from 'svelte';
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Segmented from '../lib/ui/Segmented.svelte';
@@ -46,10 +47,13 @@
       { value: 'lots', label: 'Where size helps a lot, so its lead grows fastest' },
     ],
     answer: 'none',
-    wrong: (v) => (v === 'lots' ? 'Size helps whoever is ahead, and early on that is mostly luck. Try it in the figure.' : 'Close, but not the most often. Compare all three in the figure.'),
-    hints: ['Set firm A’s product to 20% better, then compare the three markets.', 'The figure counts how often, in 100 histories, the better product came first.'],
+    wrong: (v) => (v === 'lots' ? 'Size helps whoever is ahead. Early on, who is that? Run a few histories and see.' : 'Close, but not the most often. Compare all three in the figure.'),
+    hints: ['Set firm A’s product to 20% better, then compare the three markets.', 'Early on, who leads is mostly luck. The more size matters, the more that luck gets locked in.'],
     found: 'Where size does not matter. There the better product comes first in about half of all histories; where size helps a lot, in only one in ten.',
   };
+  // A prediction: the controls open after the first answer or a hint.
+  const game = getContext('tkc-game');
+  const live = $derived(game.engaged('winners'));
 </script>
 
 <Chapter
@@ -61,8 +65,7 @@
 >
   {#snippet setup()}
     <p>
-      In many markets the biggest firm keeps getting bigger. A payment network, a marketplace or a
-      messaging app is worth more the more people use it.
+      A payment network, a marketplace or a messaging app is worth more the more people use it.
     </p>
     <p>
       Below, twenty identical firms compete for {int(CUSTOMERS)} customers. Each new customer picks a firm, and if size
@@ -73,7 +76,8 @@
   {#snippet figure()}
     <Instrument title="Twenty equal firms, one market" sub="Each line is one firm’s share of all customers so far.">
       <Puzzle id="winners" {...puzzle} onshow={() => ((size = 'none'), (better = 'better'))} />
-      <div class="tkc-controls">
+      {#if !live}<p class="tkc-wait-note">The controls open after your first answer, or a hint.</p>{/if}
+      <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
         <Segmented
           name="w-size"
           label="How much size attracts customers"
@@ -95,7 +99,7 @@
         />
       </div>
 
-      <div class="tkc-row">
+      <div class="tkc-row" class:tkc-wait={!live} inert={live ? undefined : true}>
         <button type="button" class="tkc-btn tkc-btn--small" onclick={() => (seed += 1)}>Run history again</button>
       </div>
 
@@ -150,15 +154,15 @@
     </p>
     <p>
       We increasingly live in this world. Sales in most US industries have become more concentrated in fewer, larger
-      “superstar” firms since the 1980s (Autor and colleagues, 2020). Search, cloud computing, payments and market data
-      are each served by a handful of providers. Mobile money shows both sides: in Kenya, M-Pesa reached most adults
-      within a few years of its launch in 2007, because every new user made it more useful to the rest, and the same
+      “superstar” firms since the 1980s. Search, cloud computing, payments and market data
+      are each served by a handful of providers. Mobile money shows both sides: in Kenya, M-Pesa reached most households
+      within three years of its launch in 2007, because every new user made it more useful to the rest, and the same
       pull made it hard for any rival to catch up.
     </p>
     <h3>What it means</h3>
     <ul>
       <li><strong>Early matters more than perfect.</strong> Where a market tips, the first good-enough offer can lock it in before a better one arrives.</li>
-      <li><strong>Winners become hubs.</strong> Everyone who depends on the winner shares its single points of failure, as in 2008 and in the software outage of 2024 (chapter 9).</li>
+      <li><strong>Winners become hubs.</strong> A market that has tipped leaves a link with no alternative: everyone who depends on the winner shares its single points of failure, as in 2008 and in the software outage of 2024 (chapter 9).</li>
     </ul>
   {/snippet}
 

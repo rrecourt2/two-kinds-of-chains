@@ -34,14 +34,14 @@
 
   const fmtMin = (v) => (v >= 100 ? int(v) : v >= 10 ? v.toFixed(0) : v.toFixed(1));
 
-  // Twelve roles first become the cheapest design at 794 pins a day (exponent 2.9).
+  // Twelve roles are the cheapest design from 721 pins a day; the first slider step past that is 794 (exponent 2.9).
   const FIRST_TWELVE = 794;
   const puzzle = $derived({
     goal: 'Twelve specialist roles make the cheapest pins of all, once the market is big enough. Find the smallest market at which they are the cheapest design.',
     met: best.roles === 12 && demand <= FIRST_TWELVE,
     progress: best.roles === 12 ? `Twelve roles win at ${int(demand)} pins a day. Do they still win in a smaller market?` : '',
     hints: ['Start from a town and drag the market up slowly. Watch which bar turns green.', 'It lies between 700 and 900 pins a day.'],
-    found: 'About 800 pins a day, eighty times a village. Even there the twelve specialists are idle for almost half the day. In a smaller market the long chain costs more than it saves.',
+    found: 'Just over 720 pins a day, about seventy times a village (the slider’s nearest step is 794). Even there the twelve specialists are idle for almost half the day.',
   });
 
   // The chain diagram for the design on show.
@@ -163,20 +163,20 @@
 
       {#snippet model()}
         <p>A trained pin-maker working alone makes 10 pins a day. Split the 12 operations among n specialist roles and each specialist works n times faster at their share.</p>
-        <p>Every role needs at least one whole person, so a small market leaves specialists idle. Worker-minutes per pin = everyone’s working time ÷ pins made. In this workshop the best number of roles grows with the square root of demand: four times the market supports twice as many specialists. Click a bar to see that design’s chain.</p>
+        <p>Every role needs at least one whole person, so a small market leaves specialists idle. Worker-minutes per pin = everyone’s working time ÷ pins made. Roughly, the best number of roles grows with the square root of demand, in jumps and not always upwards: because every role needs a whole person, a design with fewer roles sometimes wins for a while. Click a bar to see that design’s chain.</p>
       {/snippet}
     </Instrument>
   {/snippet}
 
   {#snippet after()}
     <p>
-      Twelve roles only win once the market reaches about 800 pins a day. In a smaller market the long chain leaves its
-      specialists waiting for work, and one person who does everything is cheaper. A village has a family doctor; a
-      city can keep a heart surgeon busy.
+      Twelve roles only win once the market passes about 720 pins a day. Below that a shorter chain does at least as
+      well, and in the smallest markets one person doing everything is cheapest of all. A village has a family doctor; a city can
+      keep a heart surgeon busy.
     </p>
     <p>
-      This is why chains grow as markets grow. Around 70% of international trade now involves global value chains, in
-      which parts cross borders several times before they become a product (OECD). It is also how many economies have
+      This is why chains grow as markets grow. According to the OECD, around 70% of international trade now involves
+      global value chains, in which parts cross borders several times before they become a product. It is also how many economies have
       grown: a country that could not yet build a whole car or phone can make one part of it well, and sell that part to
       the world.
     </p>

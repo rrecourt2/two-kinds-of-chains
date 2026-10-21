@@ -428,6 +428,16 @@
   gap: 6px;
 }
 
+/* ---------- Controls that wait for a first answer ---------- */
+
+.tkc-wait {
+  opacity: 0.5;
+}
+.tkc-wait-note {
+  font-size: 0.875rem;
+  color: var(--tkc-muted);
+}
+
 /* ---------- "Back at the bank" ---------- */
 
 .tkc-bank {

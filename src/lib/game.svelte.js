@@ -31,6 +31,8 @@ export function createGame(ids) {
     ids,
     entry,
     isOpen: (id) => entry(id).status === 'open',
+    /** After a first answer or a hint, a prediction puzzle's figure opens for exploring. */
+    engaged: (id) => entry(id).status !== 'open' || entry(id).help > 0,
     /** A hint or a wrong answer: the puzzle can still be solved, for one point. */
     help(id) {
       if (entry(id).status === 'open') update(id, { help: entry(id).help + 1 });

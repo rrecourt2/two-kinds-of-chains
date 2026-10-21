@@ -214,7 +214,7 @@
   {/snippet}
 
   {#snippet after()}
-    <p>Try a few failures at different levels of connection.</p>
+    <p>Back at 4% capital, try a few failures at different levels of connection.</p>
     <ul>
       <li>With one counterparty each, failures stay local. The network is too sparse to carry them.</li>
       <li>Around three counterparties, one failure can bring down most of the system.</li>
@@ -235,7 +235,7 @@
       Switch to <em>A few giants</em>, set about four counterparties per bank and raise capital to 6%. Fail a few random banks: most failures stay small,
       because most banks are minor. Then fail the most connected bank: nearly every bank goes down. That is the shape of
       September 2008: Lehman Brothers filed for bankruptcy on the 15th, the largest
-      bankruptcy in US history, and the next day the Federal Reserve lent $85 billion to AIG, which had sold credit
+      bankruptcy in US history, and the next day the Federal Reserve agreed to lend AIG up to $85 billion. AIG had sold credit
       protection to banks around the world.
     </p>
     <p>

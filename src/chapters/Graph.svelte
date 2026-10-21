@@ -1,4 +1,5 @@
 <script>
+  import { getContext } from 'svelte';
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
@@ -76,11 +77,11 @@
   const m = { top: 16, right: 18, bottom: 38, left: 40 };
   const x = $derived(linear(1, MAX, m.left, width - m.right));
   const y = linear(0, 55, H - m.bottom, m.top);
-  const paths = $derived(curves.map((c) => ({ ...c, d: line(c.values.map((v, i) => [x(i + 1), y(v)])) })));
+  const paths = $derived(curves.map((c) => ({ ...c, d: line(c.values.slice(0, reach).map((v, i) => [x(i + 1), y(v)])) })));
 
   function onMove(e) {
     const box = e.currentTarget.getBoundingClientRect();
-    hover = Math.max(1, Math.min(MAX, Math.round(x.invert(e.clientX - box.left + m.left))));
+    hover = Math.max(1, Math.min(reach, Math.round(x.invert(e.clientX - box.left + m.left))));
   }
 
   // Watchmakers.
@@ -106,8 +107,12 @@
     answer: '0',
     wrong: () => 'Count the links each person has, and what they cost. The figure can check it: everyone linked, 60 people.',
     hints: ['Each person keeps up a link with every one of the other 59.', '59 links at 2% each: how much time is left for work?'],
-    found: 'Nothing at all. Each person has 59 colleagues to keep up with, and at 2% each that is more than all of their time. With everyone linked, output peaks at about 25 people and then falls.',
+    found: 'Nothing at all. Each person has 59 colleagues to keep up with, and at 2% each that is more than all of their time.',
   };
+  // A prediction: the controls open, and the curves run to 60, after the first answer or a hint.
+  const game = getContext('tkc-game');
+  const live = $derived(game.engaged('graph'));
+  const reach = $derived(live ? MAX : nodes);
 </script>
 
 <Chapter
@@ -122,19 +127,20 @@
       Graph theory is the mathematics of dots and lines. It describes anything made of parts and links: people and their dependencies, systems and their data feeds, banks and their exposures.
     </p>
     <p>
-      A chain of sign-offs is a path, and stand-ins are parallel paths. Linked systems
-      are a directed graph along which problems flow. The 2008 network was a random graph that tipped into contagion.
+      A chain of sign-offs is a path, and stand-ins are parallel paths. Linked systems pass problems along their links,
+      and the banks of 2008 passed losses along theirs.
     </p>
     <p>
-      Graph theory also explains what happens with scale. If every node must link to every other, the number of links
-      grows far faster than the network: 10 nodes have 45 pairs, 50 nodes have 1,225.
+      Graph theory also explains what happens with scale. If everyone must link to everyone else, the number of links
+      grows far faster than the group: 10 people have 45 pairs, 50 have 1,225.
     </p>
   {/snippet}
 
   {#snippet figure()}
     <Instrument title="Grow the network" sub="Each required link costs both ends 2% of their capacity.">
       <Puzzle id="graph" {...puzzle} onshow={() => ((kind = 'mesh'), (nodes = 60), (what = 'people'))} />
-      <div class="tkc-controls">
+      {#if !live}<p class="tkc-wait-note">The controls open after your first answer, or a hint.</p>{/if}
+      <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
         <Segmented
           name="g-what"
           label="The nodes are"
@@ -212,14 +218,14 @@
 
   {#snippet after()}
     <p>
-      When everyone depends on everyone, output peaks at around 25 nodes and then falls: each newcomer adds more
+      When everyone depends on everyone, output peaks at around 25 people and then falls: each newcomer adds more
       coordination than work. Fred Brooks saw this in software in 1975: adding people to a late project makes it later.
       The same holds for systems, where every new point-to-point link is one more thing to maintain and one more path for
       a problem to travel.
     </p>
     <p>
       Cities show the upside of scale. Wages, patents and economic output grow faster than population: a city twice as
-      big produces roughly 2.2 times as much (Bettencourt and colleagues, 2007). In a city you can work with almost anyone
+      big produces roughly 2.2 times as much. In a city you can work with almost anyone
       and have to coordinate with almost no one. Possible links are options. Required links are conditions.
     </p>
     <p>

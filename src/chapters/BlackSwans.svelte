@@ -23,7 +23,7 @@
   };
 
   const puzzle = {
-    goal: 'The claim: every Category A project has an action plan on file. Each file shows its category or its plan on the cover, and the other inside. Which files must you open to test the claim, and no more?',
+    goal: 'The claim: every Category A project has an action plan on file. Each file shows its category or its plan status on the cover, and the other inside. Which files must you open to test the claim, and no more?',
     choices: FILES.map((f) => ({ value: f.value, label: f.cover })),
     answer: ['a', 'none'],
     multi: true,
@@ -34,7 +34,7 @@
           ? 'The claim says nothing about Category C projects.'
           : 'Half right. One more file could hide a problem.',
     hints: ['Look for the files that could prove the claim wrong, not the ones that could agree with it.', 'The claim is false only if some Category A project has no plan. Which covers could hide one?'],
-    found: 'Category A and No action plan: the only files that could prove the claim wrong. And it is wrong. The file without a plan belongs to a Category A project.',
+    found: 'Category A and No action plan. And the claim is wrong: the file without a plan belongs to a Category A project.',
   };
 
   // The turkey: its confidence that tomorrow will be fine, after n good days (Laplace's rule).
@@ -56,8 +56,9 @@
 >
   {#snippet setup()}
     <p>
-      A claim from a quarterly report: every Category A project, the kind with the highest environmental and social
-      risk, has an action plan on file. The claim has held for years, and every audit sample so far has agreed with it.
+      Take a claim of the kind any portfolio report might make: every Category A project, the kind with the highest
+      environmental and social risk, has an action plan on file. It has held for years, and every audit sample so far
+      has agreed with it.
     </p>
     <p>
       Each project file has its category on one side and its action-plan status on the other. Four files lie on the
@@ -99,7 +100,7 @@
       agree, whatever its category, and Category C says nothing either way.
     </p>
     <p>
-      The psychologist Peter Wason designed this puzzle in 1966. In his experiments only about one person in ten chose
+      The psychologist Peter Wason designed this puzzle in 1966. In his experiments fewer than one person in ten chose
       the right two cards; most turned over the one that could only agree. We look for evidence that we are right.
     </p>
     <p>
@@ -109,9 +110,9 @@
       that they are not. A claim earns trust only by surviving tests that could have broken it.
     </p>
     <p>
-      Bertrand Russell told a darker version about a chicken. It is better known with a turkey: fed every day for a
-      thousand days, the turkey grows more confident with every meal that people are kind. Its confidence is highest on
-      the day before Thanksgiving.
+      Bertrand Russell told a darker version about a chicken; it is better known with a turkey. Fed every day for a
+      thousand days, the turkey grows surer with every meal that people are kind, and is surest on the day before
+      Christmas. A thousand confirmations, and not one test.
     </p>
     <figure class="turkey" bind:clientWidth={turkeyW}>
       <svg width={turkeyW} height={TH} role="img" aria-label="The turkey's confidence rises towards 100% over 1,000 days, then collapses on day 1,001.">
@@ -150,8 +151,8 @@
   {#snippet bank()}
     <BankNote ask="Which of our safest-looking assumptions have we never tried to disprove?">
       <p>
-        For each critical assumption, name the test that could prove it wrong, and run it: a fire drill, a reverse
-        stress test, a day without the system. Treat a clean track record as a hypothesis, not as proof.
+        For each critical assumption, write down what would prove it wrong, then go and look for it. Treat a clean track
+        record as a hypothesis, not as proof.
       </p>
     </BankNote>
   {/snippet}

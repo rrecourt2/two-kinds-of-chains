@@ -43,7 +43,7 @@
   const fast = $derived(d.now.median <= 5);
   const safe = $derived(d.now.slipped < 0.02);
   const puzzle = $derived({
-    goal: 'Final challenge. Keep all six systems, a problem in one form in ten, and approvers in on 85% of days. Get the typical request to five working days or fewer, with fewer than 2% of problems slipping through.',
+    goal: 'Final challenge. Keep all six systems, a problem in one form in ten, and approvers in on 85% of days. Get the typical request to five working days or fewer, with problems slipping through on fewer than 2% of requests.',
     met: fair && fast && safe,
     progress: !fair
       ? 'Keep all six systems, problems in at least 10% of forms, and approvers in on no more than 85% of days.'
@@ -52,8 +52,8 @@
         : safe && !fast
           ? 'Safe enough, but still slower than five days.'
           : '',
-    hints: ['Three earlier chapters each hold part of the answer: the riddle, linked systems and queues.', 'One shared record with every approval kept, then stand-ins or spare capacity for the approvers.'],
-    found: 'One shared record, every approval kept and run side by side, and stand-ins or spare capacity for the approvers. The same six systems and the same checks, in about a fifth of the time.',
+    hints: ['Three earlier chapters each hold part of the answer: the riddle, linked systems and queues.', 'Start with how the systems get their data. Then ask who covers for an approver who is away, and how full their days are.'],
+    found: 'One shared record, every approval kept and run side by side, and a stand-in for every approver, with a little spare capacity. The same six systems and the same checks: four working days instead of 24.',
   });
   const showAnswer = () => ((systems = 6), (problems = 10), (availability = 85), (info = 'shared'), (approvals = 'each'), (standIns = 1), (busy = 70));
 
@@ -81,7 +81,7 @@
   const moves = [
     { title: 'Alternatives everywhere', text: 'Every approval can be given by more than one qualified person, and every critical system has a tested fallback. No link depends on one name.', ch: 'riddle' },
     { title: 'Enter it once, check it as it is typed', text: 'One shared record that every system reads, with automatic checks at entry, so a problem is caught before anything is built on it.', ch: 'systems' },
-    { title: 'Work in parallel, approve once', text: 'Start every piece that can start, and approve once, when the pieces come together.', ch: 'async' },
+    { title: 'Work in parallel', text: 'Start every piece that can start, and run the reviews side by side on one shared record, not one after another.', ch: 'async' },
     { title: 'Spare capacity', text: 'Keep key reviewers and key systems below about 80% loaded, and give them one shared queue.', ch: 'queues' },
     { title: 'Measure the whole', text: 'Give every team the same end-to-end measure, from request to answer, and pair each measure with its counterpart: speed with errors, volume with quality.', ch: 'emergence' },
     { title: 'Care in proportion to the risk', text: 'Small, reversible decisions get light checks, or a sample checked while the work flows on. Decisions that cannot be undone get several reviewers working at the same time.', ch: 'ergodicity' },
@@ -115,7 +115,7 @@
     ['Bertrand Russell', '1912', 'The Problems of Philosophy, chapter 6', 'The chicken fed every day of its life.'],
     ['Gary Klein', '2007', '“Performing a project premortem”, Harvard Business Review', 'Imagine the project has failed, then ask why.'],
     ['Nassim Nicholas Taleb', '2012, 2018', 'Antifragile; Skin in the Game', 'Convexity, and one person at the casino a hundred times.'],
-    ['Microsoft', '2024', 'Statement on the CrowdStrike incident, 20 July', 'About 8.5 million Windows devices affected.'],
+    ['David Weston, Microsoft', '2024', '“Helping our customers through the CrowdStrike outage”, Official Microsoft Blog, 20 July', 'About 8.5 million Windows devices affected.'],
     ['Lian Pin Koh and colleagues', '2004', '“Species coextinctions and the biodiversity crisis”, Science', 'Species that disappear with the species they depend on.'],
     ['Herbert A. Simon', '1962', '“The Architecture of Complexity”, Proceedings of the American Philosophical Society', 'The watchmakers Hora and Tempus, and why modular systems survive.'],
     ['John Gall', '1975', 'General Systemantics', 'A complex system that works has evolved from a simple system that worked.'],
@@ -180,7 +180,7 @@
     </section>
 
     <div class="tool">
-      <Instrument title="Check a process you know" sub="Example values are filled in. Set them to match a real request.">
+      <Instrument title="Check a process you know" sub="Example values are filled in. Solve the challenge with them, then set them to match a real request.">
         <Puzzle id="monday" {...puzzle} onshow={showAnswer} />
         <div class="tkc-controls">
           <Slider id="m-n" label="Systems the request passes through" bind:value={systems} min={2} max={8} />

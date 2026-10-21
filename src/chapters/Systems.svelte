@@ -59,14 +59,14 @@
     goal: 'Without dropping any of the six systems, get the typical request under two weeks, with problems slipping through on fewer than 2% of requests.',
     met: fair && fast && safe,
     progress: !fair
-      ? 'Keep all six systems, and forms with problems at least 10% of the time: the work is what it is.'
+      ? 'Keep all six systems, and a problem in at least one form in ten. The puzzle is to change the design, not the work.'
       : fast && !safe
         ? 'Fast enough, but too many problems slip through.'
         : !fast && safe
           ? 'Safe enough, but still too slow.'
           : '',
     hints: ['Cutting checks is not the only way to speed things up. Look at how the systems get their data.', 'With one shared record, every approver sees the whole request, so the approvals can run side by side.'],
-    found: 'One shared record, with every approval kept: a typical request takes about a week, and almost no problems slip through. A single approval at the end is faster still, but lets more through.',
+    found: 'One shared record, with every approval kept: a typical request takes about a week, and almost no problems slip through.',
   });
   const showAnswer = () => ((systems = START.systems), (problems = START.problems), (info = 'shared'), (approvals = 'each'));
 </script>
@@ -243,8 +243,8 @@
     </p>
     <p>
       Copying data from system to system is the party game of telephone: a message whispered down a line arrives
-      changed, and nobody can say where it changed. Each copy is a chance for a field to drift. Once a problem is
-      found, the request stops, and the fix has to be made in every system the problem reached and approved again.
+      changed, and nobody can say where it changed. Each copy is a chance for a field to drift, and each fix has to be
+      made and approved again, system by system.
     </p>
     <h3>Same controls, different shape</h3>
     <p>

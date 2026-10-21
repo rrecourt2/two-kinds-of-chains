@@ -1,4 +1,5 @@
 <script>
+  import { getContext } from 'svelte';
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
@@ -51,10 +52,10 @@
   const onRequest = $derived(exampleId === 'request');
   const fair = $derived(onRequest && handoff === EXAMPLES.request.handoff && mistake === 'none');
   const puzzle = $derived({
-    goal: 'In the client request, done in parallel, you can afford to make two pieces twice as fast. Which two bring it down the most?',
+    goal: 'In the client request, done in parallel, you can afford to make two pieces twice as fast. Which two cut the total time the most?',
     met: fair && faster.length === 2 && faster.includes('credit') && faster.includes('es'),
     progress: !onRequest
-      ? ''
+      ? 'Switch the example to the client request to begin.'
       : !fair
         ? 'Keep one day at each handoff and no mistakes, so only the speed-ups change.'
         : faster.length > 2
@@ -63,6 +64,9 @@
     hints: ['In parallel, one piece sets the total. Which one?', 'Once you speed up the slowest piece, another piece becomes the slowest.'],
     found: 'Credit analysis and the E&S review: five days instead of seven. Speed up credit alone and the E&S review takes over as the slowest piece. Faster legal documents or pricing change nothing at all.',
   });
+  // Which piece is slowest stays unlabelled until the puzzle is done: finding it is the puzzle.
+  const game = getContext('tkc-game');
+  const revealed = $derived(!game.isOpen('async'));
   const showAnswer = () => {
     setExample('request');
     faster = ['credit', 'es'];
@@ -138,7 +142,7 @@
               <path d={barRight(x(b.start), top + b.row * rowH + 4, Math.max(1.5, x(b.end) - x(b.start) - 1), rowH - 8, 3)} class="bar {b.kind}" />
             {/each}
             <line class="end" x1={x(panel.run.total)} x2={x(panel.run.total)} y1={top - 2} y2={top + ex.pieces.length * rowH} />
-            {#if panel.id === 'parallel' && !narrow}
+            {#if panel.id === 'parallel' && !narrow && revealed}
               {@const sp = ex.pieces.findIndex((p) => p.id === panel.run.slowest)}
               {@const sb = panel.run.bars.filter((b) => b.row === sp).reduce((a, b) => (b.end > a.end ? b : a), { end: 0 })}
               {#if sb.end > 0 && x(sb.end) + 150 < width}<text class="tkc-axis-label tkc-halo" x={x(sb.end) + 6} y={top + sp * rowH + 15}>slowest: sets the pace</text>{/if}
@@ -159,7 +163,7 @@
 
       <div class="tkc-stats" use:announce>
         <Stat label="One after another" value={amount(seq.total)} sub={detail(seq)} />
-        <Stat label="In parallel" value={amount(par.total)} sub="{detail(par)}; slowest piece: {ex.pieces.find((p) => p.id === par.slowest)?.label.toLowerCase()}" />
+        <Stat label="In parallel" value={amount(par.total)} sub={revealed ? `${detail(par)}; slowest piece: ${ex.pieces.find((p) => p.id === par.slowest)?.label.toLowerCase()}` : detail(par)} />
       </div>
 
       {#snippet model()}
@@ -180,7 +184,7 @@
       A Formula 1 pit stop works the parallel way. About twenty people change four tyres in around two seconds, each
       doing one task at the same moment. Nobody hands over to anybody, and the car leaves when the last wheel is on.
     </p>
-    <h3>Four lessons from the breakfast factory</h3>
+    <h3>What Grove’s breakfast teaches</h3>
     <ul>
       <li>
         <strong>Find the slowest step.</strong> It sets the pace for everything, so put the effort there. Expect it to
@@ -189,7 +193,8 @@
       <li>
         <strong>Keep bad inputs out first.</strong> Check the egg before you boil it. Quality engineers call this the
         1-10-100 rule: a problem that costs 1 to prevent at entry costs 10 to correct later and 100 if it reaches the
-        client. Found late, it means doing the work twice, and in parallel work one bad input spoils every piece at once.
+        client. Found late, it means doing the work twice: one bad input sends the lockstep chain back to the start, and
+        sixteen days become thirty-two. In parallel work it spoils every piece at once.
       </li>
       <li>
         <strong>Monitor where you can; stop the line only where you must.</strong> A gate holds all work until it has

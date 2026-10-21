@@ -91,7 +91,7 @@
   n={8}
   kicker="Ergodicity"
   title="When the average lies"
-  lede="A game that makes the average player richer every round, and most players poorer. What would you change?"
+  lede="A bet that makes players richer on average every round, and leaves most of them poorer. What would you change?"
   puzzle="ergodicity"
 >
   {#snippet setup()}
@@ -222,8 +222,8 @@
   {#snippet bank()}
     <BankNote ask="Which of our processes would we design differently if we judged them by their worst month instead of their average month?">
       <p>
-        A bank lives through one path, so it holds capital and liquidity buffers. The same logic puts the heaviest controls
-        where a mistake cannot be undone, and light, fast checks everywhere else.
+        A bank lives through one path, so it holds capital and liquidity buffers and caps what rides on any one client,
+        country or sector: staking less and pooling, in banking terms.
       </p>
     </BankNote>
   {/snippet}

@@ -13,6 +13,11 @@
   import { linear, line, ticks } from '../lib/scales.js';
   import { hours } from '../lib/format.js';
   import { prefersReducedMotion, watchVisibility } from '../lib/motion.js';
+  import { getContext } from 'svelte';
+
+  // Until the puzzle is done, only the way of assigning requests that is set up is shown.
+  const game = getContext('tkc-game');
+  const revealed = $derived(!game.isOpen('queues'));
 
   const SERVERS = 4;
   const SPEED = 1.6; // simulated hours per second of animation
@@ -126,6 +131,8 @@
   }
 
   const wait = $derived(mode === 'pooled' ? pooled : named);
+  const showNamed = $derived(revealed || mode === 'named');
+  const showPooled = $derived(revealed || mode === 'pooled');
   const puzzle = $derived({
     goal: 'There is no budget for a fifth reviewer, so the four must stay at least 80% busy. Can you get the average wait for a review under one hour?',
     met: busy >= 80 && wait < 1,
@@ -144,9 +151,9 @@
 >
   {#snippet setup()}
     <p>
-      Even when the right people are in, they are busy. Say four specialists review every new deal for environmental
-      and social risk, and each review takes about an hour. Queueing theory, the mathematics of waiting lines, says that
-      how busy they are decides how long everyone else waits.
+      Even when the right people are in, they are busy. Say four credit analysts review every new deal, and each review
+      takes about an hour. Queueing theory, the mathematics of waiting lines, says that how busy they are decides how
+      long everyone else waits.
     </p>
     <p>The surprise is the shape. Waiting does not grow in step with how busy someone is.</p>
   {/snippet}
@@ -205,9 +212,13 @@
         </p>
       </div>
 
-      <div class="tkc-stats tkc-stats--3" use:announce>
-        <Stat label="Average wait, named reviewer" value={hours(named)} sub="before work starts" swatch="var(--tkc-conditions)" line={true} />
-        <Stat label="Average wait, shared line" value={hours(pooled)} sub="same people, same workload" swatch="var(--tkc-options)" line={true} />
+      <div class="tkc-stats" class:tkc-stats--3={revealed} use:announce>
+        {#if revealed}
+          <Stat label="Average wait, named reviewer" value={hours(named)} sub="before work starts" swatch="var(--tkc-conditions)" line={true} />
+          <Stat label="Average wait, shared line" value={hours(pooled)} sub="same people, same workload" swatch="var(--tkc-options)" line={true} />
+        {:else}
+          <Stat label="Average wait, as set up" value={hours(wait)} sub={mode === 'named' ? 'each request waits for a named reviewer' : 'one shared line for all four'} swatch={mode === 'named' ? 'var(--tkc-conditions)' : 'var(--tkc-options)'} line={true} />
+        {/if}
         <Stat
           quiet
           label="In the animation so far"
@@ -217,7 +228,7 @@
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
-        <svg {width} height={H} role="img" aria-label="Average wait against how busy the reviewers are, for named reviewers and for a shared line.">
+        <svg {width} height={H} role="img" aria-label={revealed ? 'Average wait against how busy the reviewers are, for named reviewers and for a shared line.' : 'Average wait against how busy the reviewers are, as set up.'}>
           {#each ticks(0, Y_MAX, 4) as t}
             <line class="tkc-grid" x1={m.left} x2={width - m.right} y1={y(t)} y2={y(t)} />
             <text class="tkc-axis-label" x={m.left - 6} y={y(t) + 4} text-anchor="end">{t}h</text>
@@ -226,15 +237,17 @@
             <text class="tkc-axis-label" x={x(t)} y={H - m.bottom + 16} text-anchor="middle">{Math.round(t * 100)}%</text>
           {/each}
           <line class="tkc-base" x1={m.left} x2={width - m.right} y1={y(0)} y2={y(0)} />
-          <path d={namedCurve.d} class="curve" style:stroke="var(--tkc-conditions)" />
-          <path d={pooledCurve.d} class="curve" style:stroke="var(--tkc-options)" />
-          <text class="tkc-label-2" x={width - m.right + 6} y={y(meanWait(SERVERS, 0.98)) + 4}>Shared</text>
-          <line class="now" x1={x(rho)} x2={x(rho)} y1={namedCurve.exit !== null ? m.top + 18 : m.top} y2={y(0)} />
-          {#if named <= Y_MAX}
+          {#if showNamed}<path d={namedCurve.d} class="curve" style:stroke="var(--tkc-conditions)" />{/if}
+          {#if showPooled}
+            <path d={pooledCurve.d} class="curve" style:stroke="var(--tkc-options)" />
+            <text class="tkc-label-2" x={width - m.right + 6} y={y(meanWait(SERVERS, 0.98)) + 4}>Shared</text>
+          {/if}
+          <line class="now" x1={x(rho)} x2={x(rho)} y1={showNamed && namedCurve.exit !== null ? m.top + 18 : m.top} y2={y(0)} />
+          {#if showNamed && named <= Y_MAX}
             <circle cx={x(rho)} cy={y(named)} r="5" class="pt" style:fill="var(--tkc-conditions)" />
           {/if}
-          <circle cx={x(rho)} cy={y(pooled)} r="5" class="pt" style:fill="var(--tkc-options)" />
-          {#if namedCurve.exit !== null}
+          {#if showPooled}<circle cx={x(rho)} cy={y(pooled)} r="5" class="pt" style:fill="var(--tkc-options)" />{/if}
+          {#if showNamed && namedCurve.exit !== null}
             <text class="tkc-label-2 tkc-halo" x={x(namedCurve.exit) - 6} y={m.top + 12} text-anchor="end">Named ↑ {Math.round(meanWait(1, 0.98))}h at 98%</text>
           {/if}
           {#if hover !== null}
@@ -247,13 +260,13 @@
         {#if hover !== null}
           <div class="tkc-tip" style:left="{Math.min(width - 190, Math.max(0, x(hover) + 10))}px" style:top="24px">
             <div>At {Math.round(hover * 100)}% busy</div>
-            <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span><strong>{hours(meanWait(1, hover))}</strong> named</div>
-            <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-options)"></span><strong>{hours(meanWait(SERVERS, hover))}</strong> shared</div>
+            {#if showNamed}<div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span><strong>{hours(meanWait(1, hover))}</strong> named</div>{/if}
+            {#if showPooled}<div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-options)"></span><strong>{hours(meanWait(SERVERS, hover))}</strong> shared</div>{/if}
           </div>
         {/if}
         <div class="tkc-legend">
-          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span>Each request waits for a named reviewer</span>
-          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-options)"></span>One shared line for all four</span>
+          {#if showNamed}<span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span>Each request waits for a named reviewer</span>{/if}
+          {#if showPooled}<span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-options)"></span>One shared line for all four</span>{/if}
         </div>
       </div>
 
@@ -271,9 +284,8 @@
       the same reason: above about 85% occupancy, emergency patients start to find no bed.
     </p>
     <p>
-      A shared line changes the arithmetic. With named lines, a request can sit behind one colleague’s backlog while
-      another colleague who could do it is idle. Bank branches learned this long ago: one line for all the tellers beats
-      a line per teller.
+      With one shared line, no request waits while a colleague who could do it sits idle. Bank branches learned this
+      long ago: one line for all the tellers beats a line per teller.
     </p>
     <p>
       In a long chain, the waits add up. A request that passes six named reviewers, each 95% busy, waits about nineteen

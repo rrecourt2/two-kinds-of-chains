@@ -1,4 +1,5 @@
 <script>
+  import { getContext } from 'svelte';
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
@@ -67,9 +68,12 @@
     ],
     answer: 'standin',
     wrong: (v) => (v === 'attend' ? 'Six people at 97% are all in together on about 83% of days. Set the sliders to compare.' : 'They differ more than it seems. Set the sliders to compare.'),
-    hints: ['When everyone must be in, the chances multiply: 0.97 six times over.', 'With a stand-in, a role is uncovered only when both people are out, on about 1 day in 100.'],
-    found: 'The stand-ins win: decisions on 94% of days, against 83%. Twice the people, far less waiting.',
+    hints: ['When everyone must be in, the chances multiply: 0.97 six times over.', 'With a stand-in, a role is uncovered only when both people are out on the same day. How often is that?'],
+    found: 'The stand-ins win: decisions on 94% of days, against 83% with better attendance.',
   };
+  // A prediction: the controls open after the first answer or a hint.
+  const game = getContext('tkc-game');
+  const live = $derived(game.engaged('riddle'));
   const showAnswer = () => ((what = 'people'), (count = 6), (availability = 90), (backups = 1));
 </script>
 
@@ -97,7 +101,8 @@
   {#snippet figure()}
     <Instrument title={sys ? 'What is up this month?' : 'Who is in this month?'} sub={sys ? 'Each square is one working day. Systems fail in incidents and maintenance windows.' : 'Each square is one working day. Absences come in runs: a week of holiday, a few days of training.'}>
       <Puzzle id="riddle" {...puzzle} onshow={showAnswer} />
-      <div class="tkc-controls">
+      {#if !live}<p class="tkc-wait-note">The controls open after your first answer, or a hint.</p>{/if}
+      <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
         <Segmented
           name="r-what"
           label="The work needs"
@@ -147,7 +152,7 @@
         />
       </div>
 
-      <div class="tkc-row">
+      <div class="tkc-row" class:tkc-wait={!live} inert={live ? undefined : true}>
         <button type="button" class="tkc-btn tkc-btn--small" onclick={() => (seed += 1)}>Simulate another month</button>
       </div>
 
@@ -163,7 +168,7 @@
     <p>
       Better attendance helps less than it seems: six people at 97% are all in together on only 83% of days. A stand-in
       changes the arithmetic. A role is covered unless both people are out, so each link holds on 99 days in 100, and all
-      six hold on 94% of days. Twice as many people, and far less waiting.
+      six hold on 94% of days. Nobody has to be in more often; more people can sign.
     </p>
     <p>
       The danger is how fast a chain of ANDs falls apart. Add four more named roles and the decision is possible on one
@@ -177,8 +182,8 @@
     <p>
       That is the answer to the riddle. In the pencil’s chain, every link has many possible suppliers: if one graphite
       mine floods, the factory buys from another. Each link is an <span class="tkc-or">OR</span>. In a chain of named
-      people and single systems, each link is an <span class="tkc-and">AND</span>. ORs make a chain stronger as it
-      grows. ANDs make it weaker, and past a point it is blocked more often than it is open.
+      people and single systems, each link is an <span class="tkc-and">AND</span>. ORs let a chain grow long and stay
+      strong. ANDs weaken it with every link, and past a point it is blocked more often than it is open.
     </p>
   {/snippet}
 

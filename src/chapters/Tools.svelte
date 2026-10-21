@@ -11,6 +11,9 @@
   import { getContext } from 'svelte';
 
   const clipId = `${getContext('tkc-id') ?? 'tkc'}-payoff-clip`;
+  // A prediction: the slider opens after the first answer or a hint.
+  const game = getContext('tkc-game');
+  const live = $derived(game.engaged('tools'));
 
   let spread = $state(1.5);
   let width = $state(560);
@@ -56,7 +59,7 @@
     ],
     answer: 'rises',
     wrong: (v) => (v === 'falls' ? 'That is what happens to the gate. Move the slider and watch the tool.' : 'Only the rule stays the same. Move the slider and compare.'),
-    hints: ['Move the slider and watch the tool’s average.', 'With a tool, a person keeps the good drafts and drops the bad ones. What does a bad draft cost?'],
+    hints: ['What does a tool cost you on the AI’s worst day?', 'A person keeps the good drafts and drops the bad ones. What does a wilder AI add?'],
     found: 'It rises. People keep the good drafts and drop the bad ones, so more variety brings bigger wins and no bigger losses. Built in as a gate, the same erratic AI does the opposite.',
   };
 </script>
@@ -96,7 +99,8 @@
   {#snippet figure()}
     <Instrument title="Same AI, three ways to use it" sub="Hours saved per request. The AI saves 30 minutes on average; how much that varies is up to you.">
       <Puzzle id="tools" {...puzzle} onshow={() => (spread = 2.5)} />
-      <div class="tkc-controls tkc-controls--wide">
+      {#if !live}<p class="tkc-wait-note">The controls open after your first answer, or a hint.</p>{/if}
+      <div class="tkc-controls tkc-controls--wide" class:tkc-wait={!live} inert={live ? undefined : true}>
         <Slider id="t-spread" label="How much the AI’s usefulness varies from task to task" bind:value={spread} min={0} max={2.5} step={0.1} format={(v) => `±${v.toFixed(1)} hours`} ends={['Steady', 'Erratic']} />
       </div>
 
@@ -162,9 +166,9 @@
 
   {#snippet after()}
     <p>
-      With a steady AI, all three designs do about the same. As the AI gets more erratic, which it often is, the tool
-      gets more valuable, because people keep the good answers and drop the bad ones. The gate gets worse, because every
-      bad answer stops the work behind it, while the good answers can only save what the process was built around.
+      With a steady AI, all three designs do about the same. As the AI gets more erratic, which it often is, they pull
+      apart: the tool climbs, the rule stays put and the gate sinks below zero. Every bad answer stops the work behind
+      the gate, while its good answers can only save what the process was built around.
     </p>
     <p>
       Anyone who has priced an option will recognise the shapes. A tool is a bought option: a small, known downside
@@ -178,7 +182,7 @@
     </p>
     <p>
       The fixes are the ones from earlier chapters: one shared record for the AI to read instead of a dozen screens to
-      fill in, and one human review at the end instead of a check at every step.
+      fill in, and human reviews of the finished work, side by side, instead of a gate at every step.
     </p>
   {/snippet}
 

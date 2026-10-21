@@ -55,20 +55,19 @@
   n={6}
   kicker="Emergence"
   title="When every part does its best"
-  lede="In a complex system, the whole is not the sum of its parts. When every part does what is best for itself, what does the whole do?"
+  lede="When every part does what is best for itself, what does the whole do?"
   puzzle="emergence"
 >
   {#snippet setup()}
     <p>
-      Complexity science studies emergence: patterns of the whole that no part intends. Nobody plans a traffic jam. In
-      2008, Japanese physicists asked 22 drivers to circle a 230-metre track at a steady 30 km/h. Soon a jam formed and
-      rolled backwards around the track, with no accident and no bottleneck. Small, sensible adjustments by each driver
-      added up to a stop-start wave.
+      Nobody plans a traffic jam. In 2008, Japanese physicists asked 22 drivers to circle a 230-metre track at a steady
+      30 km/h. Soon a jam formed and rolled backwards around the track, with no accident and no bottleneck. Small,
+      sensible adjustments by each driver added up to a stop-start wave that nobody intended: what scientists call
+      emergence.
     </p>
     <p>
-      In 1968 the mathematician Dietrich Braess found something stranger in a road network like the one below. The
-      city has just opened a new link between its two junctions, a road so short that it takes no time at all. Every
-      driver picks the fastest route for themselves.
+      The city below has just opened a new link between its two junctions, a road so short that it takes no time at
+      all. Every driver picks the fastest route for themselves.
     </p>
   {/snippet}
 
@@ -117,7 +116,7 @@
       <div class="tkc-stats tkc-stats--3" use:announce>
         <Stat label="Every driver’s journey" value={mins(now.time)} sub={open && revealed ? `${now.time > before.time ? 'up' : now.time < before.time ? 'down' : 'no change'} from ${mins(before.time)} without the link` : 'each takes the fastest route'} swatch={open && revealed && now.time > before.time ? 'var(--tkc-conditions)' : 'var(--tkc-ink-2)'} />
         <Stat label="If routes were planned for everyone" value={mins(open ? best : before.time)} sub="the best the roads can do" />
-        <Stat label="Cars on the new link" value={open ? int(now.link) : '0'} sub={open ? 'each saving time, at first' : 'the link is closed'} />
+        <Stat label="Cars on the new link" value={open ? int(now.link) : '0'} sub={open ? 'the shortest way across' : 'the link is closed'} />
       </div>
 
       {#snippet model()}
@@ -129,11 +128,12 @@
 
   {#snippet after()}
     <p>
-      With the link open, each driver does the smart thing and takes it. Once everyone does, both main roads are
+      The mathematician Dietrich Braess found this in 1968. With the link open, each driver does the smart thing and
+      takes it. Once everyone does, both main roads are
       packed, and every journey is 15 minutes longer than before the link existed. Nobody can do better by switching
       back alone, so the jam is stable. With fewer than 3,000 cars the link helps; above that it hurts.
     </p>
-    <p>It happens in real cities. When New York closed 42nd Street for Earth Day in 1990, traffic in the area flowed better, not worse.</p>
+    <p>It happens in real cities. When New York closed 42nd Street for Earth Day in 1990, traffic in the area was reported to flow better, not worse.</p>
     <h3>Local best, global worse</h3>
     <p>
       This is the risk of optimizing locally. A team that makes its own part faster, safer or cheaper does not always
@@ -143,8 +143,7 @@
     <p>
       Picture five lenders financing one wind farm. Each adds a condition that protects its own position: a reserve
       account here, a consent right there. Each condition is sensible. Together they can make the project too slow or
-      too costly to build, and then every lender loses. Climate change is the same pattern at the largest scale: every
-      single choice to emit makes sense to the one who makes it, and the sum does not.
+      too costly to build, and then every lender loses.
     </p>
     <p>The remedy is not to ask every part to be selfless. It is to measure the whole.</p>
   {/snippet}
