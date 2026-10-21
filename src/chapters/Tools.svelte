@@ -98,8 +98,7 @@
 
   {#snippet figure()}
     <Instrument title="Same AI, three ways to use it" sub="Hours saved per request. The AI saves 30 minutes on average; how much that varies is up to you.">
-      <Puzzle id="tools" {...puzzle} onshow={() => (spread = 2.5)} />
-      {#if !live}<p class="tkc-wait-note">The controls open after your first answer, or a hint.</p>{/if}
+      <Puzzle id="tools" {...puzzle} predict onshow={() => (spread = 2.5)} />
       <div class="tkc-controls tkc-controls--wide" class:tkc-wait={!live} inert={live ? undefined : true}>
         <Slider id="t-spread" label="How much the AI’s usefulness varies from task to task" bind:value={spread} min={0} max={2.5} step={0.1} format={(v) => `±${v.toFixed(1)} hours`} ends={['Steady', 'Erratic']} />
       </div>

@@ -17,6 +17,7 @@
   const game = createGame(CHAPTERS.map((c) => c.id));
   setContext('tkc-game', game);
   const solvedHere = (id) => game.entry(id).status === 'solved';
+  const shownHere = (id) => game.entry(id).status === 'shown';
 
   function indexFromHash() {
     if (!syncHash) return -1;
@@ -89,6 +90,8 @@
     const tag = el?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el?.isContentEditable) return;
     if (el?.closest?.('[role="radiogroup"]')) return;
+    // Inside a figure or a puzzle, the arrow keys belong to its controls, not to the chapter pager.
+    if (el?.closest?.('.tkc-fig, .puzzle, [role="group"]')) return;
     if (menuEl?.open) return;
     if (event.key === 'ArrowRight' && next) go(index + 1);
     if (event.key === 'ArrowLeft' && prev) go(index - 1);
@@ -121,6 +124,7 @@
                 class:on={i === index}
                 class:seen={visited[i]}
                 class:solved={solvedHere(chapter.id)}
+                class:shown={shownHere(chapter.id)}
                 aria-current={i === index ? 'step' : undefined}
                 aria-label="{i === 0 ? 'Start' : `Chapter ${i}`}: {chapter.title}{solvedHere(chapter.id) ? ', puzzle solved' : ''}"
                 title={chapter.title}
@@ -129,7 +133,9 @@
             </li>
           {/each}
         </ol>
-        <span class="score tkc-num" title="Puzzle points" aria-label="Score: {game.score} of {game.max} points">★ {game.score}</span>
+        {#key game.score}
+          <span class="score tkc-num" class:pulse={game.score > 0} title="Puzzle points"><span aria-hidden="true">★ {game.score}/{game.max}</span><span class="tkc-sr">Score: {game.score} of {game.max} points</span></span>
+        {/key}
         <span class="where tkc-num" aria-hidden="true">
           {index === 0 ? 'Start' : `${index} / ${total} · ${current.short}`}
         </span>
@@ -310,7 +316,7 @@
     width: 22px;
     height: 14px;
     border-radius: 7px;
-    border: 2.5px solid var(--tkc-rule);
+    border: 2.5px solid color-mix(in srgb, var(--tkc-muted) 70%, var(--tkc-surface));
     background: transparent;
     transition: border-color 150ms ease, background-color 150ms ease;
   }
@@ -323,6 +329,10 @@
   }
   .link.solved::before {
     border-color: var(--tkc-options);
+    background: var(--tkc-options-wash);
+  }
+  .link.shown::before {
+    border-style: dashed;
   }
   .link.on::before {
     border-color: var(--tkc-ink);
@@ -333,10 +343,24 @@
   }
   .score {
     flex: none;
+    display: inline-block;
     font-size: 0.8125rem;
     font-weight: 700;
     color: var(--tkc-options-ink);
     white-space: nowrap;
+  }
+  .score.pulse {
+    animation: score-pulse 600ms ease-out;
+  }
+  @keyframes score-pulse {
+    30% {
+      transform: scale(1.25);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .score.pulse {
+      animation: none;
+    }
   }
   .where {
     font-size: 0.8125rem;

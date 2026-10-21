@@ -106,7 +106,7 @@
     ],
     answer: '0',
     wrong: () => 'Count the links each person has, and what they cost. The figure can check it: everyone linked, 60 people.',
-    hints: ['Each person keeps up a link with every one of the other 59.', '59 links at 2% each: how much time is left for work?'],
+    hints: ['Each person keeps up a link with every one of the other 59.', 'What share of one person’s time goes on keeping up with 59 colleagues?'],
     found: 'Nothing at all. Each person has 59 colleagues to keep up with, and at 2% each that is more than all of their time.',
   };
   // A prediction: the controls open, and the curves run to 60, after the first answer or a hint.
@@ -138,8 +138,7 @@
 
   {#snippet figure()}
     <Instrument title="Grow the network" sub="Each required link costs both ends 2% of their capacity.">
-      <Puzzle id="graph" {...puzzle} onshow={() => ((kind = 'mesh'), (nodes = 60), (what = 'people'))} />
-      {#if !live}<p class="tkc-wait-note">The controls open after your first answer, or a hint.</p>{/if}
+      <Puzzle id="graph" {...puzzle} predict onshow={() => ((kind = 'mesh'), (nodes = 60), (what = 'people'))} />
       <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
         <Segmented
           name="g-what"

@@ -134,10 +134,13 @@
   const showNamed = $derived(revealed || mode === 'named');
   const showPooled = $derived(revealed || mode === 'pooled');
   const puzzle = $derived({
-    goal: 'There is no budget for a fifth reviewer, so the four must stay at least 80% busy. Can you get the average wait for a review under one hour?',
+    goal: 'There is no budget for a fifth reviewer. Cut the average wait for a review to under an hour.',
     met: busy >= 80 && wait < 1,
-    progress: busy < 80 ? 'Below 80% busy the budget would need another reviewer. Keep them at 80% or more.' : `Average wait now: ${hours(wait)}.`,
-    hints: ['How busy they are is only half of it. Look at how requests reach the reviewers.', 'With named lines, a request can wait behind one reviewer’s backlog while another reviewer is free.'],
+    checks: [
+      { label: 'Reviewers at least 80% busy, as the budget requires', ok: busy >= 80 },
+      { label: `Average wait under an hour (now ${hours(wait)})`, ok: wait < 1 },
+    ],
+    hints: ['How busy they are is only half of it. Look at how requests reach the reviewers.', 'Can a request wait while a reviewer who could take it is free?'],
     found: 'One shared line does it. At 80% busy, the same four people cut the average wait from four hours to 45 minutes.',
   });
 </script>

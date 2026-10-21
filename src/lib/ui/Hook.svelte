@@ -13,7 +13,8 @@
   const RELIABILITY = 0.95;
   const REQUESTS = 100;
 
-  let guess = $state(90);
+  let guess = $state(50);
+  let scoredRun = $state(false); // whether the run on show is the one that set the opening puzzle's points
   let phase = $state('ask'); // ask | run | done
   let gates = $state(6);
   let backups = $state(false);
@@ -169,7 +170,8 @@
     phase = 'done';
     runs = [...runs, { gates, backups, through: flow.through, guess }];
     // The opening guess is the first puzzle: two points within 5, one within 10.
-    if (runs.length === 1 && game?.isOpen('start')) {
+    scoredRun = runs.length === 1 && !!game?.isOpen('start');
+    if (scoredRun) {
       const off = Math.abs(guess - flow.through);
       if (off <= 5) game.solve('start');
       else if (off <= 10) (game.help('start'), game.solve('start'));
@@ -202,10 +204,11 @@
   const first = $derived(runs[0]);
   const latest = $derived(runs[runs.length - 1]);
   const describe = (r) => `${r.gates === 6 ? 'six' : r.gates === 12 ? 'twelve' : r.gates} checks${r.backups ? ', each with a backup' : ''}`;
+  const entry = $derived(game?.entry('start'));
   const pointsText = $derived.by(() => {
-    const e = game?.entry('start');
-    if (!e || e.status === 'open') return '';
-    return e.points ? `Puzzle: ${e.points} point${e.points === 1 ? '' : 's'}` : 'Puzzle: no points this time';
+    if (!entry || entry.status === 'open') return '';
+    if (!scoredRun) return 'Practice run: your first guess set your score';
+    return entry.points ? `Puzzle: ${entry.points} point${entry.points === 1 ? '' : 's'}` : 'Puzzle: no points this time';
   });
   const arithmetic = $derived(
     latest ? `${latest.backups ? '0.9975' : '0.95'} multiplied ${latest.gates} times ≈ ${Math.round(100 * (latest.backups ? 0.9975 : 0.95) ** latest.gates)}%` : '',
@@ -233,6 +236,7 @@
           <input id="{prefix}-guess" type="range" min="0" max="100" bind:value={guess} bind:this={guessEl} aria-describedby="{prefix}-hook-q" style:--pct="{guess}%" />
           <output for="{prefix}-guess" class="guess-value tkc-num">{guess}</output>
         </div>
+        <p class="tkc-small rule">{entry && entry.status !== 'open' ? 'Your first guess already counted; this one is practice.' : 'Within 5 of the result: 2 points. Within 10: 1 point.'}</p>
         <button type="button" class="tkc-btn tkc-btn--primary go" onclick={() => send()}>Send 100 loans</button>
       </div>
     {:else if phase === 'run'}
@@ -295,7 +299,7 @@
             {:else}
               Fewer get stuck than that: {arithmetic}. Still, one loan in four does.
             {/if}
-            {#if pointsText}<span class="points">{pointsText}</span>{/if}
+            {#if pointsText}<span class="points" class:none={!scoredRun || !entry?.points}>{pointsText}</span>{/if}
           </p>
         {:else if latest.backups}
           <p class="lead">
@@ -541,6 +545,13 @@
     font-weight: 700;
     color: var(--tkc-options-ink);
     background: var(--tkc-options-wash);
+  }
+  .points.none {
+    color: var(--tkc-muted);
+    background: var(--tkc-sunken);
+  }
+  .rule {
+    color: var(--tkc-muted);
   }
   .history {
     margin: 0;

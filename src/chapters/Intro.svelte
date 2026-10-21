@@ -4,6 +4,14 @@
   import { CHAPTERS } from './index.js';
 
   const go = getContext('tkc-go');
+  const game = getContext('tkc-game');
+  // A returning reader picks up at the first chapter whose puzzle is still open.
+  const started = $derived(game.ids.some((id) => !game.isOpen(id)));
+  const resume = $derived(CHAPTERS.findIndex((c, i) => i > 0 && game.isOpen(c.id)));
+  const standing = (id) => {
+    const e = game.entry(id);
+    return e.status === 'solved' ? `✓ ${e.points} point${e.points === 1 ? '' : 's'}` : e.status === 'shown' ? 'Answer shown' : '';
+  };
   const prefix = getContext('tkc-id') ?? 'tkc';
   const total = CHAPTERS.length - 1;
 
@@ -49,8 +57,13 @@
   </p>
 
   <div class="start">
-    <button type="button" class="tkc-btn tkc-btn--primary big" onclick={() => go(1)}>Start the story →</button>
-    <span class="tkc-small">Chapters can be taken in any order from the top of the page.</span>
+    {#if started && resume > 0}
+      <button type="button" class="tkc-btn tkc-btn--primary big" onclick={() => go(resume)}>Continue: chapter {resume} →</button>
+      <span class="tkc-small">Your score so far: {game.score} of {game.max} points. Chapters can be taken in any order.</span>
+    {:else}
+      <button type="button" class="tkc-btn tkc-btn--primary big" onclick={() => go(1)}>Start the story →</button>
+      <span class="tkc-small">Chapters can be taken in any order from the top of the page.</span>
+    {/if}
   </div>
 
   <ol class="toc">
@@ -61,6 +74,7 @@
           <span class="toc-text">
             <span class="toc-title">{chapter.title}</span>
             <span class="toc-desc">{contents[chapter.id]}</span>
+            {#if standing(chapter.id)}<span class="toc-done" class:shown={game.entry(chapter.id).status === 'shown'}>{standing(chapter.id)}</span>{/if}
           </span>
         </button>
       </li>
@@ -184,5 +198,14 @@
     font-size: 0.875rem;
     line-height: 1.45;
     color: var(--tkc-ink-2);
+  }
+  .toc-done {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--tkc-options-ink);
+  }
+  .toc-done.shown {
+    color: var(--tkc-muted);
+    font-weight: 600;
   }
 </style>

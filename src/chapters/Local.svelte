@@ -42,13 +42,20 @@
 
   // Until the puzzle is done, the journey time is not compared with the network without the link.
   const revealed = $derived(!game.isOpen('emergence'));
-  const puzzle = $derived({
-    goal: 'Rush hour: 4,000 cars, and every journey takes 80 minutes. There is no money for new roads, and the cars will not go away. Get every journey under 70 minutes.',
-    met: cars >= 4000 && now.time < 70,
-    progress: cars < 4000 ? 'That is fewer cars than rush hour. Keep at least 4,000.' : '',
-    hints: ['Every driver already takes the fastest route for them. The problem is not the drivers.', 'Look at what the drivers have in common: which road do they all choose?'],
-    found: 'Close the new link. Every journey falls from 80 to 65 minutes, although each driver was only ever taking the fastest route. Nothing was built; something was taken away.',
-  });
+  const puzzle = {
+    goal: 'Rush hour: 4,000 cars, and every journey takes 80 minutes. If the city closed the new link again, what would happen to every driver’s journey?',
+    choices: [
+      { value: 'longer', label: 'It would get longer: there is one road fewer' },
+      { value: 'same', label: 'No change: drivers would simply take other routes' },
+      { value: 'shorter', label: 'It would get shorter' },
+    ],
+    answer: 'shorter',
+    wrong: () => 'Close the link in the figure and watch the main roads.',
+    hints: ['Every driver takes the fastest route for them. Which road do they all choose?', 'With the link open, everyone drives both main roads. How long does a main road take with 4,000 cars on it?'],
+    found: 'Shorter: every journey falls from 80 to 65 minutes, although each driver was only ever taking the fastest route. Nothing was built; something was taken away.',
+  };
+  // A prediction: the controls open after the first answer or a hint.
+  const live = $derived(game.engaged('emergence'));
 </script>
 
 <Chapter
@@ -73,8 +80,8 @@
 
   {#snippet figure()}
     <Instrument title="A city’s roads at rush hour" sub="Main roads slow down with traffic: a minute for every 100 cars. Bypasses always take 45 minutes. The new link takes no time at all.">
-      <Puzzle id="emergence" {...puzzle} onshow={() => ((link = 'closed'), (cars = 4000))} />
-      <div class="tkc-controls">
+      <Puzzle id="emergence" {...puzzle} predict onshow={() => ((link = 'closed'), (cars = 4000))} />
+      <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
         <Segmented
           name="l-link"
           label="The new link"

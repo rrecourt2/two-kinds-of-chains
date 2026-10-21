@@ -60,7 +60,9 @@
         ? 'Keep one day at each handoff and no mistakes, so only the speed-ups change.'
         : faster.length > 2
           ? 'The budget covers two pieces, not more.'
-          : `In parallel: ${amount(par.total)}.`,
+          : faster.length === 2 && !(faster.includes('credit') && faster.includes('es'))
+            ? `With these two: ${amount(par.total)}. Another pair does better.`
+            : `In parallel: ${amount(par.total)}.`,
     hints: ['In parallel, one piece sets the total. Which one?', 'Once you speed up the slowest piece, another piece becomes the slowest.'],
     found: 'Credit analysis and the E&S review: five days instead of seven. Speed up credit alone and the E&S review takes over as the slowest piece. Faster legal documents or pricing change nothing at all.',
   });

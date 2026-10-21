@@ -71,7 +71,7 @@
     goal: 'The specialist grows faster in a calm world. Make the years more variable: at what swing does the generalist start to grow faster?',
     met: swing === firstAhead,
     progress: gg > gs && swing > firstAhead ? 'The generalist is ahead here. Is it already ahead in a calmer world?' : '',
-    hints: ['Start from a calm world and make the years more variable, one step at a time.', 'Watch the two growth rates above the islands. The answer lies between ±25% and ±40%.'],
+    hints: ['Start from a calm world and make the years more variable, one step at a time.', 'Watch the two growth rates above the islands as you go. The lead changes hands once.'],
     found: `At about ±${crossing}%: at ±30% the specialist is still just ahead, at ±35% the generalist leads. Beyond that the specialist’s growth collapses, and at ±50% it is gone from most islands within a century.`,
   });
 </script>

@@ -100,8 +100,7 @@
 
   {#snippet figure()}
     <Instrument title={sys ? 'What is up this month?' : 'Who is in this month?'} sub={sys ? 'Each square is one working day. Systems fail in incidents and maintenance windows.' : 'Each square is one working day. Absences come in runs: a week of holiday, a few days of training.'}>
-      <Puzzle id="riddle" {...puzzle} onshow={showAnswer} />
-      {#if !live}<p class="tkc-wait-note">The controls open after your first answer, or a hint.</p>{/if}
+      <Puzzle id="riddle" {...puzzle} predict onshow={showAnswer} />
       <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
         <Segmented
           name="r-what"
@@ -143,7 +142,7 @@
       </div>
 
       <div class="tkc-stats" use:announce>
-        <Stat label="Days this month the work could be done" value="{month.possibleDays} of {DAYS}" sub={month.possibleDays < DAYS / 2 ? 'Less than half the month' : ''} />
+        <Stat label="Days this month the work could be done" value="{month.possibleDays} of {DAYS}" sub="In the long run: {pct(odds.allCovered)} of days" />
         <Stat
           label="Longest wait for everyone to be {sys ? 'up' : 'in'}"
           value={month.longestWait === 0 ? 'No wait' : `${month.longestWait} working day${month.longestWait === 1 ? '' : 's'}`}

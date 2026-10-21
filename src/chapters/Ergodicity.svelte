@@ -79,11 +79,14 @@
   }
 
   const puzzle = $derived({
-    goal: 'The coin cannot change. Get the typical player growing by at least 2.5% a round.',
-    met: growthMine >= 1.025,
-    progress: growthMine > 1 && growthMine < 1.025 ? `Growing now, by ${signedPct(growthMine)} a round. Can you do better without changing the coin?` : '',
+    goal: 'The coin cannot change, and a risk limit caps any stake at 80% of wealth. Get the typical player growing by at least 2.5% a round.',
+    met: stake <= 80 && growthMine >= 1.025,
+    checks: [
+      { label: 'Stake at most 80% of wealth', ok: stake <= 80 },
+      { label: `Typical player grows at least 2.5% a round (now ${signedPct(growthMine)})`, ok: growthMine >= 1.025 },
+    ],
     hints: ['Staking less stops the slide. But how fast can a player on their own grow?', 'Players can also share their results.'],
-    found: 'Pool with others. Five players who share every result can stake everything and grow about 3% a round. On their own, the best a typical player can manage is about 0.6%.',
+    found: 'Pool with others. Five players who share every result and stake 80% grow about 2.7% a round; twenty grow about 3.7%. On their own, the best a typical player can manage is about 0.6%.',
   });
 </script>
 
@@ -105,7 +108,7 @@
 
   {#snippet figure()}
     <Instrument title="The coin game" sub="Heads: +50%. Tails: −40%. Each grey line is one player.">
-      <Puzzle id="ergodicity" {...puzzle} onshow={() => ((stake = 100), (pool = 5))} />
+      <Puzzle id="ergodicity" {...puzzle} onshow={() => ((stake = 80), (pool = 5))} />
       <div class="tkc-controls">
         <Slider id="e-stake" label="Share of wealth staked each round" bind:value={stake} min={10} max={100} step={5} format={(v) => `${v}%`} />
         <Segmented

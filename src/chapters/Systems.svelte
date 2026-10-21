@@ -56,16 +56,14 @@
   const safe = $derived(result.slipped < 0.02);
   const fair = $derived(systems >= START.systems && problems >= START.problems);
   const puzzle = $derived({
-    goal: 'Without dropping any of the six systems, get the typical request under two weeks, with problems slipping through on fewer than 2% of requests.',
+    goal: 'Without dropping a system, make the typical request faster and safer at the same time.',
     met: fair && fast && safe,
-    progress: !fair
-      ? 'Keep all six systems, and a problem in at least one form in ten. The puzzle is to change the design, not the work.'
-      : fast && !safe
-        ? 'Fast enough, but too many problems slip through.'
-        : !fast && safe
-          ? 'Safe enough, but still too slow.'
-          : '',
-    hints: ['Cutting checks is not the only way to speed things up. Look at how the systems get their data.', 'With one shared record, every approver sees the whole request, so the approvals can run side by side.'],
+    checks: [
+      { label: 'All six systems, and a problem in at least one form in ten', ok: fair },
+      { label: `Typical request under two weeks (now ${shortDays(result.median, HORIZON)} working days)`, ok: fast },
+      { label: `Problems slip through on fewer than 2% of requests (now ${pct(result.slipped, 1)})`, ok: safe },
+    ],
+    hints: ['Cutting checks is not the only way to speed things up. Look at how the systems get their data.', 'Which setting changes how many places a problem has to be fixed?'],
     found: 'One shared record, with every approval kept: a typical request takes about a week, and almost no problems slip through.',
   });
   const showAnswer = () => ((systems = START.systems), (problems = START.problems), (info = 'shared'), (approvals = 'each'));

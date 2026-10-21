@@ -1,5 +1,5 @@
 <script>
-  import { onDestroy } from 'svelte';
+  import { onDestroy, getContext } from 'svelte';
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
@@ -91,13 +91,14 @@
   const STRESS_LINKS = 10;
   const stressed = $derived(mean(five[STRESS_LINKS - 1].shares));
   const lowestSafe = 6; // the lowest capital at which fewer than a quarter fail, on average
+  const game = getContext('tkc-game');
+  // While the stress test is open, the panels highlight its ten counterparties.
+  const stressOpen = $derived(game.isOpen('contagion'));
   const puzzle = $derived({
     goal: 'A stress test: five banks fail at once, and each bank has about ten counterparties. Find the lowest capital at which, on average, fewer than a quarter of all banks go down.',
     met: capital === lowestSafe && stressed < 0.25,
-    progress:
-      `At ${capital}% capital, five failures bring down ${Math.round(stressed * 100)}% of banks on average.` +
-      (stressed < 0.25 && capital > lowestSafe ? ' Does a lower capital still hold?' : ''),
-    hints: ['Read the panel “After five fail at once”, at ten counterparties.', 'It lies between 5% and 8%.'],
+    progress: stressed < 0.25 && capital > lowestSafe ? `Under a quarter at ${capital}%. Does a lower capital still hold?` : '',
+    hints: ['Read the panel “After five fail at once”, at ten counterparties.', 'Raise capital one point at a time from 4%. When the drop comes, it is sudden.'],
     found: '6%. At 5% capital, five failures at once bring down about two-thirds of the banks; at 6%, a fifth. One point of capital separates a contained crisis from a collapse.',
   });
 </script>
@@ -186,8 +187,8 @@
           {#each [{ title: 'After one bank fails', data: one }, { title: 'After five fail at once', data: five }] as panel (panel.title)}
             <svg width={panelW} height={SH} role="img" aria-label="{panel.title}: share of banks that fail, by number of counterparties.">
               <text class="tkc-label" x={sm.left} y="14">{panel.title}</text>
-              <rect x={sx(links - 0.5)} y={sm.top} width={sx(1) - sx(0)} height={SH - sm.top - sm.bottom} class="band" />
-              {#each [0, 0.5, 1] as t}
+              <rect x={sx((stressOpen ? STRESS_LINKS : links) - 0.5)} y={sm.top} width={sx(1) - sx(0)} height={SH - sm.top - sm.bottom} class="band" />
+              {#each [0, 0.25, 0.5, 1] as t}
                 <line class="tkc-grid" x1={sm.left} x2={panelW - sm.right} y1={sy(t)} y2={sy(t)} />
                 <text class="tkc-axis-label" x={sm.left - 6} y={sy(t) + 4} text-anchor="end">{t * 100}%</text>
               {/each}
@@ -197,7 +198,7 @@
                 {/each}
                 <line x1={sx(col.z) - 7} x2={sx(col.z) + 7} y1={sy(mean(col.shares))} y2={sy(mean(col.shares))} class="avg" />
               {/each}
-              {#each [1, 4, 8, 12] as t}
+              {#each [1, 4, 8, 10, 12] as t}
                 <text class="tkc-axis-label" x={sx(t)} y={SH - sm.bottom + 16} text-anchor="middle">{t}</text>
               {/each}
               <text class="tkc-axis-label" x={sm.left + (panelW - sm.left - sm.right) / 2} y={SH - 2} text-anchor="middle">Counterparties per bank</text>

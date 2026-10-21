@@ -27,7 +27,12 @@ one file, with no external requests, so it can run inside a locked-down bank int
 
 Every chapter opens with one puzzle. Solving it unaided earns two points, solving it after a hint or a wrong try
 earns one, and "Show me the answer" sets the figure and earns none. The explanation below each figure opens once
-its puzzle is solved or shown. Scores are kept in the reader's own browser (`localStorage`, key
+its puzzle is solved or shown.
+
+- Choice puzzles are predictions, like the opening guess: the figure's controls open after the first answer or a
+  hint, so the reader commits before testing.
+- Target puzzles count once the figure has rested on the goal for a moment, so sweeping a slider past the answer
+  does not solve them. Goals with several conditions show a live checklist. Scores are kept in the reader's own browser (`localStorage`, key
 `two-chains-puzzles-v1`); nothing is sent anywhere. The playbook shows the total and a button to start again.
 
 ## Run it

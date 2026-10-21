@@ -75,8 +75,7 @@
 
   {#snippet figure()}
     <Instrument title="Twenty equal firms, one market" sub="Each line is one firm’s share of all customers so far.">
-      <Puzzle id="winners" {...puzzle} onshow={() => ((size = 'none'), (better = 'better'))} />
-      {#if !live}<p class="tkc-wait-note">The controls open after your first answer, or a hint.</p>{/if}
+      <Puzzle id="winners" {...puzzle} predict onshow={() => ((size = 'none'), (better = 'better'))} />
       <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
         <Segmented
           name="w-size"

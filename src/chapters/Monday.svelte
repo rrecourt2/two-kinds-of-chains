@@ -1,5 +1,5 @@
 <script>
-  import { getContext, untrack } from 'svelte';
+  import { getContext, untrack, tick } from 'svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
   import Segmented from '../lib/ui/Segmented.svelte';
@@ -43,15 +43,13 @@
   const fast = $derived(d.now.median <= 5);
   const safe = $derived(d.now.slipped < 0.02);
   const puzzle = $derived({
-    goal: 'Final challenge. Keep all six systems, a problem in one form in ten, and approvers in on 85% of days. Get the typical request to five working days or fewer, with problems slipping through on fewer than 2% of requests.',
+    goal: 'Final challenge: make the example process fast and safe without removing anything.',
     met: fair && fast && safe,
-    progress: !fair
-      ? 'Keep all six systems, problems in at least 10% of forms, and approvers in on no more than 85% of days.'
-      : fast && !safe
-        ? 'Fast enough, but too many problems slip through.'
-        : safe && !fast
-          ? 'Safe enough, but still slower than five days.'
-          : '',
+    checks: [
+      { label: 'All six systems, a problem in one form in ten, approvers in on no more than 85% of days', ok: fair },
+      { label: `Typical request five working days or fewer (now ${shortDays(d.now.median, HORIZON)})`, ok: fast },
+      { label: `Problems slip through on fewer than 2% of requests (now ${pct(d.now.slipped, 1)})`, ok: safe },
+    ],
     hints: ['Three earlier chapters each hold part of the answer: the riddle, linked systems and queues.', 'Start with how the systems get their data. Then ask who covers for an approver who is away, and how full their days are.'],
     found: 'One shared record, every approval kept and run side by side, and a stand-in for every approver, with a little spare capacity. The same six systems and the same checks: four working days instead of 24.',
   });
@@ -60,9 +58,16 @@
   // The reader's score across every puzzle in the story.
   const entries = $derived(game.ids.map((id) => ({ id, ...game.entry(id) })));
   const unaided = $derived(entries.filter((e) => e.status === 'solved' && e.points === 2).length);
-  const stillOpen = $derived(entries.filter((e) => e.status === 'open' && e.id !== 'monday'));
   const nameOf = (id) => (id === 'start' ? 'The opening' : `${numberOf(id)}. ${CHAPTERS[numberOf(id)].short}`);
+  const standing = (e) => (e.status === 'solved' ? `${e.points} point${e.points === 1 ? '' : 's'}` : e.status === 'shown' ? 'answer shown' : 'open');
   let confirming = $state(false);
+  let keepEl = $state();
+  let againEl = $state();
+  async function confirmFirst(on) {
+    confirming = on;
+    await tick();
+    (on ? keepEl : againEl)?.focus();
+  }
   function startAgain() {
     confirming = false;
     game.reset();
@@ -266,23 +271,26 @@
   <section class="score-card" aria-labelledby="{prefix}-score">
     <h3 class="tkc-eyebrow" id="{prefix}-score">Your score</h3>
     <p class="score-big tkc-num">{game.score} <span>of {game.max} points</span></p>
-    <p class="tkc-small">
-      {game.solved} of {game.ids.length} puzzles solved{unaided ? `, ${unaided} of them without help` : ''}.
-      {stillOpen.length ? 'Still open:' : game.isOpen('monday') ? 'Only the final challenge is left.' : 'Every puzzle is done.'}
-    </p>
-    {#if stillOpen.length}
-      <ul class="open-list">
-        {#each stillOpen as e (e.id)}
-          <li><button type="button" class="see" onclick={() => go(e.id)}>{nameOf(e.id)}</button></li>
-        {/each}
-      </ul>
-    {/if}
+    <p class="tkc-small">{game.solved} of {game.ids.length} puzzles solved{unaided ? `, ${unaided} of them without help` : ''}.</p>
+    <ol class="all">
+      {#each entries as e (e.id)}
+        <li class:open={e.status === 'open'} class:full={e.status === 'solved' && e.points === 2}>
+          {#if e.id === 'monday'}
+            <span class="all-name">{nameOf(e.id)}</span>
+          {:else}
+            <button type="button" class="see all-name" onclick={() => go(e.id)}>{nameOf(e.id)}</button>
+          {/if}
+          <span class="all-pts">{standing(e)}</span>
+        </li>
+      {/each}
+    </ol>
     <div class="tkc-row">
       {#if confirming}
-        <button type="button" class="tkc-btn tkc-btn--small" onclick={startAgain}>Yes, clear my score</button>
-        <button type="button" class="see" onclick={() => (confirming = false)}>Keep it</button>
+        <p class="tkc-small confirm">This clears your {game.score} points and returns to the opening.</p>
+        <button type="button" class="tkc-btn tkc-btn--small danger" onclick={startAgain}>Clear my score</button>
+        <button type="button" class="see" bind:this={keepEl} onclick={() => confirmFirst(false)}>Keep it</button>
       {:else}
-        <button type="button" class="tkc-btn tkc-btn--small" onclick={() => (confirming = true)}>Start again</button>
+        <button type="button" class="tkc-btn tkc-btn--small" bind:this={againEl} onclick={() => confirmFirst(true)}>Start again</button>
       {/if}
     </div>
   </section>
@@ -454,6 +462,7 @@
   }
   .see {
     justify-self: start;
+    min-height: 32px;
     padding: 2px 0;
     border: 0;
     background: none;
@@ -518,13 +527,47 @@
     font-weight: 500;
     color: var(--tkc-muted);
   }
-  .open-list {
-    margin: 0;
+  .all {
+    margin: 4px 0 0;
     padding: 0;
     list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+    gap: 0 20px;
+    width: 100%;
+  }
+  .all li {
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px 16px;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--tkc-hair);
+  }
+  .all-name {
+    font-size: 0.875rem;
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .all-pts {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--tkc-ink-2);
+    white-space: nowrap;
+  }
+  .all li.full .all-pts {
+    color: var(--tkc-options-ink);
+  }
+  .all li.open .all-pts {
+    color: var(--tkc-muted);
+    font-weight: 500;
+  }
+  .confirm {
+    flex-basis: 100%;
+  }
+  .danger {
+    color: var(--tkc-conditions-ink);
+    border-color: var(--tkc-conditions);
   }
   .sources {
     display: grid;

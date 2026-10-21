@@ -7,6 +7,11 @@
   const game = getContext('tkc-game');
   // The explanation waits until the chapter's puzzle is solved or its answer shown.
   const unlocked = $derived(!puzzle || !game || !game.isOpen(puzzle));
+  function toPuzzle() {
+    const el = document.getElementById(`${prefix}-${puzzle}-puzzle`);
+    el?.scrollIntoView({ block: 'start' });
+    el?.focus({ preventScroll: true });
+  }
 </script>
 
 <article class="chapter" aria-labelledby="{prefix}-chapter-title">
@@ -20,11 +25,14 @@
     <div class="setup tkc-prose">{@render setup()}</div>
     <div class="fig">{@render figure()}</div>
     {#if after}
-      <div class="after tkc-prose">
+      <div class="after tkc-prose" id="{prefix}-after" tabindex="-1">
         {#if unlocked}
           {@render after()}
         {:else}
-          <p class="locked">What the puzzle shows is explained here once you have solved it, or chosen “Show me the answer”.</p>
+          <p class="locked">
+            What the puzzle shows is explained here once you have solved it, or chosen “Show me the answer”.
+            <button type="button" class="to-puzzle" onclick={toPuzzle}>Go to the puzzle ↑</button>
+          </p>
         {/if}
       </div>
     {/if}
@@ -66,6 +74,26 @@
     border: 1px dashed var(--tkc-rule);
     color: var(--tkc-muted);
     font-size: 0.9375rem;
+  }
+  .after:focus {
+    outline: none;
+  }
+  .to-puzzle {
+    display: inline-block;
+    border: 0;
+    background: none;
+    padding: 4px 0;
+    min-height: 32px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--tkc-options-ink);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+  .to-puzzle:focus-visible {
+    outline: 2px solid var(--tkc-focus);
+    outline-offset: 2px;
   }
   @container tkc (min-width: 1000px) {
     .grid {

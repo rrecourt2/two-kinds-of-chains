@@ -18,8 +18,8 @@
   ];
 
   let picked = $state([]);
-  const toggle = (v) => {
-    if (!done) picked = picked.includes(v) ? picked.filter((p) => p !== v) : [...picked, v];
+  const toggle = (v, on) => {
+    if (!done) picked = on ? [...picked, v] : picked.filter((p) => p !== v);
   };
 
   const puzzle = {
@@ -47,6 +47,41 @@
   const turkeyPath = $derived(line([...Array.from({ length: 101 }, (_, i) => [tx(i * 10), ty(confidence(i * 10))]), [tx(1001), ty(0)]]));
 </script>
 
+<!-- The four files are the puzzle's choices: real checkboxes while it is open, opened files once it is done. -->
+{#snippet files()}
+  {#if done}
+    <div class="files">
+      {#each FILES as f (f.value)}
+        <div class="file {f.kind}">
+          <span class="cover">{f.cover}</span>
+          {#if f.note}<span class="note">{f.note}</span>{/if}
+          <span class="inside">
+            <span class="inside-label">Inside</span>
+            <strong>{f.inside}</strong>
+            <span class="verdict">{f.verdict}</span>
+          </span>
+        </div>
+      {/each}
+    </div>
+  {:else}
+    <fieldset class="files">
+      <legend class="tkc-sr">Choose the files to open</legend>
+      {#each FILES as f (f.value)}
+        {@const on = picked.includes(f.value)}
+        <label class="file pickable" class:on>
+          <input type="checkbox" class="box" checked={on} onchange={(ev) => toggle(f.value, ev.currentTarget.checked)} />
+          <span class="cover">{f.cover}</span>
+          {#if f.note}<span class="note">{f.note}</span>{/if}
+          <span class="inside closed">
+            <span class="inside-label">Inside: {f.hidden}</span>
+            <span class="pick">{on ? 'Open this one' : ''}</span>
+          </span>
+        </label>
+      {/each}
+    </fieldset>
+  {/if}
+{/snippet}
+
 <Chapter
   n={10}
   kicker="Black swans"
@@ -67,29 +102,8 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="Four project files" sub="Click the files you would open, or tick them in the puzzle.">
-      <Puzzle id="black-swans" {...puzzle} bind:picked onshow={() => (picked = ['a', 'none'])} />
-      <div class="files" class:done aria-hidden="true">
-        {#each FILES as f (f.value)}
-          {@const on = picked.includes(f.value)}
-          <button type="button" tabindex="-1" class="file {done ? f.kind : ''}" class:on={on && !done} onclick={() => toggle(f.value)} disabled={done}>
-            <span class="cover">{f.cover}</span>
-            {#if f.note}<span class="note">{f.note}</span>{/if}
-            {#if done}
-              <span class="inside">
-                <span class="inside-label">Inside</span>
-                <strong>{f.inside}</strong>
-                <span class="verdict">{f.verdict}</span>
-              </span>
-            {:else}
-              <span class="inside closed">
-                <span class="inside-label">Inside: {f.hidden}</span>
-                <span class="pick">{on ? 'Open this one' : ''}</span>
-              </span>
-            {/if}
-          </button>
-        {/each}
-      </div>
+    <Instrument title="Four project files" sub="Tick the files you would open, then check.">
+      <Puzzle id="black-swans" {...puzzle} bind:picked picker={files} onshow={() => (picked = ['a', 'none'])} />
     </Instrument>
   {/snippet}
 
@@ -163,7 +177,10 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 18px 12px;
-    padding-top: 10px;
+    margin: 0;
+    padding: 10px 0 0;
+    border: 0;
+    min-width: 0;
   }
   @container fig (max-width: 560px) {
     .files {
@@ -175,7 +192,7 @@
     display: grid;
     align-content: start;
     gap: 6px;
-    min-height: 150px;
+    min-height: 140px;
     padding: 14px 12px 12px;
     border-radius: 2px 10px 10px 10px;
     border: 1.5px solid var(--tkc-rule);
@@ -205,8 +222,25 @@
     border-color: var(--tkc-options);
     background: var(--tkc-options-wash);
   }
-  .file:disabled {
+  div.file {
     cursor: default;
+  }
+  .box {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    margin: 0;
+    accent-color: var(--tkc-options);
+  }
+  .box:focus-visible {
+    outline: none;
+  }
+  .file.pickable:has(.box:focus-visible) {
+    outline: 2px solid var(--tkc-focus);
+    outline-offset: 2px;
+  }
+  .pickable .cover {
+    padding-right: 20px;
   }
   .cover {
     font-weight: 700;
@@ -249,8 +283,13 @@
     color: var(--tkc-conditions-ink);
     font-weight: 700;
   }
-  .file.idle {
-    opacity: 0.72;
+  .file.idle,
+  .file.idle::before {
+    border-style: dashed;
+    background: var(--tkc-sunken);
+  }
+  .file.idle::before {
+    border-bottom: 0;
   }
   @keyframes open {
     from {

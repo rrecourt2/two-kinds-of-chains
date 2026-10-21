@@ -40,8 +40,8 @@
     goal: 'Twelve specialist roles make the cheapest pins of all, once the market is big enough. Find the smallest market at which they are the cheapest design.',
     met: best.roles === 12 && demand <= FIRST_TWELVE,
     progress: best.roles === 12 ? `Twelve roles win at ${int(demand)} pins a day. Do they still win in a smaller market?` : '',
-    hints: ['Start from a town and drag the market up slowly. Watch which bar turns green.', 'It lies between 700 and 900 pins a day.'],
-    found: 'Just over 720 pins a day, about seventy times a village (the slider’s nearest step is 794). Even there the twelve specialists are idle for almost half the day.',
+    hints: ['Start from a town and drag the market up slowly. The coloured bar marks the cheapest design.', 'It lies between a town and a city, nearer the city.'],
+    found: '794 pins a day on the slider; strictly, the switch comes just past 720, about seventy times a village. Even there the twelve specialists are idle for almost half the day.',
   });
 
   // The chain diagram for the design on show.
@@ -83,7 +83,7 @@
           bind:value={exponent}
           min={1}
           max={4}
-          step={0.05}
+          step={0.1}
           format={() => `${int(demand)} pins a day · ${market.label}`}
           ends={['Village', 'Nation']}
         />
