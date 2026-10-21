@@ -206,12 +206,6 @@
         as the average. This is the logic of insurance, of mutual funds and of banks themselves.
       </li>
     </ul>
-    <h3>Why this matters for how we organize</h3>
-    <p>
-      Dependencies multiply. A chain of sign-offs, a chain of counterparties, a species that relies on one food: each
-      succeeds only if every link succeeds, so one bad draw can zero the whole product. In multiplicative systems the
-      average misleads, and survival comes first.
-    </p>
     <p>Pooling is interdependence too, of the good kind. It shares risk instead of chaining it.</p>
   {/snippet}
 
@@ -219,8 +213,7 @@
     <BankNote ask="Which of our processes would we design differently if we judged them by their worst month instead of their average month?">
       <p>
         A bank lives through one path, so it holds capital and liquidity buffers. The same logic puts the heaviest controls
-        where a mistake cannot be undone. Processes need the same thinking: slack and stand-ins are buffers, and a pool of
-        reviewers is risk-sharing.
+        where a mistake cannot be undone, and light, fast checks everywhere else.
       </p>
     </BankNote>
   {/snippet}

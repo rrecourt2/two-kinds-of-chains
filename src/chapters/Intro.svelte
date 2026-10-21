@@ -15,12 +15,12 @@
     async: 'The breakfast factory: start what can start, and keep bad inputs out first.',
     emergence: 'A new road that makes every journey slower, and the risk of optimizing locally.',
     tools: 'UI fatigue, and AI as a tool that works the screens or as one more gate.',
-    ergodicity: 'A coin game that makes the average player rich and the typical player broke.',
+    ergodicity: 'A coin game in which average wealth soars while the typical player goes broke.',
     contagion: 'How a network of banks absorbs small shocks and spreads big ones.',
     'black-swans': 'The turkey problem: why the data hides the risks that matter most.',
     survivors: 'Where to armour a bomber, and what the missing data would have said.',
     extinction: 'Specialists, generalists, and the danger of depending on one thing.',
-    graph: 'Graph theory, Simon’s watchmakers, and why modular systems stay flexible.',
+    graph: 'Why a network’s shape, not its size, decides whether growth helps.',
     winners: 'Twenty equal firms, one winner: how small leads become whole markets.',
     monday: 'A two-question test for every step, and a tool to check a process you know.',
   };
@@ -29,7 +29,7 @@
 
 <section class="intro" aria-labelledby="{prefix}-story-title">
   <header class="masthead">
-    <div class="tkc-eyebrow">An interactive story · about 30 minutes · every chart is live</div>
+    <div class="tkc-eyebrow">An interactive story · 15 short chapters · every chart is live</div>
     <h1 class="tkc-display title" id="{prefix}-story-title" tabindex="-1">Two Kinds of Chains</h1>
     <p class="deck">
       Why some complexity makes a bank smarter, some makes it stall, and why scale amplifies whichever kind you have.

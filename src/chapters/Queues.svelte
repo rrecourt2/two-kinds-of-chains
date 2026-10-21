@@ -140,7 +140,7 @@
 >
   {#snippet setup()}
     <p>
-      Even when approvers are in, they are busy. Organizations prize experts with full calendars. Queueing theory, the
+      Even when approvers are in, they are busy. A full calendar looks like productivity. Queueing theory, the
       mathematics of waiting lines, says that full calendars are exactly what makes everyone else wait.
     </p>
     <p>
@@ -274,8 +274,7 @@
       branches learned this long ago: one shared line for all the tellers beats a line per teller.
     </p>
     <p>
-      Spare capacity is what lets work flow. An expert at 95% utilization behaves like a queue, however talented they
-      are. The same mathematics governs systems: a server running at 95% load answers slowly for everyone, which is why
+      Spare capacity is what lets work flow. The same mathematics governs systems: a server running at 95% load answers slowly for everyone, which is why
       engineers always keep headroom.
     </p>
   {/snippet}
@@ -283,9 +282,8 @@
   {#snippet bank()}
     <BankNote ask="Who are the three busiest reviewers in our processes, and could their work go to a shared pool?">
       <p>
-        When an expert becomes a bottleneck, the reflex is to route even more through them. Do the opposite. Send the
-        work to a pool of qualified people, and keep key reviewers around 70–80% loaded so there is room for the urgent
-        case. Spare capacity looks like waste on a utilization report. The waiting it prevents appears on no report at
+        Keep key reviewers around 70–80% loaded, so there is room for the urgent case. Spare capacity looks like waste
+        on a utilization report. The waiting it prevents appears on no report at
         all.
       </p>
     </BankNote>

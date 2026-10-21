@@ -134,8 +134,8 @@
             <line class="end" x1={x(panel.run.total)} x2={x(panel.run.total)} y1={top - 2} y2={top + ex.pieces.length * rowH} />
             {#if panel.id === 'parallel' && !narrow}
               {@const sp = ex.pieces.findIndex((p) => p.id === panel.run.slowest)}
-              {@const sb = panel.run.bars.filter((b) => b.row === sp && b.kind === 'work').at(-1)}
-              {#if sb}<text class="tkc-axis-label tkc-halo" x={x(sb.end) + 6} y={top + sp * rowH + 15}>slowest: sets the pace</text>{/if}
+              {@const sb = panel.run.bars.filter((b) => b.row === sp).reduce((a, b) => (b.end > a.end ? b : a), { end: 0 })}
+              {#if sb.end > 0 && x(sb.end) + 150 < width}<text class="tkc-axis-label tkc-halo" x={x(sb.end) + 6} y={top + sp * rowH + 15}>slowest: sets the pace</text>{/if}
             {/if}
           {/each}
           {#each tickVals as t}
@@ -152,8 +152,8 @@
       </div>
 
       <div class="tkc-stats" use:announce>
-        <Stat label="One after another" value={amount(seq.total)} sub={detail(seq)} swatch="var(--tkc-conditions)" />
-        <Stat label="In parallel" value={amount(par.total)} sub={detail(par)} swatch="var(--tkc-options)" />
+        <Stat label="One after another" value={amount(seq.total)} sub={detail(seq)} />
+        <Stat label="In parallel" value={amount(par.total)} sub="{detail(par)}; slowest piece: {ex.pieces.find((p) => p.id === par.slowest)?.label.toLowerCase()}" />
       </div>
 
       <TryThis items={tries} />
@@ -167,12 +167,8 @@
 
   {#snippet after()}
     <p>
-      One after another, the times add up, and so do the waits between them. In parallel, the work takes as long as its
-      slowest piece.
-    </p>
-    <p>
-      Now make a piece twice as fast. One after another, every speed-up helps a little. In parallel, only the slowest
-      piece matters: making anything else faster changes nothing. Improving a part is not the same as improving the
+      Now make a piece twice as fast. One after another, every speed-up helps a little. In parallel, only the slowest piece matters,
+      along with anything every piece waits for, such as the client data. Making any other piece faster changes nothing. Improving a part is not the same as improving the
       whole, which is the subject of the next chapter.
     </p>
     <h3>Four lessons from the breakfast factory</h3>
@@ -182,9 +178,9 @@
         move: real work varies, so the slowest piece changes from one request to the next.
       </li>
       <li>
-        <strong>Keep bad inputs out first.</strong> Check the egg before you boil it. Work adds value at every step, so
-        a problem costs least at the start. Found at the end, it means doing the work twice. In parallel work this
-        matters even more, because every piece starts from the same record.
+        <strong>Keep bad inputs out first.</strong> Check the egg before you boil it. Quality engineers call this the
+        1-10-100 rule: a problem that costs 1 to prevent at entry costs 10 to correct later and 100 if it reaches the
+        client. Found late, it means doing the work twice, and in parallel work one bad input spoils every piece at once.
       </li>
       <li>
         <strong>Monitor where you can; stop the line only where you must.</strong> A gate holds all work until it has
@@ -197,18 +193,16 @@
       </li>
     </ul>
     <p>
-      Parallel work needs pieces that do not depend on each other. Many steps wait for one another only out of habit,
-      or because the data they need sits in someone else’s system. One shared record (chapter 3) lets them start at
-      once, and the one approval comes at the end, when the pieces meet.
+      Parallel work needs pieces that do not depend on each other. Often a step waits not for another step’s result
+      but for data held in another system; one shared record (chapter 3) removes that wait.
     </p>
   {/snippet}
 
   {#snippet bank()}
     <BankNote ask="Which steps wait for a step they do not actually need, and where are bad inputs found late?">
       <p>
-        Take a common request and mark, for each step, which earlier result it truly needs. Start everything else at
-        once from one shared record. Move the cheap checks to the start, where a problem costs least, and keep one
-        approval for when the pieces come together.
+        Take a common request and mark, for each step, which earlier result it truly needs. Everything that needs only
+        the client data can start on the first day.
       </p>
     </BankNote>
   {/snippet}
@@ -244,6 +238,7 @@
   }
   .chip[aria-pressed='true']::before {
     content: '×2 ';
+    content: '×2 ' / '';
   }
   .chip:focus-visible {
     outline: 2px solid var(--tkc-focus);
@@ -256,8 +251,8 @@
     fill: var(--tkc-ink-2);
   }
   .bar.wait {
-    fill: var(--tkc-sunken);
-    stroke: var(--tkc-rule);
+    fill: var(--tkc-rule);
+    stroke: var(--tkc-ink-2);
     stroke-dasharray: 3 2;
   }
   .bar.redo {
@@ -274,8 +269,8 @@
     background: var(--tkc-ink-2);
   }
   .sw-wait {
-    background: var(--tkc-sunken);
-    border: 1px dashed var(--tkc-rule);
+    background: var(--tkc-rule);
+    border: 1px dashed var(--tkc-ink-2);
   }
   .sw-redo {
     background: var(--tkc-conditions);

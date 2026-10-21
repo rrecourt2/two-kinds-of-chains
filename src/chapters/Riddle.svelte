@@ -88,8 +88,7 @@
     <p>A request inside a large organization can need six colleagues and six systems in one building, and take weeks.</p>
     <p>Both are chains, and the pencil’s chain is far longer. Why does it work so much better?</p>
     <p>
-      The opening showed the arithmetic: when every link must hold, the risks multiply. Here is what that means for
-      people’s time. Some work needs every link on the same day: a committee, a joint review, a same-day cut-off, or
+      The opening showed the arithmetic: when every link must hold, the risks multiply. Some work needs every link on the same day: a committee, a joint review, a same-day cut-off, or
       simply a working day that needs remote access, sign-in, the client file and the risk model all at once.
     </p>
   {/snippet}
@@ -176,18 +175,13 @@
       that one. In a chain of named people and single systems, each link is an <span class="tkc-and">AND</span>: this
       person, and this system, and this person. ORs make a chain stronger. ANDs make it weaker.
     </p>
-    <p>
-      The economist Michael Kremer built a theory of economic development on this arithmetic and named it after the
-      O-ring, the small seal whose failure destroyed the space shuttle Challenger in 1986: when every part must work,
-      small differences in reliability multiply into large differences in output.
-    </p>
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Which sign-off or system in your area has no alternative, and what happens to the work when it is unavailable?">
+    <BankNote ask="Which decisions wait for everyone to be present, when a quorum of qualified people would do?">
       <p>
-        For every link in a process, ask whether it is filled by one specific person or system, or by anyone or anything
-        qualified. A link with no alternative is an AND condition, however small it looks.
+        A committee that needs all six members present is a chain of ANDs: with each member in 90% of the time, it can
+        meet on about half of all days. One that can decide with any four of the six can meet on almost every day.
       </p>
     </BankNote>
   {/snippet}

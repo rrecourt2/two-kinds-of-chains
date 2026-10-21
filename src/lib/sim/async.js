@@ -49,9 +49,10 @@ export function schedule(example, { mode, handoff = example.handoff, faster = []
   const bars = [];
   let waiting = 0;
   let rework = 0;
-  const wait = (row, at) => {
+  // A handoff wait, drawn on every row that waits for it and counted once.
+  const wait = (rows, at) => {
     if (handoff > 0) {
-      bars.push({ row, start: at, end: at + handoff, kind: 'wait' });
+      for (const row of [].concat(rows)) bars.push({ row, start: at, end: at + handoff, kind: 'wait' });
       waiting += handoff;
     }
     return at + handoff;
@@ -73,14 +74,14 @@ export function schedule(example, { mode, handoff = example.handoff, faster = []
       t += base.time;
     }
     const group = base ? rest : pieces;
-    if (base) t = wait(group[0].row, t);
+    if (base) t = wait(group.map((p) => p.row), t);
     const start = t;
     let end = t;
     for (const p of group) {
       bars.push({ row: p.row, start, end: start + p.time, kind });
       end = Math.max(end, start + p.time);
     }
-    return base ? wait(group[0].row, end) : end;
+    return base ? wait(group.map((p) => p.row), end) : end;
   };
 
   let t = 0;

@@ -69,6 +69,7 @@
       }
     }
     setTitle();
+    closeMenu();
     await tick();
     top?.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     // Move keyboard and screen-reader users to the new chapter, not the button they left behind.
@@ -84,6 +85,7 @@
     const tag = el?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el?.isContentEditable) return;
     if (el?.closest?.('[role="radiogroup"]')) return;
+    if (menuEl?.open) return;
     if (event.key === 'ArrowRight' && next) go(index + 1);
     if (event.key === 'ArrowLeft' && prev) go(index - 1);
   }
@@ -126,8 +128,14 @@
           {index === 0 ? 'Start' : `${index} / ${total} · ${current.short}`}
         </span>
         <!-- On a phone the chain gives way to a compact chapter menu. -->
-        <details class="menu" bind:this={menuEl} onkeydown={(e) => e.key === 'Escape' && closeMenu(true)}>
-          <summary class="tkc-num">{index === 0 ? 'Start' : `${index} / ${total}`} · {current.short}</summary>
+        <details
+          class="menu"
+          bind:this={menuEl}
+          onkeydown={(e) => e.key === 'Escape' && closeMenu(true)}
+          onfocusout={(e) => !menuEl.contains(e.relatedTarget) && closeMenu()}
+          ontoggle={() => menuEl.open && menuEl.querySelector('.menu-list .on')?.scrollIntoView({ block: 'nearest' })}
+        >
+          <summary class="tkc-num"><span class="menu-label">{index === 0 ? 'Start' : `${index} / ${total} · ${current.short}`}</span></summary>
           <ol class="menu-list">
             {#each CHAPTERS as chapter, i (chapter.id)}
               <li>
@@ -165,7 +173,7 @@
         </button>
       {/if}
     </nav>
-    <p class="nogates tkc-caption">Jump to any chapter from the links at the top. This story has no approval gates.</p>
+    <p class="nogates tkc-caption">Jump to any chapter from the top of the page.</p>
   </main>
 </div>
 
@@ -386,11 +394,6 @@
     display: none;
   }
   @container tkc (max-width: 900px) {
-    .where {
-      display: none;
-    }
-  }
-  @container tkc (max-width: 680px) {
     .home-name {
       display: none;
     }
@@ -404,8 +407,11 @@
       grid-row: 1;
     }
   }
-  /* Phones and narrow web-part columns: a chapter menu instead of the chain. */
-  @container tkc (max-width: 480px) {
+  /* Phones, small tablets and narrow web-part columns: a chapter menu instead of the chain. */
+  @container tkc (max-width: 760px) {
+    .where {
+      display: none;
+    }
     .links {
       flex: 1;
       min-width: 0;
@@ -430,9 +436,13 @@
       color: var(--tkc-ink);
       cursor: pointer;
       list-style: none;
-      white-space: nowrap;
+    }
+    .menu-label {
+      flex: 1;
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .menu summary::-webkit-details-marker {
       display: none;

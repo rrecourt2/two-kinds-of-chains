@@ -22,6 +22,7 @@
   const raid = $derived(simulateRaid({ vital: vital / 100, seed }));
   const all = $derived(show === 'all');
   const right = $derived(guess === 'engines' || guess === 'cockpit');
+  const fewest = $derived(ZONES.reduce((a, z) => (raid.density[z.id].returned < raid.density[a.id].returned ? z : a)).label.toLowerCase());
   const guessLabel = $derived(ZONES.find((z) => z.id === guess)?.label.toLowerCase());
 
   async function choose(id) {
@@ -54,7 +55,7 @@
   n={11}
   kicker="Survivorship bias"
   title="The planes that came back"
-  lede="The data you can see has already been filtered. What is missing from it is often what matters most."
+  lede="The data you can see has already been filtered, often by the very outcome you are studying."
 >
   {#snippet setup()}
     <p>
@@ -63,8 +64,7 @@
       had to go where it would do the most good.
     </p>
     <p>
-      The statistician Abraham Wald, of the Statistical Research Group at Columbia University, pointed to what the data
-      could not show: the planes that did not come back. Before reading on, decide where you would put the armour.
+      Before reading on, decide where you would put the armour.
     </p>
   {/snippet}
 
@@ -77,9 +77,12 @@
       </div>
       {#if guess}
         <p class="answer" tabindex="-1" bind:this={answerEl}>
-          {#if right}
-            Right. The {guessLabel} of the planes that came back have the fewest holes, because planes hit there mostly
-            did not come back.
+          {#if vital < 30}
+            With vital hits this mild, holes are spread fairly evenly and nearly every plane comes back. Raise the chance
+            that an engine or cockpit hit is fatal and watch those parts go quiet.
+          {:else if right}
+            Right. The {guessLabel} of the planes that came back have few holes, because planes hit there mostly did not
+            come back. The cleanest part this mission: the {fewest}.
           {:else}
             The {guessLabel} of the planes that came back are full of holes, and those planes came back anyway. Now look at
             the planes that were lost.
@@ -125,7 +128,7 @@
 
       <div class="tkc-chart">
         <div class="tkc-fig-title small">How densely each part was hit</div>
-        <svg {width} height={ZONES.length * BH + 6} role="img" aria-label="Holes per area on each part of the plane.">
+        <svg {width} height={ZONES.length * BH + 6} role="img" aria-label="Holes per area on each part of the plane, planes that came back{all ? ' and planes lost' : ''}: {ZONES.map((z) => `${z.label} ${Math.round(raid.density[z.id].returned)}${all ? ` and ${Math.round(raid.density[z.id].lost)}` : ''}`).join(', ')}.">
           {#each ZONES as z, i (z.id)}
             {@const y = 4 + i * BH}
             {@const d = raid.density[z.id]}
@@ -157,7 +160,8 @@
 
   {#snippet after()}
     <p>
-      The planes that came back were hit everywhere except where a hit was deadly. Their holes show where a plane can be
+      The statistician Abraham Wald, of the Statistical Research Group at Columbia University, saw what the data could
+      not show: the planes that came back were hit everywhere except where a hit was deadly. Their holes show where a plane can be
       hit and still fly home. The clean areas show where the lost planes were hit. The armour belongs where the holes are
       not. Wald’s real analysis was more technical than the story, but the lesson holds: the sample had been filtered by
       the very thing being studied.
@@ -165,8 +169,7 @@
     <h3>Organizations learn from survivors too</h3>
     <ul>
       <li>
-        <strong>Success stories.</strong> Studies of successful companies find the habits that made them great, but
-        failed companies often had the same habits. Two of the “great” companies in a bestselling business book from
+        <strong>Success stories.</strong> Studies of successful companies find the habits that made them great, but rarely check whether companies that failed had the same habits. Two of the “great” companies in a bestselling business book from
         2001, Circuit City and Fannie Mae, were in deep trouble by 2008.
       </li>
       <li>
@@ -174,20 +177,14 @@
         fund looked better than what investors actually earned.
       </li>
       <li><strong>Feedback.</strong> Surveys reach the clients who stayed and the colleagues who stayed. Those who left are not in the sample.</li>
-      <li>
-        <strong>Risks.</strong> The incident log lists the failures that happened. A risk that has not struck yet, or a
-        project that was quietly stopped, leaves no record at all.
-      </li>
     </ul>
-    <p>Survivorship bias belongs to the same family as the black swan in chapter 10: what is missing from the data is what matters most.</p>
   {/snippet}
 
   {#snippet bank()}
     <BankNote ask="Whose experience is missing from the data we decide with?">
       <p>
-        Before copying a success, ask how many tried the same and failed. Before trusting a survey, ask who did not
-        answer. And talk to the clients who left and the colleagues who moved on: they hold the holes that are not on the
-        plane.
+        Before copying a success, ask how many tried the same and failed. And talk to the clients who left and the
+        colleagues who moved on: they hold the holes that are not on the plane.
       </p>
     </BankNote>
   {/snippet}
@@ -218,7 +215,7 @@
   }
   .part {
     fill: var(--tkc-sunken);
-    stroke: var(--tkc-rule);
+    stroke: var(--tkc-muted);
     stroke-width: 1.5;
   }
   .engine {

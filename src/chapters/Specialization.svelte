@@ -168,15 +168,14 @@
   {#snippet after()}
     <p>
       Drag the market from a village to a nation. The best design gets longer as the market grows: one generalist for
-      a village, a dozen specialists for a nation. This is why supply chains get longer as markets grow. Around 70% of
+      a village, a dozen specialist roles for a nation. This is why supply chains get longer as markets grow. Around 70% of
       international trade now involves global value chains, in which parts cross borders several times before they
       become a product (OECD).
     </p>
     <h3>Chips: one of the longest chains, and one of the most inventive</h3>
     <p>
       Until the late 1980s, almost every chip company designed and made its own chips. In 1987 Morris Chang founded TSMC
-      in Taiwan to do one thing only: make chips that other companies design. Designers such as Nvidia and Qualcomm no longer needed
-      a factory of their own. Arm licenses chip blueprints, a handful of firms write the design software, and ASML in
+      in Taiwan to do one thing only: make chips that other companies design. Designers such as Nvidia and Qualcomm could do without a factory of their own. Arm licenses chip blueprints, a handful of firms write the design software, and ASML in
       the Netherlands builds the machines that print the circuits. Each link specializes, and the chain has been one of
       the most innovative in industry.
     </p>
@@ -187,9 +186,9 @@
     </p>
     <h3>Splitting at the right level</h3>
     <p>
-      In 1937 the economist Ronald Coase asked why firms exist at all. His answer: because coordinating inside one firm
-      is sometimes cheaper than buying from others. When working across firms gets easier, the best size of a firm
-      shrinks. It is part of the reason many conglomerates have broken up. GE split into three companies in 2023 and
+      The economist Ronald Coase explained in 1937 that firms exist because coordinating inside one is sometimes cheaper
+      than buying from others. When working across firms gets easier, the best size of a firm shrinks, which is part of
+      why many conglomerates have broken up. GE split into three companies in 2023 and
       2024, and Johnson &amp; Johnson separated its consumer brands as Kenvue in 2023.
     </p>
     <p>
@@ -197,19 +196,13 @@
       deal with each other through a clear interface, the way a customer deals with a supplier. Cut in the wrong place,
       and the interface itself becomes a long chain of handoffs.
     </p>
-    <p>
-      Specialists also build systems. The risk team builds the tool that suits risk, the credit team the one that suits
-      credit. That is good complexity too, until a single client request has to pass through all of them. That is the
-      next chapter.
-    </p>
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Where do we have enough volume to justify a specialist team, and can work reach any qualified member of it?">
+    <BankNote ask="Where could one specialist team serve the whole bank, instead of each unit keeping its own?">
       <p>
-        Specialist teams are good complexity when the volume justifies them and work can go to any qualified
-        specialist. A centre of expertise that serves the whole bank is specialization. A sign-off that only its head
-        can give is dependence.
+        A centre of expertise that serves the whole bank is specialization. A sign-off that only one named person can
+        give is dependence.
       </p>
     </BankNote>
   {/snippet}

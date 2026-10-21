@@ -12,7 +12,7 @@
   const RELIABILITY = 0.95;
   const REQUESTS = 100;
 
-  let guess = $state(50);
+  let guess = $state(90);
   let phase = $state('ask'); // ask | run | done
   let gates = $state(6);
   let backups = $state(false);
@@ -170,6 +170,9 @@
     announce = `${flow.through} of 100 got through ${describe({ gates, backups })}.${runs.length === 1 ? ` You guessed ${guess}.` : ''}`;
     await tick();
     resultEl?.focus({ preventScroll: true });
+    // On a phone the result can land below the fold: bring its first lines into view.
+    const box = resultEl?.getBoundingClientRect();
+    if (box && box.top > window.innerHeight - 160) resultEl.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   }
 
   async function again() {
@@ -205,9 +208,9 @@
   <div class="grid">
     <div class="tkc-eyebrow head">Before you start: a quick guess</div>
     <p class="q" id="{prefix}-hook-q">
-      A client request has to pass through <strong>six systems</strong>, each built by a different specialist team. At
-      each one, it goes through cleanly <strong>95% of the time</strong>: no missing field, no approver away. Out of 100
-      requests, how many get all the way through without getting stuck?
+      A client request has to pass through <strong>six systems</strong>. At each one, it goes through cleanly
+      <strong>95% of the time</strong>: no missing field, no approver away. Out of 100 requests, how many get all the way
+      through?
     </p>
 
     {#if phase === 'ask'}

@@ -85,7 +85,8 @@
 
   // Watchmakers.
   const w = $derived(watchmakers(interrupt / 1000));
-  const wx = $derived(linear(0, 10, 92, Math.max(140, watchW - 60)));
+  const watchInner = $derived(Math.max(0, watchW - 30)); // the figure's clientWidth includes its padding
+  const wx = $derived(linear(0, 10, 92, Math.max(140, watchInner - 60)));
   const every = (perMonth) => {
     if (perMonth >= 1) return `${perMonth.toFixed(1)} a month`;
     const months = 1 / perMonth;
@@ -103,9 +104,9 @@
 </script>
 
 <Chapter
-  n={13}
+  n={14}
   kicker="Graph theory"
-  title="The shape of the graph"
+  title="The shape of the network"
   lede="Every chapter so far has been about a network. Its shape, more than its size, decides whether growth makes an organization smarter or slower."
 >
   {#snippet setup()}
@@ -113,7 +114,7 @@
       Graph theory is the mathematics of dots and lines. It describes anything made of parts and links: people and their dependencies, systems and their data feeds, banks and their exposures.
     </p>
     <p>
-      Every chapter so far was a graph. A chain of sign-offs is a path, and stand-ins are parallel paths. Linked systems
+      A chain of sign-offs is a path, and stand-ins are parallel paths. Linked systems
       are a directed graph along which problems flow. The 2008 network was a random graph that tipped into contagion.
     </p>
     <p>
@@ -216,9 +217,7 @@
     </p>
     <p>
       A single central hub keeps links low, but output stops growing at whatever the centre can handle, and the centre is
-      a single point of failure. Small modules with clear interfaces keep growing almost in proportion. In 1968 the
-      programmer Melvin Conway observed that organizations design systems that copy their own communication structure: a
-      tangled organization builds tangled systems.
+      a single point of failure. Small modules with clear interfaces keep growing almost in proportion.
     </p>
     <h3>Simon’s watchmakers: why modular means flexible</h3>
     <p>
@@ -229,7 +228,7 @@
     </p>
     <figure class="watch" bind:clientWidth={watchW}>
       <Slider id="g-int" label="Chance of an interruption per part" bind:value={interrupt} min={0} max={20} format={(v) => `${(v / 10).toFixed(1)}%`} />
-      <svg width={watchW} height="76" role="img" aria-label="Watches finished per month: Tempus {every(w.tempus.perMonth)}, Hora {every(w.hora.perMonth)}.">
+      <svg width={watchInner} height="76" role="img" aria-label="Watches finished per month: Tempus {every(w.tempus.perMonth)}, Hora {every(w.hora.perMonth)}.">
         {#each [{ name: 'Tempus', sub: 'one piece', v: w.tempus.perMonth }, { name: 'Hora', sub: 'modules of 10', v: w.hora.perMonth }] as row, i (row.name)}
           {@const yy = 4 + i * 36}
           <text class="tkc-label" x="0" y={yy + 13}>{row.name}</text>
@@ -252,8 +251,7 @@
     </p>
     <p>
       John Gall, a doctor who wrote about why systems fail, turned the same idea into a law in 1975: a complex system
-      that works is invariably found to have evolved from a simple system that worked. Complex systems designed from
-      scratch rarely work. Start simple, make it work, and let it grow.
+      that works is invariably found to have evolved from a simple system that worked. A complex system designed from scratch, he added, never works and cannot be patched up to make it work. Start simple, make it work, and let it grow.
     </p>
   {/snippet}
 

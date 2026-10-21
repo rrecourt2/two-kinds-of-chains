@@ -166,11 +166,10 @@
 
   {#snippet after()}
     <p>
-      In both worlds the record will probably fall: with ten years of data, the worst day you have seen is beaten in the
-      next thirty years about three times in four. The difference is by how much. In the thin-tailed world the new
-      record is barely worse than the old one, so ten years of data tell you almost everything. In the fat-tailed world
-      it is often far worse: in more than one history in four, at least twice as bad as anything in your data. Twenty
-      years of data halve that risk but do not remove it.
+      In both worlds the worst day in your data will probably be beaten. The difference is by how much. With thin
+      tails the new record is barely worse, so ten years of data tell you almost everything. With fat tails, in more
+      than one history in four it is at least twice as bad. Twenty years of data cut that risk to about one history in
+      ten, but do not remove it.
     </p>
     <p>
       In August 2007 the finance chief of Goldman Sachs said the firm was seeing “25-standard deviation moves, several
@@ -183,19 +182,12 @@
       <li>
         <strong>Some costs never reach the data.</strong> Nobody logs the client who gave up, the project that was never
         started, or the week a request spent waiting for a sign-off. An incident, by contrast, gets an investigation, a
-        report and a new control. Over time controls pile up, each justified by a visible failure, while their costs stay
-        invisible.
+        report and a new control. So every control has a visible reason to exist, while its cost stays out of sight.
       </li>
       <li>
         <strong>The past may not be a guide.</strong> Loss histories come from yesterday’s climate, yesterday’s systems
         and yesterday’s clients. When the world itself changes, even a long, clean record says little about what comes
         next.
-      </li>
-      <li>
-        <strong>Linked systems hide their dependencies.</strong> On 19 July 2024 a faulty update to one security product
-        crashed about 8.5 million Windows computers, grounding flights and disrupting banks and hospitals. Few of the
-        firms hit had seen anything like it in their own data, though the same product had crashed Linux servers that
-        spring. The dependency became visible only when it broke.
       </li>
     </ul>
   {/snippet}
@@ -204,8 +196,7 @@
     <BankNote ask="Which of our risks have we never seen in our data, and which of our costs have we never measured?">
       <p>
         When a new control is proposed after an incident, weigh what it costs on the thousand ordinary days, not only what
-        it would have prevented on the one bad day. Start recording the silent costs: waiting time, abandoned requests,
-        work-arounds. And treat a clean track record as a hypothesis to test, not as proof.
+        it would have prevented on the one bad day. Treat a clean track record as a hypothesis to test, not as proof.
       </p>
     </BankNote>
   {/snippet}

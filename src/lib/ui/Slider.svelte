@@ -20,7 +20,7 @@
 <div class="ctl">
   <div class="top">
     <label for={inputId}>{label}</label>
-    <output for={inputId} class="tkc-num">{format(value)}</output>
+    <output for={inputId} class="tkc-num" aria-hidden="true">{format(value)}</output>
   </div>
   <input id={inputId} type="range" {min} {max} {step} bind:value aria-valuetext={format(value)} style:--pct="{pct}%" />
   {#if ends}

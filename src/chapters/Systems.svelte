@@ -76,7 +76,7 @@
   n={3}
   kicker="Linked systems"
   title="When systems lean on each other"
-  lede="When each system copies its data from the last, one wrong field stops the request and must be fixed everywhere it went. With one shared record, the same approvals can run at once, and requests move several times faster."
+  lede="When systems copy data from each other, one wrong field stops the request everywhere it went. One shared record keeps the same approvals and makes requests several times faster."
 >
   {#snippet setup()}
     <p>
@@ -239,7 +239,7 @@
   {#snippet after()}
     <p>
       In this model, a chain of six systems with an approval at each takes more than three working weeks for a typical
-      request, and only about one hour in seven of that time is real work. About one request in ten still carries a
+      request, and only about one hour in seven of that time is spent working on it. About one request in ten still carries a
       hidden problem at the end, because a problem that enters late meets few checks.
     </p>
     <h3>Why linked systems are harder than they look</h3>
@@ -247,10 +247,9 @@
       <li><strong>A problem stops everything.</strong> The request cannot continue until it is fixed, so one wrong field costs days, not minutes.</li>
       <li>
         <strong>Problems spread.</strong> When each system copies the last, the fix has to be made everywhere the data
-        has gone, and approved again. Quality engineers sum this up in the 1-10-100 rule: a problem that costs 1 to
-        prevent at entry costs 10 to correct later and 100 if it reaches the client.
+        has gone, and approved again.
       </li>
-      <li><strong>Every new system adds a link.</strong> Each new tool brings its own form, its own approval, its own copy of the data and its own screen to learn. People feel the sum of those screens as UI fatigue.</li>
+      <li><strong>Every new system adds a link.</strong> Each new tool brings its own form, its own approval and its own copy of the data.</li>
     </ul>
     <h3>Same controls, different shape</h3>
     <p>
@@ -259,19 +258,17 @@
       one. If every approver checks the whole record, almost no problems slip through.
     </p>
     <p>
-      Then try one approval at the end. It is the fastest design, a few days, and it still lets fewer problems through
-      than a chain of copies. Several parallel reviews can catch more, but only if each reviewer checks the whole record
-      and they do not all miss the same things. The choice follows the risk: one approval for standard requests, several
-      reviewers in parallel for decisions that cannot be undone.
+      Then try one approval at the end: the fastest design, a few days, and it still lets fewer problems through than a
+      chain of copies. Several parallel reviewers catch more, if each checks the whole record, so keep them for
+      decisions that cannot be undone.
     </p>
   {/snippet}
 
   {#snippet bank()}
     <BankNote ask="Which of our systems ask for data that already exists in another system?">
       <p>
-        Follow one request across every system it touches. For each, ask two questions. Does it copy data from another
-        system, or read it from one shared source? Does it need its own approval in sequence, or could the approvals run
-        at the same time, or as one approval at the end for standard cases?
+        Follow one recent request and count how many times the same client data was typed in. Each re-entry is a copy
+        that can drift, and one more place where a fix must be repeated.
       </p>
     </BankNote>
   {/snippet}

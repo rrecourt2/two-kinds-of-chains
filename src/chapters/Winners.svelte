@@ -41,22 +41,19 @@
   const tries = [
     { label: 'Size does not help', apply: () => (size = 'none') },
     { label: 'Size helps a lot', apply: () => (size = 'lots') },
-    { label: 'Run history again', apply: () => (seed += 1) },
     { label: 'Give firm A a better product', apply: () => ((better = 'better'), (size = 'lots')) },
   ];
 </script>
 
 <Chapter
-  n={14}
+  n={13}
   kicker="Winner-take-all"
   title="Why the winner takes most"
   lede="When size itself attracts customers, small early leads grow into whole markets, and the winner is not always the best."
 >
   {#snippet setup()}
     <p>
-      In many markets the biggest firm keeps getting bigger. The economist Sherwin Rosen explained part of this in 1981:
-      once a performance can be copied at almost no cost, the best performer can serve everyone, and small differences
-      in talent become huge differences in income. Networks add a second force. A payment network, a marketplace or a
+      In many markets the biggest firm keeps getting bigger. A payment network, a marketplace or a
       messaging app is worth more the more people use it.
     </p>
     <p>
@@ -119,7 +116,7 @@
         <Stat label="Largest firm’s share" value={pct(m.leaderShare)} sub={m.leader === 0 && boost ? 'firm A, the better product' : `${name(m.leader)}, which started like the rest`} swatch="var(--tkc-conditions)" line={true} />
         <Stat label="Firms with at least 5%" value="{big} of {FIRMS}" sub="at the end of this history" />
         {#if boost}
-          <Stat label="The better product came first" value="{many.betterWins} of {many.runs}" sub="histories; by luck alone, 5" swatch="var(--tkc-options)" line={true} />
+          <Stat label="The better product came first" value="{many.betterWins} of {many.runs}" sub="histories; a random firm would lead 5" swatch="var(--tkc-options)" line={true} />
         {:else}
           <Stat label="Typical largest share" value={pct(many.medianLeader)} sub="across {many.runs} histories" />
         {/if}
@@ -138,32 +135,29 @@
     <p>
       When size does not help, the market stays shared. When it helps a lot, one firm ends up with most of the market,
       and which firm wins is settled by luck among the first few hundred customers. Run history again: a different
-      firm wins almost every time. W. Brian Arthur of the Santa Fe Institute called this lock-in by historical events
-      (1989). The concentration emerges; nobody designs it.
+      firm wins almost every time. Economists call this lock-in. The concentration emerges; nobody designs it.
     </p>
     <p>
       Now give firm A a product that is 20% better. When size helps a lot, it comes first in only about one history in
       ten. An early lead beats a better product.
     </p>
     <p>
-      We increasingly live in this world. Sales in most US industries have become concentrated in fewer, larger
+      We increasingly live in this world. Sales in most US industries have become more concentrated in fewer, larger
       “superstar” firms since the 1980s (Autor and colleagues, 2020). Search, cloud computing, payments and market data
       are each served by a handful of providers.
     </p>
     <h3>What it means</h3>
     <ul>
       <li><strong>Early matters more than perfect.</strong> Where a market tips, the first good-enough offer can lock it in before a better one arrives.</li>
-      <li><strong>Winners become hubs.</strong> Everyone who depends on the winner shares its single points of failure, as in 2008 and in the software outage of 2024 (chapters 9 and 10).</li>
-      <li><strong>Platforms tip inside organizations too.</strong> The system most people use attracts the most investment, data and skills. It is better to choose that platform deliberately than to let it happen by accident.</li>
+      <li><strong>Winners become hubs.</strong> Everyone who depends on the winner shares its single points of failure, as in 2008 and in the software outage of 2024 (chapter 9).</li>
     </ul>
   {/snippet}
 
   {#snippet bank()}
     <BankNote ask="Where do we compete in a market that tips to one winner, and where do we depend on a winner we do not control?">
       <p>
-        For each critical service, ask who provides it, how many alternatives exist, and what happens on the day it
-        fails. For each market we compete in, ask whether size itself attracts clients. If it does, speed matters more
-        than polish.
+        Inside the bank, the platform most people use attracts the most investment, data and skills, whether or not it
+        is the best. Choose it deliberately, and early.
       </p>
     </BankNote>
   {/snippet}

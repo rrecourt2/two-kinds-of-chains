@@ -30,7 +30,7 @@ export const CHAPTERS = [
   { id: 'black-swans', short: 'Black swans', title: 'What the data cannot show', component: BlackSwans },
   { id: 'survivors', short: 'Survivorship bias', title: 'The planes that came back', component: Survivors },
   { id: 'extinction', short: 'Extinction', title: 'Why species go extinct', component: Extinction },
-  { id: 'graph', short: 'Graphs', title: 'The shape of the graph', component: Graph },
   { id: 'winners', short: 'Winner-take-all', title: 'Why the winner takes most', component: Winners },
+  { id: 'graph', short: 'Networks', title: 'The shape of the network', component: Graph },
   { id: 'monday', short: 'Playbook', title: 'What to do on Monday', component: Monday },
 ];

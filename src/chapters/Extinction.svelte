@@ -68,7 +68,7 @@
 
 <Chapter
   n={12}
-  kicker="Ecology"
+  kicker="Extinction"
   title="Why species go extinct"
   lede="The species that die out are the ones that depend on a single thing when the world turns volatile."
 >
@@ -76,7 +76,7 @@
     <p>
       Ecologists have studied dependence for a century, and their findings will sound familiar. Some extinctions are
       black swans: when an asteroid struck 66 million years ago, many of the survivors were small animals that could
-      live on many kinds of food. Most are slower.
+      live on many kinds of food. Most extinctions are slower.
     </p>
     <p>
       The species most at risk are usually not the weakest. They are the ones that depend on something irreplaceable:
@@ -193,33 +193,19 @@
       A changing climate makes many years more variable. That is why it worries ecologists, farmers and lenders alike:
       it punishes whoever depends on one crop, one region or one supplier.
     </p>
-    <h3>Two more results</h3>
-    <ul>
-      <li><strong>Small populations die of bad luck</strong>, even when the average year is good. Start with 10 animals per island and watch.</li>
-      <li>
-        <strong>A population can grow on average and still be doomed.</strong> Richard Lewontin and Dan Cohen proved this
-        in 1969, decades before the coin game in chapter 8 became famous in economics. Desert plants hedge against it by
-        never letting all their seeds germinate in the same year.
-      </li>
-    </ul>
+    <p><strong>Small populations die of bad luck</strong>, even when the average year is good. Start with 10 animals per island and watch.</p>
     <p>
       Scale protects, but only when it is diverse. The Gros Michel banana was grown by the billion, but every plant was
       a clone. When Panama disease spread through the plantations, the export trade had to switch to another variety
       altogether. A billion identical plants are one dependency, copied a billion times.
     </p>
-    <p>
-      There is a lesson about specialization here too. Economies get specialization without dependence because every
-      link can trade with many others. A pencil maker who loses a graphite supplier calls another. A koala that loses
-      its eucalyptus forest cannot.
-    </p>
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="If our busiest month came with one key person missing, which process would fail first?">
+    <BankNote ask="Which small teams do something nobody else in the bank can do?">
       <p>
-        A process tuned for the average day is a specialist. It is efficient until the year turns volatile: a key
-        person leaves, the holiday season arrives, a crisis doubles the volume. Design for the bad year, with more than
-        one route through every step.
+        Small teams are small populations: a team of two can disappear through one resignation and one long illness,
+        however good the average year.
       </p>
     </BankNote>
   {/snippet}

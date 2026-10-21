@@ -6,9 +6,8 @@
   import { announce } from '../lib/ui/announce.js';
   import TryThis from '../lib/ui/TryThis.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { DESIGNS, averagePayoff, density, chainSuccess, MEAN_HELP } from '../lib/sim/convexity.js';
+  import { DESIGNS, averagePayoff, density, MEAN_HELP } from '../lib/sim/convexity.js';
   import { linear, line } from '../lib/scales.js';
-  import { pct } from '../lib/format.js';
   import { getContext } from 'svelte';
 
   const clipId = `${getContext('tkc-id') ?? 'tkc'}-payoff-clip`;
@@ -52,12 +51,11 @@
     { label: 'A steady AI (±0.3 h)', apply: () => (spread = 0.3) },
     { label: 'An erratic AI (±2.5 h)', apply: () => (spread = 2.5) },
   ];
-  const chain = [5, 10, 20, 40];
 </script>
 
 <Chapter
   n={7}
-  kicker="AI and convexity"
+  kicker="AI and tools"
   title="Tools before gates"
   lede="AI that does the work behind the screens, with a person checking the result, is an option with a small downside. AI added as one more mandatory screen is a gate with a small upside."
 >
@@ -72,13 +70,12 @@
     <p>
       AI can work in the opposite direction. Modern AI models can use software tools: they can read a request written
       in plain language, fill in the systems behind it, and show a person what they did. Used that way, the systems
-      become the AI’s tools, and the banker deals with one conversation instead of twelve screens. Added the wrong way,
-      the AI is just one more screen.
+      become the AI’s tools, and the banker deals with one conversation instead of a dozen screens. Added as one more
+      step, it is just one more screen.
     </p>
     <p>
-      Traders have a name for the difference: <strong>convexity</strong>. A bought option has a small, known downside and
-      a large upside, so variability helps it. A sold option has the reverse. A tool is a bought option. A gate is a sold
-      one. Nassim Taleb built <em>Antifragile</em> on this idea.
+      A tool is like a bought option: a small, known downside and a large upside, so variability helps it. A gate is
+      like a sold option: the reverse.
     </p>
     <p>
       Below, an AI fills in the entries for a client request. On average it saves half an hour, but some drafts save a
@@ -104,7 +101,7 @@
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
-        <div class="tkc-fig-title small">What each design gives you, for a given answer</div>
+        <div class="tkc-fig-title small">Hours saved, from a bad draft (left) to a good one (right)</div>
         <svg {width} height={H} role="img" aria-label="Payoff lines: the tool never goes much below zero, the rule follows the answer, the gate is capped above and steep below.">
           {#each [-4, -2, 0, 2] as t}
             <line class={t === 0 ? 'tkc-base' : 'tkc-grid'} x1={m.left} x2={width - m.right} y1={y(t)} y2={y(t)} />
@@ -165,33 +162,22 @@
       tool gets more valuable, because people keep the good answers and drop the bad ones. The gate gets worse, because
       every bad answer stops the work behind it while the good answers can only save what the process was built around.
     </p>
-    <p>
-      That is the line between AI that cures UI fatigue and AI that adds to it. An assistant that fills in screens for
-      people, with a person checking the result, is a tool. A mandatory AI step with its own screen and its own approval
-      is a gate.
-    </p>
     <h3>AI agents have the same problem as approval chains</h3>
     <p>
       An AI agent that can call many tools and try another when one fails is built from ORs. An agent that must fill in
-      a fixed sequence of screens is built from ANDs. If each step is 95% reliable:
+      a fixed sequence of screens is built from ANDs, and the arithmetic from the opening applies: at 95% a step, a
+      20-step sequence gets everything right only about one time in three.
     </p>
-    <table class="tkc-table chain">
-      <thead><tr><th>Steps in a rigid sequence</th>{#each chain as n}<th>{n}</th>{/each}</tr></thead>
-      <tbody><tr><td>All steps right</td>{#each chain as n}<td>{pct(chainSuccess(n, 0.95))}</td>{/each}</tr></tbody>
-    </table>
     <p>
-      The fixes are the ones from earlier chapters: one shared record for the AI to read instead of twenty screens to
-      fill in, saved progress so a failure does not mean starting over, and one human review at the end instead of a
-      check at every step.
+      The fixes are the ones from earlier chapters: one shared record for the AI to read instead of a dozen screens to
+      fill in, and one human review at the end instead of a check at every step.
     </p>
   {/snippet}
 
   {#snippet bank()}
     <BankNote ask="How many screens does it take to serve one client, and which AI initiatives would remove one?">
       <p>
-        Count the screens a banker touches to serve one client, and treat each as a cost. Introduce AI as a tool that
-        fills in and checks those screens, with a person confirming the result, and judge it by the screens, fields and
-        waits it removes. Make it a gate only where its mistakes are small, visible and easy to undo, and keep a manual
+        Judge each AI initiative by the screens, fields and waits it removes. Make it a gate only where its mistakes are small, visible and easy to undo, and keep a manual
         route for the day it fails.
       </p>
     </BankNote>
@@ -216,8 +202,5 @@
     fill: var(--tkc-sunken);
     stroke: var(--tkc-muted);
     stroke-width: 1.5;
-  }
-  .chain {
-    max-width: 30rem;
   }
 </style>

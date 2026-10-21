@@ -48,10 +48,10 @@
   const moves = [
     { title: 'Alternatives everywhere', text: 'Every approval can be given by more than one qualified person, and every critical system has a tested fallback. No link depends on one name.', ch: 'riddle' },
     { title: 'Enter it once, check it as it is typed', text: 'One shared record that every system reads, with automatic checks at entry, so a problem is caught before anything is built on it.', ch: 'systems' },
-    { title: 'Work in parallel, approve once', text: 'Start every piece that can start. Standard requests get one approval when the pieces come together; decisions that cannot be undone get several reviewers working at the same time.', ch: 'async' },
+    { title: 'Work in parallel, approve once', text: 'Start every piece that can start, and approve once, when the pieces come together.', ch: 'async' },
     { title: 'Spare capacity', text: 'Keep key reviewers and key systems below about 80% loaded, and give them one shared queue.', ch: 'queues' },
     { title: 'Measure the whole', text: 'Give every team the same end-to-end measure, from request to answer, and pair each measure with its counterpart: speed with errors, volume with quality.', ch: 'emergence' },
-    { title: 'Care in proportion to the risk', text: 'Small, reversible decisions get light, fast checks. The most care goes where mistakes cannot be undone.', ch: 'ergodicity' },
+    { title: 'Care in proportion to the risk', text: 'Small, reversible decisions get light checks, or a sample checked while the work flows on. Decisions that cannot be undone get several reviewers working at the same time.', ch: 'ergodicity' },
     { title: 'Tools before gates', text: 'Bring in AI and automation as tools that carry the complexity for people. Judge them by the screens and steps they remove.', ch: 'tools' },
     { title: 'Look for what the data misses', text: 'Measure waiting, rework and abandoned requests alongside incidents. Study failures as well as successes, and ask the people who left.', ch: 'survivors' },
   ];
@@ -62,7 +62,6 @@
     ['OECD', '', 'Global value chains and trade', 'About 70% of international trade involves global value chains.'],
     ['Ronald Coase', '1937', '“The Nature of the Firm”, Economica', 'Why firms exist, and where their boundaries fall.'],
     ['Chris Miller', '2022', 'Chip War', 'How the semiconductor industry split into a long chain of specialists.'],
-    ['Michael Kremer', '1993', '“The O-Ring Theory of Economic Development”, Quarterly Journal of Economics', 'When every task must succeed, small differences in reliability multiply.'],
     ['George Labovitz and Yu Sang Chang', '1992', 'The 1-10-100 rule', 'A data error costs far more to fix the longer it survives. The rule is commonly attributed to them; we found no primary publication.'],
     ['J. F. C. Kingman', '1961', '“The single server queue in heavy traffic”, Proceedings of the Cambridge Philosophical Society', 'Why waiting explodes near full utilization.'],
     ['Donald Reinertsen', '2009', 'The Principles of Product Development Flow', 'Queues, utilization and batch size in knowledge work.'],
@@ -70,27 +69,23 @@
     ['Yuki Sugiyama and colleagues', '2008', '“Traffic jams without bottlenecks”, New Journal of Physics', 'A jam that emerges on a circular track with no cause but the drivers themselves.'],
     ['Dietrich Braess', '1968', '“Über ein Paradoxon aus der Verkehrsplanung”, Unternehmensforschung', 'Adding a road can make every journey slower.'],
     ['Gina Kolata', '1990', '“What if they closed 42d Street and nobody noticed?”, The New York Times, 25 December', 'Braess’s paradox in Manhattan.'],
-    ['Eliyahu M. Goldratt and Jeff Cox', '1984', 'The Goal', 'The Theory of Constraints: only the bottleneck sets the pace.'],
     ['Ole Peters', '2019', '“The ergodicity problem in economics”, Nature Physics', 'The coin game, and time averages versus ensemble averages.'],
     ['Ole Peters and Alexander Adamou', '2015', '“An evolutionary advantage of cooperation”', 'Pooling raises the growth rate a typical member experiences.'],
     ['Duncan J. Watts', '2002', '“A simple model of global cascades on random networks”, PNAS', 'Cascade windows and robust-yet-fragile networks.'],
-    ['Prasanna Gai and Sujit Kapadia', '2010', '“Contagion in financial networks”, Proceedings of the Royal Society A', 'The interbank model behind chapter 8.'],
+    ['Prasanna Gai and Sujit Kapadia', '2010', '“Contagion in financial networks”, Proceedings of the Royal Society A', 'The interbank model behind chapter 9.'],
     ['Andrew Haldane', '2009', '“Rethinking the financial network”, speech, Amsterdam', 'The financial system as robust yet fragile.'],
     ['Andrew Haldane and Robert May', '2011', '“Systemic risk in banking ecosystems”, Nature', 'A central banker and an ecologist on banks as an ecosystem.'],
     ['Karl Popper', '1959', 'The Logic of Scientific Discovery', 'Theories can be falsified, never proven by examples.'],
     ['Nassim Nicholas Taleb', '2007, 2012, 2018', 'The Black Swan; Antifragile; Skin in the Game', 'Rare events, convexity, and one person at the casino a hundred times.'],
     ['Microsoft', '2024', 'Statement on the CrowdStrike incident, 20 July', 'About 8.5 million Windows devices affected.'],
     ['Abraham Wald', '1943', '“A Method of Estimating Plane Vulnerability Based on Damage of Survivors”, Statistical Research Group, Columbia University', 'The planes that came back.'],
-    ['Edwin Elton, Martin Gruber and Christopher Blake', '1996', '“Survivor Bias and Mutual Fund Performance”, Review of Financial Studies', 'How dropping closed funds flatters the average.'],
+    ['Edwin Elton, Martin Gruber and Christopher Blake', '1996', '“Survivorship Bias and Mutual Fund Performance”, Review of Financial Studies', 'How dropping closed funds flatters the average.'],
     ['Phil Rosenzweig', '2007', 'The Halo Effect', 'Why studies of successful companies mislead.'],
-    ['Richard Lewontin and Dan Cohen', '1969', '“On population growth in a randomly varying environment”, PNAS', 'A population can grow on average and still go extinct.'],
     ['Lian Pin Koh and colleagues', '2004', '“Species coextinctions and the biodiversity crisis”, Science', 'Species that disappear with the species they depend on.'],
     ['Herbert A. Simon', '1962', '“The Architecture of Complexity”, Proceedings of the American Philosophical Society', 'The watchmakers Hora and Tempus, and why modular systems survive.'],
-    ['John Gall', '1975', 'Systemantics', 'A complex system that works has evolved from a simple system that worked.'],
-    ['Melvin Conway', '1968', '“How Do Committees Invent?”', 'Organizations design systems that copy their communication structure.'],
+    ['John Gall', '1975', 'General Systemantics', 'A complex system that works has evolved from a simple system that worked.'],
     ['Frederick P. Brooks', '1975', 'The Mythical Man-Month', 'Adding people to a late project makes it later.'],
     ['Luís Bettencourt and colleagues', '2007', '“Growth, innovation, scaling, and the pace of life in cities”, PNAS', 'Why bigger cities produce more per person.'],
-    ['Sherwin Rosen', '1981', '“The Economics of Superstars”, American Economic Review', 'Why small differences in talent become huge differences in reward.'],
     ['W. Brian Arthur', '1989', '“Competing Technologies, Increasing Returns, and Lock-In by Historical Events”, Economic Journal', 'Markets that tip to a winner decided by early luck.'],
     ['David Autor and colleagues', '2020', '“The Fall of the Labor Share and the Rise of Superstar Firms”, Quarterly Journal of Economics', 'Sales concentrating in fewer, larger firms.'],
     ['Réka Albert, Hawoong Jeong and Albert-László Barabási', '2000', '“Error and attack tolerance of complex networks”, Nature', 'Hub networks shrug off random failures and collapse when a hub fails.'],
@@ -136,7 +131,7 @@
 
   <div class="grid">
     <section class="moves" aria-labelledby="{prefix}-moves">
-      <h3 class="tkc-display moves-title" id="{prefix}-moves">Eight moves that keep the controls and lose the waiting</h3>
+      <h3 class="tkc-display moves-title" id="{prefix}-moves">Eight moves</h3>
       <ol>
         {#each moves as move (move.title)}
           <li>
@@ -227,9 +222,7 @@
       conditions. Scale multiplies whichever you have.
     </p>
     <p class="tkc-lede">
-      A bank needs its checks. Simplicity is not fewer controls; it is fewer conditions. Give the controls the shape of
-      options: alternatives at every link, data entered once, work that runs in parallel and meets once, spare capacity,
-      one measure for the whole journey, and tools that take screens away instead of adding them.
+      A bank needs its checks. Simplicity is not fewer controls; it is fewer conditions.
     </p>
   </section>
 

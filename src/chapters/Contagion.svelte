@@ -220,22 +220,22 @@
       yet fragile”.
     </p>
     <p>
-      Switch to <em>A few giants</em> and raise capital to 6%. Fail a few random banks: most failures stay small,
+      Switch to <em>A few giants</em>, set about four counterparties per bank and raise capital to 6%. Fail a few random banks: most failures stay small,
       because most banks are minor. Then fail the most connected bank: nearly every bank goes down. That is the shape of
       September 2008: Lehman Brothers filed for bankruptcy on the 15th, the largest
       bankruptcy in US history, and the next day the Federal Reserve lent $85 billion to AIG, which had sold credit
       protection to banks around the world.
     </p>
     <p>
-      Organizations have the same shape. A person that every process must pass through is a hub. Small, spread-out
-      dependencies get absorbed. A dependency on one central approver is a single point of failure: when that person
-      is out, everything behind them stops. Systems are no different: when a shared service such as sign-in or the
-      client file goes down, every system that leans on it stops at once.
+      Organizations have the same shape. Small, spread-out dependencies get absorbed. A person or system that
+      everything passes through is a hub, and a single point of failure. On 19 July 2024 a faulty update to one
+      security product crashed about 8.5 million Windows computers, grounding flights and disrupting banks and
+      hospitals on the same day.
     </p>
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Who are the hubs in our processes: the people or systems that everything passes through? What is their stand-in?">
+    <BankNote ask="Which single event would hit many of our teams, systems or suppliers at the same time?">
       <p>
         After 2008, regulators used three tools: more capital (bigger buffers), central clearing and resolution plans
         (robust hubs, and failures that can be survived), and ring-fencing (firebreaks). The same tools work inside the

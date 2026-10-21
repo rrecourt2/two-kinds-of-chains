@@ -29,7 +29,7 @@
   --tkc-sunken: #e8ecf1;
   --tkc-ink: #121820;
   --tkc-ink-2: #46505d;
-  --tkc-muted: #6a7585;
+  --tkc-muted: #5f6a7a;
   --tkc-hair: #dfe4ea;
   --tkc-rule: #c2c9d3;
   --tkc-options: #2a78d6;
@@ -315,6 +315,7 @@
 }
 .tkc-note summary {
   cursor: pointer;
+  padding-block: 3px;
   color: var(--tkc-ink-2);
   font-weight: 600;
 }

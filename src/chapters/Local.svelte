@@ -76,7 +76,7 @@
             { value: 'open', label: 'Open' },
           ]}
         />
-        <Slider id="l-cars" label="Cars in rush hour" bind:value={cars} min={1000} max={6000} step={500} format={(v) => int(v)} />
+        <Slider id="l-cars" label="Cars on the road" bind:value={cars} min={1000} max={6000} step={500} format={(v) => int(v)} />
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
@@ -92,7 +92,10 @@
             <text class="tkc-label-2 tkc-halo" x={m.x + dx} y={up ? m.y - 30 : m.y + 28} text-anchor="middle">{r.name}</text>
             <text class="tkc-axis-label tkc-halo" x={m.x + dx} y={up ? m.y - 16 : m.y + 42} text-anchor="middle">{int(r.carsOn)} cars · {mins(r.minutes)}</text>
           {/each}
-          <text class="tkc-axis-label tkc-halo" x={N.x + 8} y={H / 2 + 4}>{open ? `New link: ${int(now.link)} cars` : 'New link (closed)'}</text>
+          <text class="tkc-axis-label tkc-halo" x={width < 460 ? N.x - 8 : N.x + 8} y={H / 2 + 4} text-anchor={width < 460 ? 'end' : 'start'}>
+            <tspan>New link</tspan>
+            <tspan x={width < 460 ? N.x - 8 : N.x + 8} dy="14">{open ? `${int(now.link)} cars` : 'closed'}</tspan>
+          </text>
           {#each [{ p: S, t: 'Start' }, { p: E, t: 'End' }] as node (node.t)}
             <circle cx={node.p.x} cy={node.p.y} r="7" class="node" />
             <text class="tkc-label" x={node.p.x} y={node.p.y + 24} text-anchor="middle">{node.t}</text>
@@ -104,7 +107,7 @@
 
       <div class="tkc-stats tkc-stats--3" use:announce>
         <Stat label="Every driver’s journey" value={mins(now.time)} sub={open ? `${now.time > before.time ? 'up' : now.time < before.time ? 'down' : 'no change'} from ${mins(before.time)} without the link` : 'each takes the fastest route'} swatch={open && now.time > before.time ? 'var(--tkc-conditions)' : 'var(--tkc-ink-2)'} />
-        <Stat label="If routes were planned for everyone" value={mins(open ? best : before.time)} sub="the best the roads can do" swatch="var(--tkc-options)" />
+        <Stat label="If routes were planned for everyone" value={mins(open ? best : before.time)} sub="the best the roads can do" />
         <Stat label="Cars on the new link" value={open ? int(now.link) : '0'} sub={open ? 'each saving time, at first' : 'the link is closed'} />
       </div>
 
@@ -112,7 +115,7 @@
 
       {#snippet model()}
         <p>{int(cars)} cars travel from Start to End. Each main road takes one minute per 100 cars on it; each bypass takes 45 minutes whatever the traffic. Every driver chooses the route that is fastest for them, so the traffic settles where nobody can save time by switching alone (a Nash equilibrium).</p>
-        <p>“Planned for everyone” assigns routes to give the shortest average journey. The gap between the two is what economists call the price of anarchy.</p>
+        <p>“Planned for everyone” assigns routes to give the shortest average journey. The ratio of the two is what game theorists call the price of anarchy.</p>
       {/snippet}
     </Instrument>
   {/snippet}
@@ -133,9 +136,7 @@
       makes it, and the sum does not.
     </p>
     <p>
-      The management writer Eliyahu Goldratt built his Theory of Constraints on the same idea: time saved anywhere
-      except at the bottleneck saves the whole system nothing. The remedy is not to ask every part to be selfless. It is
-      to measure the whole: give every team the same end-to-end measure, and judge each change by what it does to it.
+      The remedy is not to ask every part to be selfless. It is to measure the whole.
     </p>
   {/snippet}
 
