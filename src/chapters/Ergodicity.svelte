@@ -55,6 +55,7 @@
 
   const samplePaths = $derived(mine.paths.map((p) => series(p)));
   const avgPath = $derived(series(mine.expected));
+  const meanPath = $derived(series(mine.mean));
   const basePath = $derived(series(base.median));
   const minePath = $derived(series(mine.median));
   const end = $derived(shown);
@@ -64,7 +65,8 @@
   // Direct labels at the right edge, nudged apart if they collide.
   const labels = $derived.by(() => {
     const items = [
-      { id: 'avg', text: `Average ${multiple(mine.expected[end])}`, y: y(cap(mine.expected[end])) },
+      { id: 'avg', text: `On paper ${multiple(mine.expected[end])}`, y: y(cap(mine.expected[end])) },
+      { id: 'mean', text: `Actual ${multiple(mine.mean[end])}`, y: y(cap(mine.mean[end])) },
       { id: 'base', text: `Typical ${multiple(base.median[end])}`, y: y(cap(base.median[end])) },
     ];
     if (changed) items.push({ id: 'mine', text: `Yours ${multiple(mine.median[end])}`, y: y(cap(mine.median[end])) });
@@ -94,14 +96,15 @@
   n={8}
   kicker="Ergodicity"
   title="When the average lies"
-  lede="A bet that makes players richer on average every round, and leaves most of them poorer. What would you change?"
+  lede="A bet worth 5% a round on paper, that leaves most of the people who play it poorer. What would you change?"
   puzzle="ergodicity"
 >
   {#snippet setup()}
     <p>
       So far this story has been about speed. The next chapters are about survival, which is why a bank has controls at all.
-      Start with a game. Each round, flip a coin. Heads, your wealth grows by 50%. Tails, it shrinks by 40%. On average,
-      each round makes you 5% richer. Would you play it every round, with everything you own?
+      Start with a game. Each round, flip a coin. Heads, your wealth grows by 50%. Tails, it shrinks by 40%. On paper
+      the bet is worth 5% a round: that is its expected value, the average over every possible outcome. Would you play
+      it every round, with everything you own?
     </p>
     <p>Below, 2,000 players each play 100 rounds.</p>
   {/snippet}
@@ -125,7 +128,7 @@
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
-        <svg {width} height={H} role="img" aria-label="Wealth over 100 rounds on a log scale. The average rises to {multiple(mine.expected[ROUNDS])}; the typical player ends at {multiple(base.median[ROUNDS])}.">
+        <svg {width} height={H} role="img" aria-label="Wealth over 100 rounds on a log scale. On paper it rises to {multiple(mine.expected[ROUNDS])}; the players’ actual average reaches {multiple(mine.mean[ROUNDS])}; the typical player ends at {multiple(base.median[ROUNDS])}.">
           <defs>
             <clipPath id={clipId}><rect x={m.left} y={m.top - 2} width={Math.max(0, width - m.left - m.right)} height={H - m.top - m.bottom + 4} /></clipPath>
           </defs>
@@ -142,6 +145,7 @@
             {/each}
             <path d={basePath} class="ln" style:stroke="var(--tkc-conditions)" />
             {#if changed}<path d={minePath} class="ln" style:stroke="var(--tkc-options)" />{/if}
+            <path d={meanPath} class="ln mean" />
             <path d={avgPath} class="ln avg" />
           </g>
           {#each labels as l (l.id)}
@@ -156,13 +160,15 @@
         {#if hover !== null}
           <div class="tkc-tip" style:left="{Math.min(width - 210, Math.max(0, x(hover) + 10))}px" style:top="20px">
             <div>After round {hover}</div>
-            <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-ink)"></span><strong>{multiple(mine.expected[hover])}</strong> average</div>
+            <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-ink)"></span><strong>{multiple(mine.expected[hover])}</strong> on paper</div>
+            <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-ink-2)"></span><strong>{multiple(mine.mean[hover])}</strong> actual average</div>
             <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span><strong>{multiple(base.median[hover])}</strong> typical, all in, alone</div>
             {#if changed}<div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-options)"></span><strong>{multiple(mine.median[hover])}</strong> typical, your settings</div>{/if}
           </div>
         {/if}
         <div class="tkc-legend">
-          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-ink)"></span>Average across all players (expected value)</span>
+          <span><span class="tkc-swatch tkc-swatch--line sw-dash" style:background="var(--tkc-ink)"></span>On paper: the expected value</span>
+          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-ink-2)"></span>Actual average of all 2,000 players</span>
           <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span>Typical player, all in, alone (median)</span>
           {#if changed}<span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-options)"></span>Typical player, your settings</span>{/if}
         </div>
@@ -174,27 +180,28 @@
       </div>
 
       <div class="tkc-stats tkc-stats--3" use:announce>
-        <Stat label="Average wealth" value={multiple(mine.expected[end])} sub="{signedPct(expectedFactor(stake / 100))} a round" />
-        <Stat label="Typical player, all in, alone" value={multiple(base.median[end])} sub="{signedPct(typicalFactor(1, 1))} a round" swatch="var(--tkc-conditions)" line={true} />
+        <Stat label="On paper" value={multiple(mine.expected[end])} sub="the expected value, {signedPct(expectedFactor(stake / 100))} a round" />
+        <Stat label="Actual average of the players" value={multiple(mine.mean[end])} sub="{pct(mine.topShare[end])} of it held by the richest 1%" />
         {#if changed}
           <Stat label="Typical player, your settings" value={multiple(mine.median[end])} sub="{signedPct(growthMine)} a round" swatch="var(--tkc-options)" line={true} />
         {:else}
-          <Stat label="Players who lost money" value={pct(lostNow)} sub="after {end} rounds" />
+          <Stat label="Typical player" value={multiple(base.median[end])} sub="{pct(lostNow)} of players are poorer than at the start" swatch="var(--tkc-conditions)" line={true} />
         {/if}
       </div>
 
       {#snippet model()}
         <p>2,000 players flip independent fair coins. With a stake below 100%, only that share of wealth rides on each flip. Pooled players add up their results every round and split the total equally.</p>
-        <p>The average line is the expected value, 1.05 to the power of the round (at full stake). The typical player is the median of all 2,000. Long-run growth for a typical player alone is √(1.5 × 0.6) − 1 = −5.1% a round.</p>
+        <p>“On paper” is the expected value, 1.05 to the power of the round at full stake: what the average would be over every possible run of luck. The actual average is the mean wealth of these 2,000 players; it follows the paper value for a while and then lags, because the outcomes that hold up the expected value are too rare to turn up even among 2,000 players. The typical player is the median. Long-run growth for a typical player alone is √(1.5 × 0.6) − 1 = −5.1% a round.</p>
       {/snippet}
     </Instrument>
   {/snippet}
 
   {#snippet after()}
     <p>
-      The average rises steadily while the typical player is almost wiped out. Both are correct. A handful of
-      extraordinarily lucky players pull the average up, while most players lose. One head and one tail multiply your
-      wealth by 1.5 × 0.6 = 0.9: a 10% loss every two rounds.
+      On paper the bet gains 5% a round, and the players’ actual average rises too. But nearly all of that wealth sits
+      with a handful of extraordinarily lucky players: after 100 rounds the richest 1% hold almost all of it. Most
+      players lose, and the typical player is almost wiped out. One head and one tail multiply wealth by 1.5 × 0.6 = 0.9:
+      a 10% loss every two rounds, and that is the rate each player actually lives through.
     </p>
     <p>
       A system is called <strong>ergodic</strong> when the average across many people equals what happens to one person
@@ -212,7 +219,7 @@
       <li>
         <strong>Pool.</strong> Let players share everything each round. A pair is not enough: two players who stake
         everything still shrink slightly. In a pool of five, the typical player grows about 3% a round; in a pool of
-        twenty, 4.5%, almost as fast as the average. This is the logic of insurance, of a portfolio spread over many
+        twenty, 4.5%, almost as fast as the paper value. This is the logic of insurance, of a portfolio spread over many
         countries and sectors, and of banks themselves.
       </li>
     </ul>
@@ -247,6 +254,14 @@
   }
   .avg {
     stroke: var(--tkc-ink);
+    stroke-dasharray: 6 4;
+  }
+  .mean {
+    stroke: var(--tkc-ink-2);
+    stroke-width: 1.75;
+  }
+  .sw-dash {
+    background: repeating-linear-gradient(90deg, var(--tkc-ink) 0 6px, transparent 6px 9px) !important;
   }
   .cross {
     stroke: var(--tkc-muted);

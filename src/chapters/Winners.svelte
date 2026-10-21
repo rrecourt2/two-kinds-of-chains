@@ -144,7 +144,7 @@
   {#snippet after()}
     <p>
       When size does not help, the market stays shared. When it helps a lot, one firm ends up with most of the market,
-      and which firm wins is settled by luck among the first few hundred customers. Run history again: a different
+      and which firm wins is settled by luck among the first few hundred customers. Run history again, and a different
       firm wins almost every time. Economists call this lock-in. The concentration emerges; nobody designs it.
     </p>
     <p>
@@ -169,7 +169,7 @@
     <BankNote ask="Where do we compete in a market that tips to one winner, and where do we depend on a winner we do not control?">
       <p>
         Inside the bank, the platform most people use attracts the most investment, data and skills, whether or not it
-        is the best. Choose it deliberately, and early.
+        is the best. That makes the choice of platform one of the few decisions that is hard to undo later.
       </p>
     </BankNote>
   {/snippet}

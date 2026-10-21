@@ -252,7 +252,14 @@
     </p>
     <p>
       One approval at the end is the fastest design, but lets more problems through than parallel reviews of a shared
-      record. That is a trade-off to make knowingly: one check for what can be undone, several for what cannot.
+      record. It is a trade-off between speed and safety, and the right balance differs between decisions that can be
+      undone and those that cannot.
+    </p>
+    <p>
+      Shared does not have to mean central. A single database that every request must pass through is itself a hub:
+      when it is slow, everyone is slow, and people start keeping their own copies to get their work done, the very
+      copies a shared record was meant to replace. A record works best when each piece of data has one home, close to
+      the people who create it, and everyone else reads it from there instead of copying it.
     </p>
     <p>
       Every new tool brings its own form, its own approval and its own copy of the data. Each makes sense to the team
@@ -263,8 +270,8 @@
   {#snippet bank()}
     <BankNote ask="Which of our systems ask for data that already exists in another system?">
       <p>
-        Follow one recent request and count how many times the same client data was typed in. Each re-entry is a copy
-        that can drift, and one more place where a fix must be repeated.
+        Each time the same client data is typed in again, there is one more copy that can drift, and one more place where
+        a fix must be repeated.
       </p>
     </BankNote>
   {/snippet}

@@ -9,18 +9,15 @@
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
   import { STRUCTURES, structure, outputCurve, singlePoints, TEAM_SIZE } from '../lib/sim/scale.js';
-  import { watchmakers } from '../lib/sim/watchmakers.js';
-  import { linear, line, ticks, barRight } from '../lib/scales.js';
+  import { linear, line, ticks } from '../lib/scales.js';
   import { int, pct } from '../lib/format.js';
 
   const MAX = 60;
   let nodes = $state(24);
   let kind = $state('mesh');
   let what = $state('people');
-  let interrupt = $state(10); // tenths of a percent per part
   let diagramW = $state(320);
   let width = $state(560);
-  let watchW = $state(360);
   let hover = $state(null);
 
   const sys = $derived(what === 'systems');
@@ -83,18 +80,6 @@
     const box = e.currentTarget.getBoundingClientRect();
     hover = Math.max(1, Math.min(reach, Math.round(x.invert(e.clientX - box.left + m.left))));
   }
-
-  // Watchmakers.
-  const w = $derived(watchmakers(interrupt / 1000));
-  const watchInner = $derived(Math.max(0, watchW - 30)); // the figure's clientWidth includes its padding
-  const wx = $derived(linear(0, 10, 92, Math.max(140, watchInner - 60)));
-  const every = (perMonth) => {
-    if (perMonth >= 1) return `${perMonth.toFixed(1)} a month`;
-    const months = 1 / perMonth;
-    if (months < 24) return `one every ${Math.round(months)} months`;
-    const years = months / 12;
-    return years > 1000 ? 'almost never' : `one every ${Math.round(years)} years`;
-  };
 
   const puzzle = {
     goal: 'Sixty people must each work closely with all the others, and each of those links takes 2% of both people’s time. How much useful work do the sixty produce?',
@@ -218,67 +203,28 @@
   {#snippet after()}
     <p>
       When everyone depends on everyone, output peaks at around 25 people and then falls: each newcomer adds more
-      coordination than work. Fred Brooks saw this in software in 1975: adding people to a late project makes it later.
-      The same holds for systems, where every new point-to-point link is one more thing to maintain and one more path for
-      a problem to travel.
+      coordination than work. Economists call this the cost of coordination, and when every pair must keep in touch it
+      grows with the square of the group. Fred Brooks saw it in software in 1975: adding people to a late project makes
+      it later. The same holds for systems, where every new point-to-point link is one more thing to maintain and one
+      more path for a problem to travel.
     </p>
     <p>
       Cities show the upside of scale. Wages, patents and economic output grow faster than population: a city twice as
-      big produces roughly 2.2 times as much. In a city you can work with almost anyone
-      and have to coordinate with almost no one. Possible links are options. Required links are conditions.
+      big produces roughly 2.2 times as much. In a city you can work with almost anyone and have to coordinate with
+      almost no one. Possible links are options. Required links are conditions.
     </p>
     <p>
       A single central hub keeps links low, but output stops growing at whatever the centre can handle, and the centre is
-      a single point of failure. Small modules with clear interfaces keep growing almost in proportion.
-    </p>
-    <p>
-      Ships are built the same way. A hull divided into watertight compartments survives a breach that would sink an
-      open one. The Titanic had sixteen, and could stay afloat with its first four flooded. The iceberg opened five, and
-      the walls between compartments stopped short of the top, so the water spilled from one into the next. Modules
-      protect only if the walls between them hold.
-    </p>
-    <h3>Simon’s watchmakers: why modular means flexible</h3>
-    <p>
-      Herbert Simon, a Nobel economist and one of the founders of artificial intelligence, told a parable about two
-      watchmakers. Both build watches of 1,000 parts, and both are often interrupted. Tempus builds each watch in one go;
-      when he puts it down, it falls apart and he starts again. Hora builds modules of ten parts that hold together, so an
-      interruption costs him only the module in his hands.
-    </p>
-    <figure class="watch" bind:clientWidth={watchW}>
-      <Slider id="g-int" label="Chance of an interruption per part" bind:value={interrupt} min={0} max={20} format={(v) => `${(v / 10).toFixed(1)}%`} />
-      <svg width={watchInner} height="76" role="img" aria-label="Watches finished per month: Tempus {every(w.tempus.perMonth)}, Hora {every(w.hora.perMonth)}.">
-        {#each [{ name: 'Tempus', sub: 'one piece', v: w.tempus.perMonth }, { name: 'Hora', sub: 'modules of 10', v: w.hora.perMonth }] as row, i (row.name)}
-          {@const yy = 4 + i * 36}
-          <text class="tkc-label" x="0" y={yy + 13}>{row.name}</text>
-          <text class="tkc-axis-label" x="0" y={yy + 27}>{row.sub}</text>
-          <path d={barRight(wx(0), yy + 2, Math.max(2, wx(Math.min(10, row.v)) - wx(0)), 18)} class="wbar" class:win={row.v >= Math.max(w.tempus.perMonth, w.hora.perMonth)} />
-          <text class="tkc-label-2" x={wx(Math.min(10, row.v)) + 6} y={yy + 15}>{every(row.v)}</text>
-        {/each}
-      </svg>
-      <figcaption class="tkc-caption">
-        Watches finished per month, placing one part a minute for 160 hours. With no interruptions Tempus is slightly
-        faster, because modules cost a little extra assembly.
-        {#if interrupt > 0}At {(interrupt / 10).toFixed(1)}% Hora is {w.ratio < 10 ? `${w.ratio.toFixed(1)} times` : w.ratio < 1e6 ? `about ${int(Number(w.ratio.toPrecision(2)))} times` : 'more than a million times'} faster{#if interrupt === 10}; Simon’s rougher arithmetic gave about 4,000{/if}.{/if}
-      </figcaption>
-    </figure>
-    <p>
-      Simon’s point was that complex systems which survive and adapt are almost always built like Hora’s watches: from
-      modules with few links between them. That is what flexible means in graph terms. It is why regulators ring-fence
-      parts of banks, why payment systems settle through a few heavily protected hubs, and why AI agents work best when a
-      big task is broken into small steps whose results are saved.
-    </p>
-    <p>
-      John Gall, a doctor who wrote about why systems fail, turned the same idea into a law in 1975: a complex system
-      that works is invariably found to have evolved from a simple system that worked. A complex system designed from scratch, he added, never works and cannot be patched up to make it work. Start simple, make it work, and let it grow.
+      a single point of failure. Small modules with clear interfaces keep growing almost in proportion. They have a
+      second advantage, which the next chapter is about: they survive interruptions.
     </p>
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Draw the graph of one process: who and what must link to whom? Where are the single points of failure?">
+    <BankNote ask="Who and what must link to whom in one of our processes, and where are its single points of failure?">
       <p>
-        Before adding a role, a committee, a system or an interface, ask what it does to the graph: does it add an option
-        or a required link? Build in modules that can finish their work and hand over a stable result, so an interruption
-        in one does not send everything back to the start.
+        Every new role, committee, system or interface changes the graph. What matters is whether it adds an option or a
+        required link.
       </p>
     </BankNote>
   {/snippet}
@@ -333,21 +279,5 @@
   .pt {
     stroke: var(--tkc-surface);
     stroke-width: 2;
-  }
-  .watch {
-    margin: 0;
-    display: grid;
-    gap: 10px;
-    min-width: 0;
-    padding: 14px;
-    border-radius: 10px;
-    background: var(--tkc-surface);
-    border: 1px solid var(--tkc-hair);
-  }
-  .wbar {
-    fill: var(--tkc-ink-2);
-  }
-  .wbar.win {
-    fill: var(--tkc-options);
   }
 </style>

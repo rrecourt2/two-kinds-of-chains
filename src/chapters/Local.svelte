@@ -158,9 +158,9 @@
   {#snippet bank()}
     <BankNote ask="Which of our measures can improve while the whole gets worse?">
       <p>
-        For each team, ask which number it is judged on, and whether that number can look better while a client waits
-        longer or a risk moves elsewhere. Add one shared measure for the whole journey, from request to answer, and
-        judge every change by it.
+        Every team is judged on some number. The question is whether that number can look better while a client waits
+        longer or a risk moves elsewhere. A measure of the whole journey, from request to answer, is one that no part
+        can improve at the expense of the rest.
       </p>
     </BankNote>
   {/snippet}

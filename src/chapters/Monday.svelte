@@ -85,21 +85,21 @@
 
   const moves = [
     { title: 'Alternatives everywhere', text: 'Every approval can be given by more than one qualified person, and every critical system has a tested fallback. No link depends on one name.', ch: 'riddle' },
-    { title: 'Enter it once, check it as it is typed', text: 'One shared record that every system reads, with automatic checks at entry, so a problem is caught before anything is built on it.', ch: 'systems' },
-    { title: 'Work in parallel', text: 'Start every piece that can start, and run the reviews side by side on one shared record, not one after another.', ch: 'async' },
-    { title: 'Spare capacity', text: 'Keep key reviewers and key systems below about 80% loaded, and give them one shared queue.', ch: 'queues' },
-    { title: 'Measure the whole', text: 'Give every team the same end-to-end measure, from request to answer, and pair each measure with its counterpart: speed with errors, volume with quality.', ch: 'emergence' },
+    { title: 'Data entered once, at its source', text: 'Each piece of data has one home, close to the people who create it. Every system reads it from there, and checks run as it is typed, so a problem is caught before anything is built on it.', ch: 'systems' },
+    { title: 'Spare capacity', text: 'Key reviewers and key systems run below about 80% of capacity, and share one queue.', ch: 'queues' },
+    { title: 'Work in parallel', text: 'Every piece that can start, starts. Reviews run side by side on the same record, not one after another.', ch: 'async' },
+    { title: 'Measure the whole', text: 'Every team shares one measure of the whole journey, from request to answer, and each measure comes with its counterpart: speed with errors, volume with quality.', ch: 'emergence' },
+    { title: 'Tools before gates', text: 'AI and automation carry complexity for people as tools, not as extra steps. Their value lies in the steps and waits they remove.', ch: 'tools' },
     { title: 'Care in proportion to the risk', text: 'Small, reversible decisions get light checks, or a sample checked while the work flows on. Decisions that cannot be undone get several reviewers working at the same time.', ch: 'ergodicity' },
-    { title: 'Tools before gates', text: 'Bring in AI and automation as tools that carry the complexity for people. Judge them by the screens and steps they remove.', ch: 'tools' },
-    { title: 'Try to prove yourself wrong', text: 'Run fire drills and reverse stress tests, and keep the near misses. Count waiting, rework and abandoned requests alongside incidents, so the cost of a control is as visible as its reason.', ch: 'black-swans' },
-    { title: 'Build in modules', text: 'Small teams and systems with clear interfaces, each able to finish its part and hand over a stable result, so trouble in one stays in one.', ch: 'graph' },
+    { title: 'Hubs with a second route', text: 'The people, committees and systems that everything passes through each have a deputy or a fallback, and enough slack to absorb a busy week.', ch: 'contagion' },
+    { title: 'Claims that have met a test', text: 'Fire drills, reverse stress tests and near misses test the safest-looking assumptions. Waiting, rework and abandoned requests are counted alongside incidents, so the cost of a control is as visible as its reason.', ch: 'black-swans' },
+    { title: 'Work in modules', text: 'Work is saved in finished pieces, each with a clear owner and a clear interface, so an interruption costs only the piece in hand and trouble in one part stays there.', ch: 'modules' },
   ];
 
   const sources = [
     ['Adam Smith', '1776', 'The Wealth of Nations, Book I, chapters 1 and 3', 'The pin workshop; the division of labour is limited by the extent of the market.'],
     ['Leonard E. Read', '1958', '“I, Pencil”', 'No single person knows how to make a pencil.'],
     ['OECD', '', 'Global value chains and trade', 'About 70% of international trade involves global value chains.'],
-    ['Ronald Coase', '1937', '“The Nature of the Firm”, Economica', 'Why firms exist, and where their boundaries fall.'],
     ['Chris Miller', '2022', 'Chip War', 'How the semiconductor industry split into a long chain of specialists.'],
     ['George Labovitz and Yu Sang Chang', '1992', 'The 1-10-100 rule', 'A data error costs far more to fix the longer it survives. The rule is commonly attributed to them; we found no primary publication.'],
     ['J. F. C. Kingman', '1961', '“The single server queue in heavy traffic”, Proceedings of the Cambridge Philosophical Society', 'Why waiting explodes near full utilization.'],
@@ -136,8 +136,8 @@
 <article class="monday" aria-labelledby="{prefix}-chapter-title">
   <header class="head">
     <div class="tkc-eyebrow">Chapter {total} of {total} · Playbook</div>
-    <h2 class="tkc-display tkc-chapter-title" id="{prefix}-chapter-title" tabindex="-1">What to do on Monday</h2>
-    <p class="tkc-lede">Keep the controls. Change their shape. For each step in a process, ask two questions: does it do the work or check it, and is there an alternative when it is unavailable?</p>
+    <h2 class="tkc-display tkc-chapter-title" id="{prefix}-chapter-title" tabindex="-1">What it means on Monday</h2>
+    <p class="tkc-lede">The controls can stay. What changes is their shape. Two questions sort any step in a process: does it do the work or check it, and is there an alternative when it is unavailable?</p>
   </header>
 
   <div class="matrix" role="table" aria-label="Two-question test for a step in a process">
@@ -172,7 +172,7 @@
 
   <div class="grid">
     <section class="moves" aria-labelledby="{prefix}-moves">
-      <h3 class="tkc-display moves-title" id="{prefix}-moves">Nine moves</h3>
+      <h3 class="tkc-display moves-title" id="{prefix}-moves">Ten patterns</h3>
       <ol>
         {#each moves as move (move.title)}
           <li>

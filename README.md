@@ -1,27 +1,32 @@
 # Two Kinds of Chains
 
 An interactive learning story about good complexity (specialization), bad complexity (dependence) and how scale
-amplifies both, and about how a long, rigid chain of conditions tips into failure. Fourteen short chapters, each
-built around a puzzle with a live model the reader can change. Built with Svelte 5 and Vite. Everything ships as
-one file, with no external requests, so it can run inside a locked-down bank intranet.
+amplifies both, and about how a long, rigid chain of conditions tips into failure. Fifteen short chapters in four
+parts, each built around a puzzle with a live model the reader can change. Built with Svelte 5 and Vite. Everything
+ships as one file, with no external requests, so it can run inside a locked-down bank intranet.
 
 | # | Chapter | Puzzle and live model |
 |---|---------|------------------------|
 | 0 | Two Kinds of Chains | Guess how many of 100 loans clear six checks, then watch them flow |
+| | **Part 1 · Two kinds of chains** | |
 | 1 | A riddle about chains | Better attendance or a stand-in per role? A month calendar of people or systems (AND vs OR) |
-| 2 | Why longer chains get cheaper | The smallest market in which twelve specialists pay off; the chip industry; splitting firms at the right level |
-| 3 | When systems lean on each other | Make a request faster and safer without dropping a system: copies vs one shared record, approvals at every system or once |
+| 2 | Why longer chains get cheaper | The smallest market in which twelve specialists pay off; the chip industry's long chain |
+| | **Part 2 · How a chain grows rigid** | |
+| 3 | When systems lean on each other | Faster and safer without dropping a system: copies vs one shared record, which need not be a central hub |
 | 4 | Why full calendars make long queues | Get the wait under an hour with reviewers at least 80% busy: named lines vs one shared line |
-| 5 | Don't wait for each other | Which two speed-ups help most when the work runs in parallel; bad inputs caught early or late |
-| 6 | When every part does its best | Braess's paradox: get every journey under 70 minutes without building anything |
-| 7 | Tool, rule or gate? | What a more erratic AI does to a tool, a rule and a gate |
-| 8 | When the average lies | Ole Peters' coin game: get the typical player growing at 2.5% a round |
-| 9 | 2008: when links became conditions | A stress test on a 48-bank network: the lowest capital that contains five failures at once |
-| 10 | How to find a black swan | Wason's selection task with four project files; Popper, the turkey, fire drills and reverse stress tests |
+| 5 | Don't wait for each other | Which two speed-ups help most when the work runs in parallel; Grove's breakfast |
+| 6 | When every part does its best | Braess's paradox as a prediction: what closing a road does to every journey |
+| 7 | Tool, rule or gate? | Twenty requests, a steady or an erratic AI, and which pairing saves the most time |
+| | **Part 3 · When the world pulls on the chain** | |
+| 8 | When the average lies | Ole Peters' coin game: the paper value, the players' actual average, and the typical player |
+| 9 | 2008: when links became conditions | A stress test on a 48-bank network; hubs inside organizations |
+| 10 | How to find a black swan | Wason's selection task with four project files; Popper and Russell's turkey |
 | 11 | Why species go extinct | Where the generalist overtakes the specialist as the years get more volatile |
 | 12 | Why the winner takes most | Where a better product most often wins, among twenty equal firms |
-| 13 | The shape of the network | What sixty fully linked people produce; mesh, hub and modules; Simon's watchmakers; Gall's law |
-| 14 | What to do on Monday | A final challenge on the check-up tool, nine moves, and the reader's score |
+| | **Part 4 · Chains that bend** | |
+| 13 | The shape of the network | What sixty fully linked people produce; coordination costs; mesh, hub and modules |
+| 14 | Two watchmakers | Herbert Simon's parable as a live race: one long chain against modules; Gall's law |
+| 15 | What it means on Monday | A final challenge on the check-up tool, ten patterns, and the reader's score |
 
 ### Puzzles and score
 
@@ -32,8 +37,13 @@ its puzzle is solved or shown.
 - Choice puzzles are predictions, like the opening guess: the figure's controls open after the first answer or a
   hint, so the reader commits before testing.
 - Target puzzles count once the figure has rested on the goal for a moment, so sweeping a slider past the answer
-  does not solve them. Goals with several conditions show a live checklist. Scores are kept in the reader's own browser (`localStorage`, key
-`two-chains-puzzles-v1`); nothing is sent anywhere. The playbook shows the total and a button to start again.
+  does not solve them. Goals with several conditions show a live checklist.
+- Every figure has a "Reset" that puts its controls back as they started. The score in the header opens a small
+  panel with "Reset score", which asks before clearing anything.
+
+Scores are kept in the reader's own browser (`localStorage`, key `two-chains-puzzles-v1`); nothing is sent anywhere.
+On the standalone page, chapters change with a short slide (the View Transitions API, where the browser supports it,
+and never when the reader prefers reduced motion); inside SharePoint the host page is left alone.
 
 ## Run it
 

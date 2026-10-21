@@ -23,3 +23,37 @@ body {
   background: var(--page-bg);
   color: var(--page-ink);
 }
+
+/* Chapter changes on the standalone page: the old chapter fades, the new one slides in. */
+::view-transition-old(tkc-view) {
+  animation: 160ms ease-in both tkc-out;
+}
+::view-transition-new(tkc-view) {
+  animation: 300ms cubic-bezier(0.2, 0.7, 0.2, 1) both tkc-in;
+}
+:root[data-tkc-dir='back']::view-transition-new(tkc-view) {
+  animation-name: tkc-in-back;
+}
+@keyframes tkc-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes tkc-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+@keyframes tkc-in-back {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(tkc-view),
+  ::view-transition-new(tkc-view) {
+    animation: none;
+  }
+}

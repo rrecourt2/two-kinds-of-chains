@@ -211,7 +211,7 @@
       specialist, with a better income in a normal year and nothing to fall back on in a drought. One who also keeps a
       second crop and a few animals earns less in a good year, and is still farming after a bad one.
     </p>
-    <p><strong>Small populations die of bad luck</strong>, even when the average year is good. Start with 10 animals per island and watch.</p>
+    <p><strong>Small populations die of bad luck</strong>, even when the average year is good: start with 10 animals per island instead of 100, and both species die out on several islands even in a calm world.</p>
     <p>
       Scale protects, but only when it is diverse. The Gros Michel banana was grown by the billion, but every plant was
       a clone. When Panama disease spread through the plantations, the export trade had to switch to another variety

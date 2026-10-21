@@ -91,6 +91,10 @@
 >
   {#snippet setup()}
     <p>
+      Before 2008, the claim that links between banks spread risk thinly had years of evidence behind it. Claims like
+      that are hard to test, because the cases that could break them are rare.
+    </p>
+    <p>
       Take a claim of the kind any portfolio report might make: every Category A project, the kind with the highest
       environmental and social risk, has an action plan on file. It has held for years, and every audit sample so far
       has agreed with it.
@@ -114,8 +118,9 @@
       agree, whatever its category, and Category C says nothing either way.
     </p>
     <p>
-      The psychologist Peter Wason designed this puzzle in 1966. In his experiments fewer than one person in ten chose
-      the right two cards; most turned over the one that could only agree. We look for evidence that we are right.
+      The psychologist Peter Wason designed this puzzle in 1966, and it became one of the most studied in psychology
+      because it is harder than it looks. In his first experiments fewer than one person in ten chose the right two
+      cards, and most chose the one that could only agree.
     </p>
     <p>
       For centuries Europeans took it as settled that all swans are white, because every swan anyone had seen was
@@ -148,13 +153,12 @@
       count of white swans. A system with alternatives survives one of them being wrong. A rigid chain fails at its
       weakest untested link, and often all at once.
     </p>
-    <p>So go looking for the black swan before it finds you.</p>
-    <ul>
-      <li><strong>Fire drills.</strong> Switch off a system, or send the key person on holiday, and see what stops.</li>
-      <li><strong>Reverse stress tests.</strong> Instead of asking whether the bank survives the expected scenario, ask which scenario would break it, and how far away it is.</li>
-      <li><strong>Pre-mortems.</strong> Before a big decision, imagine it has failed a year from now, and ask why.</li>
-      <li><strong>Keep the counterexamples.</strong> A near miss, a complaint or a deal that went wrong carries more information than a thousand files that agree.</li>
-    </ul>
+    <p>
+      Banking already has habits that work this way. A reverse stress test starts from failure and asks what would cause
+      it. A fire drill switches off a system to see what stops. A pre-mortem imagines that a project has failed and asks
+      why. A near miss is worth more than a thousand files that agree. Each is a way of opening the file that could
+      break the claim.
+    </p>
     <p>
       There is a second asymmetry, and it is how chains grow long. An incident gets an investigation, a report and a
       new control. The client who gave up waiting, or the project that was never started, leaves no trace. So every
@@ -163,10 +167,10 @@
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Which of our safest-looking assumptions have we never tried to disprove?">
+    <BankNote ask="Which of our safest-looking assumptions has never met a test that could break it?">
       <p>
-        For each critical assumption, write down what would prove it wrong, then go and look for it. Treat a clean track
-        record as a hypothesis, not as proof.
+        A clean track record and a tested one look the same in a report. Only one of them has survived a test that could
+        have broken it.
       </p>
     </BankNote>
   {/snippet}

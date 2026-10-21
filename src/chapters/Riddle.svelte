@@ -170,7 +170,7 @@
       six hold on 94% of days. Nobody has to be in more often; more people can sign.
     </p>
     <p>
-      The danger is how fast a chain of ANDs falls apart. Add four more named roles and the decision is possible on one
+      The danger is how fast a chain of ANDs falls apart. With four more named roles, the decision is possible on one
       day in three. The blocked days come in stretches, too: one person’s week of holiday stops everything that needs
       them.
     </p>

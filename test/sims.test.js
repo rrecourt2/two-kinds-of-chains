@@ -6,7 +6,8 @@ import { simulateSystems } from '../src/lib/sim/systems.js';
 import { EXAMPLES, schedule } from '../src/lib/sim/async.js';
 import { equilibrium, bestForAll } from '../src/lib/sim/braess.js';
 import { manyMarkets } from '../src/lib/sim/market.js';
-import { DESIGNS, averagePayoff, chainSuccess } from '../src/lib/sim/convexity.js';
+import { DESIGNS, averagePayoff, chainSuccess, sampleRequests, STEADY, ERRATIC } from '../src/lib/sim/convexity.js';
+import { watchmakers } from '../src/lib/sim/watchmakers.js';
 import { erlangC, meanWait, LiveQueue } from '../src/lib/sim/queue.js';
 import { typicalFactor, expectedFactor, simulateCoin } from '../src/lib/sim/coin.js';
 import { cascade, sweep, buildNetwork, mostConnected } from '../src/lib/sim/network.js';
@@ -57,6 +58,9 @@ test('coin game: average rises, typical player falls', () => {
   console.log('coin median@100', sim.median[100], 'lost', sim.lostShare, 'pool 5 typical', typicalFactor(1, 5), 'pool 20', typicalFactor(1, 20));
   assert.ok(sim.median[100] < 0.05);
   assert.ok(sim.lostShare > 0.8);
+  // The players' actual average does rise, below the paper value, and almost all of it sits with the richest 1%.
+  assert.ok(sim.mean[100] > 10 && sim.mean[100] < sim.expected[100]);
+  assert.ok(sim.topShare[100] > 0.9);
 });
 
 test('contagion threshold is exact', () => {
@@ -183,6 +187,14 @@ test('convexity: variability helps a tool and hurts a gate', () => {
   assert.ok(averagePayoff(gate, 2) < averagePayoff(gate, 0.5));
   assert.ok(averagePayoff(gate, 2) < 0);
   near(chainSuccess(20, 0.95), 0.358, 0.001);
+  // The chapter's puzzle: of the four pairings offered, the erratic AI used as a tool saves the most.
+  const [toolS, ruleS, gateS] = DESIGNS.map((d) => averagePayoff(d, STEADY));
+  const [toolE, ruleE, gateE] = DESIGNS.map((d) => averagePayoff(d, ERRATIC));
+  assert.ok(toolE > Math.max(gateS, toolS, ruleE));
+  assert.ok(gateE < 0 && ruleS > toolS);
+  // Both AIs see the same luck, and the stream is repeatable.
+  assert.deepEqual(sampleRequests(5, 1, 3), sampleRequests(5, 1, 3));
+  near(sampleRequests(1, ERRATIC, 7)[0] - 0.5, (sampleRequests(1, STEADY, 7)[0] - 0.5) * (ERRATIC / STEADY), 1e-9);
   console.log('convexity at spread 1.5', DESIGNS.map((d) => `${d.id}:${averagePayoff(d, 1.5).toFixed(2)}`).join(' '));
 });
 
@@ -197,4 +209,10 @@ test('diagnosis levers', () => {
   assert.ok(d.parallel.slipped <= d.together.slipped);
   // A process that already approves once at the end has no parallel variant to offer.
   assert.equal(diagnose({ systems: 6, problems: 0.1, info: 'copies', approvals: 'end', availability: 0.85, busy: 0.85, standIns: 0 }).parallel, null);
+});
+
+test('watchmakers: modules finish thousands of times more watches at one interruption in a hundred', () => {
+  const w = watchmakers(0.01);
+  assert.ok(w.ratio > 1000 && w.ratio < 10000, String(w.ratio));
+  assert.ok(watchmakers(0).ratio < 1); // with no interruptions, one piece is slightly faster
 });

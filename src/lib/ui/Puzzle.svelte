@@ -3,6 +3,8 @@
   // a choice puzzle is solved by picking the right answer. Hints and wrong tries lower
   // the points from two to one; "Show me the answer" sets the figure and gives none.
   import { getContext, tick, untrack } from 'svelte';
+  import { fly, slide } from 'svelte/transition';
+  import { prefersReducedMotion } from '../motion.js';
 
   let {
     id,
@@ -23,6 +25,7 @@
   } = $props();
 
   const game = getContext('tkc-game');
+  const ms = prefersReducedMotion() ? 0 : 220;
   const prefix = getContext('tkc-id') ?? 'tkc';
   const e = $derived(game.entry(id));
   const open = $derived(e.status === 'open');
@@ -140,10 +143,10 @@
     {:else if progress}
       <p class="progress">{progress}</p>
     {/if}
-    {#if feedback}<p class="feedback">{feedback}</p>{/if}
+    {#if feedback}<p class="feedback" transition:slide={{ duration: ms }}>{feedback}</p>{/if}
     {#if hintsShown}
       <ul class="hints" bind:this={hintsEl}>
-        {#each hints.slice(0, hintsShown) as h (h)}<li tabindex="-1">{h}</li>{/each}
+        {#each hints.slice(0, hintsShown) as h (h)}<li tabindex="-1" in:fly={{ y: -6, duration: ms }}>{h}</li>{/each}
       </ul>
     {/if}
     <div class="row actions">
@@ -153,7 +156,7 @@
       <button type="button" class="link" onclick={show}>Show me the answer</button>
     </div>
   {:else}
-    {#if found}<p class="found" tabindex="-1" bind:this={foundEl}>{found}</p>{/if}
+    {#if found}<p class="found" tabindex="-1" bind:this={foundEl} in:fly={{ y: 8, duration: ms * 1.6 }}>{found}</p>{/if}
     {#if picker}{@render picker()}{/if}
     {#if hasExplanation}
       <div class="row"><button type="button" class="link strong" onclick={toExplanation}>Why it works ↓</button></div>
@@ -264,6 +267,10 @@
     text-align: center;
     font-weight: 700;
     color: var(--tkc-muted);
+    transition: color 200ms ease;
+  }
+  .checks li {
+    transition: color 200ms ease;
   }
   .checks li.ok .mark {
     color: var(--tkc-options-ink);

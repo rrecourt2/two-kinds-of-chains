@@ -192,18 +192,6 @@
       ASML builds the most advanced printing machines. Specialization concentrates skill. It does not have to
       concentrate dependence, but here it does.
     </p>
-    <h3>Splitting at the right level</h3>
-    <p>
-      The economist Ronald Coase explained in 1937 that firms exist because coordinating inside one is sometimes cheaper
-      than buying from others. When working across firms gets easier, the best size of a firm shrinks, which is part of
-      why many conglomerates have broken up. GE split into three companies in 2023 and
-      2024, and Johnson &amp; Johnson separated its consumer brands as Kenvue in 2023.
-    </p>
-    <p>
-      Splitting reduces complexity when the cut is in the right place. Each part becomes simpler to run, and the parts
-      deal with each other through a clear interface, the way a customer deals with a supplier. Cut in the wrong place,
-      and the interface itself becomes a long chain of handoffs.
-    </p>
   {/snippet}
 
   {#snippet bank()}

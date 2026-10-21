@@ -215,15 +215,15 @@
   {/snippet}
 
   {#snippet after()}
-    <p>Back at 4% capital, try a few failures at different levels of connection.</p>
+    <p>At 4% capital, the level of connection decides what a single failure does.</p>
     <ul>
       <li>With one counterparty each, failures stay local. The network is too sparse to carry them.</li>
       <li>Around three counterparties, one failure can bring down most of the system.</li>
       <li>With eight or more, each loss is a small slice of capital, and a single failure is usually absorbed.</li>
     </ul>
     <p>
-      That last result is the trap. A dense network absorbs small shocks so well that it looks safe. Now hit five banks
-      at once, the way a fall in house prices hit everyone holding the same mortgage securities. The same links that
+      That last result is the trap. A dense network absorbs small shocks so well that it looks safe. Five banks failing
+      at once is another matter, the way a fall in house prices hit everyone holding the same mortgage securities. The same links that
       absorbed one failure carry five to every bank. Andrew Haldane of the Bank of England called the system “robust
       yet fragile”.
     </p>
@@ -233,17 +233,24 @@
       level of capital, the system does not bend a little more. It breaks.
     </p>
     <p>
-      Switch to <em>A few giants</em>, set about four counterparties per bank and raise capital to 6%. Fail a few random banks: most failures stay small,
-      because most banks are minor. Then fail the most connected bank: nearly every bank goes down. That is the shape of
-      September 2008: Lehman Brothers filed for bankruptcy on the 15th, the largest
+      A network of <em>a few giants</em> behaves differently. With about four counterparties per bank and 6% capital,
+      most random failures stay small, because most banks are minor. When the most connected bank fails, nearly every
+      bank goes down. That is the shape of September 2008: Lehman Brothers filed for bankruptcy on the 15th, the largest
       bankruptcy in US history, and the next day the Federal Reserve agreed to lend AIG up to $85 billion. AIG had sold credit
       protection to banks around the world.
     </p>
+    <h3>Hubs inside organizations</h3>
     <p>
-      Organizations have the same shape. Small, spread-out dependencies get absorbed. A person or system that
-      everything passes through is a hub, and a single point of failure. On 19 July 2024 a faulty update to one
-      security product crashed about 8.5 million Windows computers, grounding flights and disrupting banks and
-      hospitals on the same day.
+      Organizations grow hubs the same way the giants grew in the figure. Work flows to whoever already handles the
+      most: the expert everyone asks, the committee that sees every deal, the central system every other system reads
+      from. Each new link makes the hub a little more useful, so the next link goes there too.
+    </p>
+    <p>
+      On a normal day a hub is efficient: one place to ask, one place to look. It is also a queue, as chapter 4 showed,
+      and a single point of failure. When the hub is busy, everyone waits; when it stops, everything stops. On 19 July
+      2024 a faulty update to one security product crashed about 8.5 million Windows computers, grounding flights and
+      disrupting banks and hospitals on the same day. Small, spread-out dependencies get absorbed. A hub’s failure is
+      everyone’s.
     </p>
   {/snippet}
 
@@ -251,8 +258,8 @@
     <BankNote ask="Which single event would hit many of our teams, systems or suppliers at the same time?">
       <p>
         After 2008, regulators used three tools: more capital (bigger buffers), central clearing and resolution plans
-        (robust hubs, and failures that can be survived), and ring-fencing (firebreaks). The same tools work inside the
-        bank: slack, a stand-in for every hub, and teams that can keep working when a neighbour stops.
+        (robust hubs, and failures that can be survived), and ring-fencing (firebreaks). Inside a bank the same three
+        shapes appear as slack, a deputy for every hub, and teams that can keep working when a neighbour stops.
       </p>
     </BankNote>
   {/snippet}

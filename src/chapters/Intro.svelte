@@ -1,7 +1,7 @@
 <script>
   import { getContext } from 'svelte';
   import Hook from '../lib/ui/Hook.svelte';
-  import { CHAPTERS } from './index.js';
+  import { CHAPTERS, PARTS } from './index.js';
 
   const go = getContext('tkc-go');
   const game = getContext('tkc-game');
@@ -29,6 +29,7 @@
     extinction: 'Two species, forty islands, and the year the weather turns.',
     winners: 'Twenty equal firms and one market: does the best one win?',
     graph: 'Sixty people who must all work with each other: how much gets done?',
+    modules: 'Two watchmakers, the same watch, and a phone that keeps ringing.',
     monday: 'One last puzzle: speed up a slow process without removing a single control.',
   };
 
@@ -66,11 +67,14 @@
     {/if}
   </div>
 
-  <ol class="toc">
-    {#each CHAPTERS.slice(1) as chapter, i (chapter.id)}
+  {#each PARTS as part, k (part)}
+    <section class="part" aria-labelledby="{prefix}-part-{k + 1}">
+      <h2 class="part-title" id="{prefix}-part-{k + 1}"><span class="part-n tkc-num">Part {k + 1}</span>{part}</h2>
+      <ol class="toc">
+        {#each CHAPTERS.map((c, i) => [c, i]).filter(([c]) => c.part === k + 1) as [chapter, i] (chapter.id)}
       <li>
-        <button type="button" onclick={() => go(i + 1)}>
-          <span class="toc-n tkc-num">{i + 1}</span>
+        <button type="button" onclick={() => go(i)}>
+          <span class="toc-n tkc-num">{i}</span>
           <span class="toc-text">
             <span class="toc-title">{chapter.title}</span>
             <span class="toc-desc">{contents[chapter.id]}</span>
@@ -78,8 +82,10 @@
           </span>
         </button>
       </li>
-    {/each}
-  </ol>
+        {/each}
+      </ol>
+    </section>
+  {/each}
 </section>
 
 <style>
@@ -151,6 +157,28 @@
     min-height: 48px;
     padding-inline: 1.4em;
     font-size: 1rem;
+  }
+  .part {
+    display: grid;
+    gap: 12px;
+  }
+  .part-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    font-family: var(--tkc-font-display);
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+  .part-n {
+    font-family: var(--tkc-font-body);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--tkc-muted);
   }
   .toc {
     list-style: none;

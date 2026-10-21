@@ -83,6 +83,7 @@
   puzzle="async"
 >
   {#snippet setup()}
+    <p>Busy people are one source of waiting. The order of the work is another.</p>
     <p>
       Andrew Grove, who ran Intel, taught management with a breakfast: a boiled egg, toast and coffee, all ready at the
       same moment. A good cook does not boil the egg, then make the toast, then the coffee. They start everything that
@@ -189,36 +190,35 @@
     <h3>What Grove’s breakfast teaches</h3>
     <ul>
       <li>
-        <strong>Find the slowest step.</strong> It sets the pace for everything, so put the effort there. Expect it to
-        move: real work varies, so the slowest piece changes from one request to the next.
+        <strong>The slowest step sets the pace.</strong> Effort spent anywhere else changes little. And it moves: real
+        work varies, so the slowest piece changes from one request to the next.
       </li>
       <li>
-        <strong>Keep bad inputs out first.</strong> Check the egg before you boil it. Quality engineers call this the
+        <strong>Bad inputs are cheapest to stop at the start.</strong> Grove checked the egg before boiling it. Quality engineers call this the
         1-10-100 rule: a problem that costs 1 to prevent at entry costs 10 to correct later and 100 if it reaches the
         client. Found late, it means doing the work twice: one bad input sends the lockstep chain back to the start, and
         sixteen days become thirty-two. In parallel work it spoils every piece at once.
       </li>
       <li>
-        <strong>Monitor where you can; stop the line only where you must.</strong> A gate holds all work until it has
-        been checked. A monitoring step checks samples while the work flows on, and checks less often while quality is
+        <strong>A monitor can often do a gate’s job.</strong> A gate holds all work until it has been checked. A monitoring step checks samples while the work flows on, and checks less often while quality is
         good.
       </li>
       <li>
-        <strong>Pair every measure with its counterpart.</strong> Count speed together with errors, and volume together
-        with quality, so that improving one number cannot quietly damage another.
+        <strong>Every measure has a counterpart.</strong> Speed counted alone invites errors, and volume alone invites
+        lower quality. Counted in pairs, neither can quietly improve at the other’s expense.
       </li>
     </ul>
     <p>
       Parallel work needs pieces that do not depend on each other. Often a step waits not for another step’s result
-      but for data held in another system; one shared record (chapter 3) removes that wait.
+      but for data held in another system, and reading the data where it lives (chapter 3) removes that wait.
     </p>
   {/snippet}
 
   {#snippet bank()}
     <BankNote ask="Which steps wait for a step they do not actually need, and where are bad inputs found late?">
       <p>
-        Take a common request and mark, for each step, which earlier result it truly needs. Everything that needs only
-        the client data can start on the first day.
+        Often many steps need only the client data, not each other’s results, and could all start on the first
+        day.
       </p>
     </BankNote>
   {/snippet}

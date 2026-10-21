@@ -301,9 +301,8 @@
   {#snippet bank()}
     <BankNote ask="Who are the three busiest reviewers in our processes, and could their work go to a shared pool?">
       <p>
-        Keep key reviewers around 70–80% loaded, so there is room for the urgent case. Spare capacity looks like waste
-        on a utilization report. The waiting it prevents appears on no report at
-        all.
+        A reviewer at 70–80% has room for the urgent case; one at 95% does not. Spare capacity looks like waste on a
+        utilization report. The waiting it prevents appears on no report at all.
       </p>
     </BankNote>
   {/snippet}

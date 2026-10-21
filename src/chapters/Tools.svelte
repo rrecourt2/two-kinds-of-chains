@@ -1,66 +1,68 @@
 <script>
+  import { getContext } from 'svelte';
+  import { Tween } from 'svelte/motion';
+  import { cubicOut } from 'svelte/easing';
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
-  import Slider from '../lib/ui/Slider.svelte';
+  import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { DESIGNS, averagePayoff, density, MEAN_HELP } from '../lib/sim/convexity.js';
-  import { linear, line } from '../lib/scales.js';
-  import { getContext } from 'svelte';
+  import { DESIGNS, averagePayoff, sampleRequests, STEADY, ERRATIC } from '../lib/sim/convexity.js';
+  import { prefersReducedMotion } from '../lib/motion.js';
 
-  const clipId = `${getContext('tkc-id') ?? 'tkc'}-payoff-clip`;
-  // A prediction: the slider opens after the first answer or a hint.
+  // A prediction: the choice of AI opens after the first answer or a hint.
   const game = getContext('tkc-game');
   const live = $derived(game.engaged('tools'));
 
-  let spread = $state(1.5);
+  const N = 20;
+  let ai = $state('steady');
+  let seed = $state(1);
   let width = $state(560);
-  let hover = $state(null);
 
-  const COLORS = { tool: 'var(--tkc-options)', rule: 'var(--tkc-ink-2)', gate: 'var(--tkc-conditions)' };
-  const averages = $derived(DESIGNS.map((d) => ({ ...d, avg: averagePayoff(d, spread) })));
+  const spread = $derived(ai === 'steady' ? STEADY : ERRATIC);
+  const drafts = $derived(sampleRequests(N, spread, seed));
+  const rows = $derived(DESIGNS.map((d) => ({ ...d, values: drafts.map(d.payoff), avg: averagePayoff(d, spread) })));
+  const totals = $derived(rows.map((r) => r.values.reduce((a, b) => a + b, 0)));
 
-  // Payoff chart: what each design gives you for a given answer.
-  const H = 230;
-  const m = { top: 16, right: 64, bottom: 36, left: 44 };
-  const X0 = -3;
-  const X1 = 3;
-  const x = $derived(linear(X0, X1, m.left, width - m.right));
-  const y = linear(-4, 3, H - m.bottom, m.top);
-  const xs = Array.from({ length: 241 }, (_, i) => X0 + (i * (X1 - X0)) / 240);
-  const paths = $derived(DESIGNS.map((d) => ({ ...d, path: line(xs.map((v) => [x(v), y(d.payoff(v))])) })));
-
-  // Distribution strip with the same x axis.
-  const DH = 64;
-  const peak = $derived(density(MEAN_HELP, Math.max(spread, 0.15)));
-  const dy = $derived(linear(0, peak * 1.05, DH - 16, 6));
-  const area = $derived.by(() => {
-    const s = Math.max(spread, 0.15);
-    const pts = xs.map((v) => [x(v), dy(density(v, s))]);
-    return `${line(pts)}L${x(X1).toFixed(1)} ${dy(0).toFixed(1)}L${x(X0).toFixed(1)} ${dy(0).toFixed(1)}Z`;
+  // The bars glide to their new heights when the AI or the requests change.
+  const bars = new Tween(DESIGNS.flatMap(() => Array(N).fill(0)), { duration: 450, easing: cubicOut });
+  $effect(() => {
+    bars.set(rows.flatMap((r) => r.values), { duration: prefersReducedMotion() ? 0 : 450 });
   });
 
-  const fmtH = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)} h`;
-
-  function onMove(e) {
-    const box = e.currentTarget.getBoundingClientRect();
-    const v = x.invert(e.clientX - box.left + m.left);
-    hover = Math.max(X0, Math.min(X1, Math.round(v * 10) / 10));
-  }
+  // One row per design: a heading line, then the twenty bars around a zero line.
+  const LIMIT = 4; // hours shown each way; larger values are clipped and marked
+  const HEAD = 20;
+  const HALF = 30;
+  const ROW = HEAD + 2 * HALF + 18;
+  const H = 3 * ROW;
+  const gap = 2;
+  const bw = $derived(Math.max(3, (width - gap * (N - 1)) / N));
+  const bx = (i) => i * (bw + gap);
+  const h = (v) => (Math.min(LIMIT, Math.abs(v)) / LIMIT) * HALF;
+  const fmtH = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(v !== 0 && Math.abs(v) < 10 ? 1 : 0)} h`;
+  const NOTES = { tool: 'a person keeps what is right', rule: 'drafts go in as they are', gate: 'every request must pass it' };
+  const COLORS = { tool: 'var(--tkc-options)', rule: 'var(--tkc-ink-2)', gate: 'var(--tkc-conditions)' };
 
   const puzzle = {
-    goal: 'The AI keeps saving 30 minutes per task on average, but becomes more erratic: bigger wins, bigger mistakes. What happens to the time a tool saves?',
+    goal: 'Both AIs save half an hour per request on average. One is steady; the other is brilliant on some requests and wrong on others. Which pairing saves the most time over many requests?',
     choices: [
-      { value: 'falls', label: 'It falls: an erratic AI is worth less' },
-      { value: 'same', label: 'It stays the same: the average has not changed' },
-      { value: 'rises', label: 'It rises' },
+      { value: 'steady-gate', label: 'The steady AI, as a gate every request must pass' },
+      { value: 'steady-tool', label: 'The steady AI, as a tool people may use' },
+      { value: 'erratic-tool', label: 'The erratic AI, as a tool people may use' },
+      { value: 'erratic-rule', label: 'The erratic AI, as a rule: its drafts always go in' },
     ],
-    answer: 'rises',
-    wrong: (v) => (v === 'falls' ? 'That is what happens to the gate. Move the slider and watch the tool.' : 'Only the rule stays the same. Move the slider and compare.'),
-    hints: ['What does a tool cost you on the AI’s worst day?', 'A person keeps the good drafts and drops the bad ones. What does a wilder AI add?'],
-    found: 'It rises. People keep the good drafts and drop the bad ones, so more variety brings bigger wins and no bigger losses. Built in as a gate, the same erratic AI does the opposite.',
+    answer: 'erratic-tool',
+    wrong: (v) =>
+      v === 'steady-tool'
+        ? 'Good, but not the most. Compare the erratic AI used the same way.'
+        : v === 'steady-gate'
+          ? 'A gate caps what the AI can save and multiplies what it costs.'
+          : 'As a rule, its wrong drafts cost about as much as its good ones save.',
+    hints: ['What does a tool cost you when the AI is wrong?', 'With a tool, a person keeps the best drafts and drops the wrong ones. Which AI has more brilliant drafts?'],
+    found: 'The erratic AI, as a tool: almost an hour saved per request, against 25 minutes for the steady one used the same way. People keep its brilliant drafts and drop its wrong ones. Built in as a gate, the same AI loses almost an hour and a half per request.',
   };
 </script>
 
@@ -68,150 +70,139 @@
   n={7}
   kicker="AI and tools"
   title="Tool, rule or gate?"
-  lede="The same AI can remove a dozen screens, or become the thirteenth. It depends on where it sits in the chain."
+  lede="The same AI can make a chain shorter, or add one more link. It depends on where it sits."
   puzzle="tools"
 >
   {#snippet setup()}
     <p>
-      Every specialist team that builds a system also builds a screen. Serving one client can mean a dozen logins, a
-      dozen forms and a dozen versions of the client’s name. People call it UI fatigue, and every new system adds to it.
-      The computer scientist Larry Tesler, who helped invent cut-and-paste, put the underlying rule simply: every task
-      has some complexity that cannot be removed, only moved. Either the system carries it, or the person at the screen
-      does.
+      Larry Tesler, the computer scientist who helped invent cut-and-paste, liked to point out that every task has some
+      complexity that cannot be removed, only moved. Either the system carries it, or the person using it does.
     </p>
     <p>
-      AI can work in the opposite direction. Modern AI models can use software tools: they can read a request written
-      in plain language, fill in the systems behind it, and show a person what they did. Used that way, the systems
-      become the AI’s tools, and the banker deals with one conversation instead of a dozen screens. Added as one more
-      step, it is just one more screen.
-    </p>
-    <p>
-      Below, an AI fills in the entries for a client request. On average it saves half an hour, but some drafts save a
-      lot and some are wrong and cost time. There are three ways to build it into the work.
+      AI is the newest place to move it to. Modern AI models can read a request written in plain language, fill in the
+      systems behind it and show a person what they did. Where the AI sits in the chain decides what it does. There are
+      three ways to build it in:
     </p>
     <ul>
-      <li><strong>A tool:</strong> the AI drafts the entries and a person keeps what is right.</li>
-      <li><strong>A rule:</strong> its entries go in as they are.</li>
-      <li><strong>A gate:</strong> every request must pass the AI step before it can continue. When it works it saves a little; when it is wrong, the work behind it waits too.</li>
+      <li><strong>A tool:</strong> the AI drafts, and a person keeps what is right.</li>
+      <li><strong>A rule:</strong> its drafts go in as they are.</li>
+      <li><strong>A gate:</strong> every request must pass the AI step before it can continue, and a wrong answer holds up the work behind it.</li>
     </ul>
+    <p>
+      Below, two AIs work through the same twenty requests. Both save half an hour per request on average. One is
+      steady; the other is brilliant on some requests and wrong on others.
+    </p>
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="Same AI, three ways to use it" sub="Hours saved per request. The AI saves 30 minutes on average; how much that varies is up to you.">
-      <Puzzle id="tools" {...puzzle} predict onshow={() => (spread = 2.5)} />
-      <div class="tkc-controls tkc-controls--wide" class:tkc-wait={!live} inert={live ? undefined : true}>
-        <Slider id="t-spread" label="How much the AI’s usefulness varies from task to task" bind:value={spread} min={0} max={2.5} step={0.1} format={(v) => `±${v.toFixed(1)} hours`} ends={['Steady', 'Erratic']} />
-      </div>
-
-      <div class="tkc-stats tkc-stats--3" use:announce>
-        {#each averages as d (d.id)}
-          <Stat label="{d.label}: average" value={fmtH(d.avg)} sub="per task" swatch={COLORS[d.id]} line={true} />
-        {/each}
-      </div>
-
-      <div class="tkc-chart" bind:clientWidth={width}>
-        <div class="tkc-fig-title small">Hours saved, from a bad draft (left) to a good one (right)</div>
-        <svg {width} height={H} role="img" aria-label="Payoff lines: the tool never goes much below zero, the rule follows the answer, the gate is capped above and steep below.">
-          {#each [-4, -2, 0, 2] as t}
-            <line class={t === 0 ? 'tkc-base' : 'tkc-grid'} x1={m.left} x2={width - m.right} y1={y(t)} y2={y(t)} />
-            <text class="tkc-axis-label" x={m.left - 6} y={y(t) + 4} text-anchor="end">{t > 0 ? '+' : ''}{t} h</text>
-          {/each}
-          <line class="tkc-grid" x1={x(0)} x2={x(0)} y1={m.top} y2={H - m.bottom} />
-          <defs><clipPath id={clipId}><rect x={m.left} y={m.top - 4} width={Math.max(0, width - m.left - m.right)} height={H - m.top - m.bottom + 8} /></clipPath></defs>
-          <g clip-path="url(#{clipId})">
-            <!-- The tool is drawn last: where it runs along the rule, its blue stays visible. -->
-            {#each [...paths].reverse() as p (p.id)}
-              <path d={p.path} class="cv" style:stroke={COLORS[p.id]} />
-            {/each}
-          </g>
-          <text class="tkc-label-2" x={width - m.right + 6} y={y(DESIGNS[0].payoff(X1)) + 4}>Tool</text>
-          <text class="tkc-label-2 tkc-halo" x={x(-2.6)} y={y(-2.6) - 10}>Rule</text>
-          <text class="tkc-label-2" x={width - m.right + 6} y={y(DESIGNS[2].payoff(X1)) + 4}>Gate</text>
-          {#each [-3, -2, -1, 0, 1, 2, 3] as t}
-            <text class="tkc-axis-label" x={x(t)} y={H - m.bottom + 16} text-anchor="middle">{t > 0 ? '+' : ''}{t}</text>
-          {/each}
-          <text class="tkc-axis-title" x={m.left + (width - m.left - m.right) / 2} y={H - 4} text-anchor="middle">{width < 380 ? 'How good the AI’s draft is (hours)' : 'How good the AI’s draft is (hours it could save)'}</text>
-          {#if hover !== null}
-            <line class="cross" x1={x(hover)} x2={x(hover)} y1={m.top} y2={H - m.bottom} />
-          {/if}
-          <rect x={m.left} y={m.top} width={Math.max(0, width - m.left - m.right)} height={H - m.top - m.bottom} fill="transparent" role="presentation" onpointermove={onMove} onpointerleave={() => (hover = null)} />
-        </svg>
-        {#if hover !== null}
-          <div class="tkc-tip" style:left="{Math.min(width - 200, Math.max(0, x(hover) + 10))}px" style:top="20px">
-            <div>An answer worth {hover > 0 ? '+' : ''}{hover.toFixed(1)} h</div>
-            {#each DESIGNS as d (d.id)}
-              <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background={COLORS[d.id]}></span><strong>{fmtH(d.payoff(hover))}</strong> {d.short.toLowerCase()}</div>
-            {/each}
-          </div>
-        {/if}
-        <svg {width} height={DH} role="img" aria-label="How often each answer happens: a bell curve centred on +0.5 hours, wider when the AI is more erratic.">
-          <path d={area} class="dist" />
-          <line class="tkc-base" x1={m.left} x2={width - m.right} y1={dy(0)} y2={dy(0)} />
-          <text class="tkc-axis-label" x={m.left} y={DH - 2}>How often each answer happens</text>
-        </svg>
-        <div class="tkc-legend">
-          {#each DESIGNS as d (d.id)}
-            <span><span class="tkc-swatch tkc-swatch--line" style:background={COLORS[d.id]}></span>{d.label}</span>
-          {/each}
+    <Instrument title="Twenty requests, one AI" sub="Each bar is one request: time saved above the line, time lost below.">
+      <Puzzle id="tools" {...puzzle} predict onshow={() => (ai = 'erratic')} />
+      <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
+        <Segmented
+          name="t-ai"
+          label="The AI"
+          bind:value={ai}
+          options={[
+            { value: 'steady', label: 'Steady' },
+            { value: 'erratic', label: 'Erratic' },
+          ]}
+        />
+        <div class="again">
+          <button type="button" class="tkc-btn tkc-btn--small" onclick={() => (seed += 1)}>Another twenty requests</button>
         </div>
       </div>
 
+      <div class="tkc-chart" bind:clientWidth={width}>
+        <svg {width} height={H} role="img" aria-label="Time saved over twenty requests with the {ai} AI: tool {fmtH(totals[0])}, rule {fmtH(totals[1])}, gate {fmtH(totals[2])}.">
+          {#each rows as r, k (r.id)}
+            {@const top = k * ROW}
+            {@const zero = top + HEAD + HALF}
+            <text class="tkc-label" x="0" y={top + 14}>{r.short}<tspan class="note" dx="8">{width < 400 ? '' : NOTES[r.id]}</tspan></text>
+            <text class="tkc-label total" x={width} y={top + 14} text-anchor="end" style:fill={totals[k] < 0 ? 'var(--tkc-conditions-ink)' : 'var(--tkc-ink)'}>{fmtH(totals[k])} in all</text>
+            <line class="zero" x1="0" x2={width} y1={zero} y2={zero} />
+            {#each Array(N) as _, i (i)}
+              {@const v = bars.current[k * N + i]}
+              <rect x={bx(i)} y={v >= 0 ? zero - h(v) : zero} width={bw} height={Math.max(0.5, h(v))} rx="1.5" class={v >= 0 ? 'saved' : 'lost'} />
+              {#if Math.abs(v) > LIMIT}
+                <path d={v > 0 ? `M${bx(i)} ${zero - HALF - 2}l${bw / 2} -5l${bw / 2} 5Z` : `M${bx(i)} ${zero + HALF + 2}l${bw / 2} 5l${bw / 2} -5Z`} class={v > 0 ? 'saved' : 'lost'} />
+              {/if}
+            {/each}
+          {/each}
+        </svg>
+        <div class="tkc-legend">
+          <span><span class="tkc-swatch" style:background="var(--tkc-options)"></span>Time saved</span>
+          <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>Time lost</span>
+          <span>Bars stop at ±{LIMIT} hours; a small arrow marks a longer one.</span>
+        </div>
+      </div>
+
+      <div class="tkc-stats tkc-stats--3" use:announce>
+        {#each rows as r (r.id)}
+          <Stat label="{r.short}, over many requests" value={fmtH(r.avg)} sub="per request, {ai} AI" swatch={COLORS[r.id]} line={true} />
+        {/each}
+      </div>
+
       {#snippet model()}
-        <p>On each task the AI’s answer is worth X hours, drawn from a normal distribution with an average of +0.5 hours and the spread you choose. A tool costs six minutes to look at and is used only when it helps: max(X, 0) − 0.1. A rule always uses the answer: X. A gate saves at most the half hour the process was designed around, and when it is wrong the work behind it waits as well, tripling the loss.</p>
-        <p>The averages are exact expectations over that distribution.</p>
+        <p>On each request the AI’s draft is worth X hours: half an hour on average, give or take {STEADY} hours for the steady AI and {ERRATIC} hours for the erratic one (a normal distribution). Both AIs see the same requests, with the same luck, scaled by their spread.</p>
+        <p>A tool costs six minutes to look at and is used only when it helps: max(X, 0) − 0.1. A rule always uses the draft: X. A gate saves at most the half hour the process was designed around, and when it is wrong the work behind it waits as well, tripling the loss. The figures “over many requests” are exact long-run averages.</p>
       {/snippet}
     </Instrument>
   {/snippet}
 
   {#snippet after()}
     <p>
-      With a steady AI, all three designs do about the same. As the AI gets more erratic, which it often is, they pull
-      apart: the tool climbs, the rule stays put and the gate sinks below zero. Every bad answer stops the work behind
-      the gate, while its good answers can only save what the process was built around.
+      With the steady AI the three designs come out about even, and the rule is the simplest. With the erratic one they
+      pull apart. As a tool, its brilliant drafts are kept and its wrong ones cost only the minutes spent looking, so its
+      variety becomes an advantage. As a gate, every wrong answer holds up the work behind it, while its best answers can
+      only save what the process was built around.
     </p>
     <p>
-      Anyone who has priced an option will recognise the shapes. A tool is a bought option: a small, known downside
-      and a large upside, so variability helps it. A gate is a sold option: the reverse.
+      Anyone who has priced an option will recognise the shapes. A tool is a bought option: a small, known downside and a
+      large upside. A gate is a sold option: the reverse. In the language of this story, a tool adds an
+      <span class="tkc-or">OR</span> to the chain, and a gate adds an <span class="tkc-and">AND</span>.
     </p>
     <h3>AI agents have the same problem as approval chains</h3>
     <p>
-      An AI agent that can call many tools and try another when one fails is built from ORs. An agent that must fill in
-      a fixed sequence of screens is built from ANDs, and the arithmetic from the opening applies: at 95% a step, a
-      20-step sequence gets everything right only about one time in three.
+      An AI agent that can call many tools and try another when one fails is built from ORs. An agent that must work
+      through a fixed sequence of systems is built from ANDs, and the arithmetic from the opening applies: at 95% a step,
+      a 20-step sequence gets everything right only about one time in three.
     </p>
     <p>
-      The fixes are the ones from earlier chapters: one shared record for the AI to read instead of a dozen screens to
-      fill in, and human reviews of the finished work, side by side, instead of a gate at every step.
+      The same remedies apply as in earlier chapters: one record for the AI to read, rather than many systems to fill in,
+      and human reviews of the finished work, side by side, rather than a gate at every step.
     </p>
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="How many screens does it take to serve one client, and which AI initiatives would remove one?">
+    <BankNote ask="Where would an AI step add a link to the chain, and where would it take one away?">
       <p>
-        Judge each AI initiative by the screens, fields and waits it removes. Make it a gate only where its mistakes are small, visible and easy to undo, and keep a manual
-        route for the day it fails.
+        An AI project is easiest to judge by what it takes out of the chain: steps, fields and waits. As a gate it is safe
+        only where its mistakes are small, visible and easy to undo.
       </p>
     </BankNote>
   {/snippet}
 </Chapter>
 
 <style>
-  .small {
-    font-size: 0.9375rem;
+  .again {
+    display: flex;
+    align-items: end;
   }
-  .cv {
-    fill: none;
-    stroke-width: 2.5;
-    stroke-linejoin: round;
-    stroke-linecap: round;
+  .note {
+    font-weight: 400;
+    fill: var(--tkc-muted);
   }
-  .cross {
-    stroke: var(--tkc-muted);
+  .total {
+    font-variant-numeric: tabular-nums;
+  }
+  .zero {
+    stroke: var(--tkc-rule);
     stroke-width: 1;
   }
-  .dist {
-    fill: var(--tkc-sunken);
-    stroke: var(--tkc-muted);
-    stroke-width: 1.5;
+  .saved {
+    fill: var(--tkc-options);
+  }
+  .lost {
+    fill: var(--tkc-conditions);
   }
 </style>

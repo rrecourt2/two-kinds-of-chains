@@ -4,6 +4,7 @@
 
 <script>
   import { setContext, tick } from 'svelte';
+  import { Tween } from 'svelte/motion';
   import { CHAPTERS } from './chapters/index.js';
   import { prefersReducedMotion } from './lib/motion.js';
   import { createGame } from './lib/game.svelte.js';
@@ -61,26 +62,94 @@
   const prev = $derived(index > 0 ? CHAPTERS[index - 1] : null);
   const next = $derived(index < CHAPTERS.length - 1 ? CHAPTERS[index + 1] : null);
 
+  // On the standalone page, chapters slide in with a view transition; a host page is left alone.
+  const useTransitions = syncHash && typeof document !== 'undefined' && 'startViewTransition' in document;
+
   async function go(target) {
     const i = typeof target === 'string' ? CHAPTERS.findIndex((c) => c.id === target) : target;
     if (i < 0 || i >= CHAPTERS.length || i === index) return;
-    index = i;
-    visited[i] = true;
-    if (syncHash) {
-      try {
-        history.replaceState(null, '', `#${CHAPTERS[i].id}`);
-      } catch {
-        /* the host may not allow URL changes */
+    const animate = useTransitions && !prefersReducedMotion();
+    const swap = async () => {
+      index = i;
+      visited[i] = true;
+      if (syncHash) {
+        try {
+          history.replaceState(null, '', `#${CHAPTERS[i].id}`);
+        } catch {
+          /* the host may not allow URL changes */
+        }
       }
+      setTitle();
+      closeMenu();
+      await tick();
+      top?.scrollIntoView({ block: 'start', behavior: animate || prefersReducedMotion() ? 'auto' : 'smooth' });
+    };
+    if (animate) {
+      document.documentElement.dataset.tkcDir = i > index ? 'forward' : 'back';
+      await document.startViewTransition(swap).updateCallbackDone;
+    } else {
+      await swap();
     }
-    setTitle();
-    closeMenu();
-    await tick();
-    top?.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     // Move keyboard and screen-reader users to the new chapter, not the button they left behind.
     focusHeading();
   }
   setContext('tkc-go', go);
+
+  // "Reset" on a figure builds the chapter afresh, so every control returns to where it started.
+  let fresh = $state(0);
+  async function resetView() {
+    fresh += 1;
+    await tick();
+  }
+  setContext('tkc-reset', resetView);
+
+  // The score in the header counts up, and opens a small panel with a reset.
+  const shownScore = new Tween(game.score, { duration: 600 });
+  let pulse = $state(false);
+  let lastScore = game.score;
+  $effect(() => {
+    const s = game.score;
+    shownScore.set(s, { duration: prefersReducedMotion() ? 0 : 600 });
+    if (s > lastScore) {
+      pulse = false;
+      requestAnimationFrame(() => (pulse = true));
+    }
+    lastScore = s;
+  });
+  let scoreOpen = $state(false);
+  let confirmReset = $state(false);
+  let scoreBox = $state();
+  let panelLeft = $state(0);
+  // Open the panel under the score, nudged so that it stays inside the window on a phone.
+  function openScore() {
+    const r = scoreBox?.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const w = Math.min(280, vw - 32);
+    panelLeft = r ? Math.min(Math.max(r.left, 16), vw - 16 - w) - r.left : 0;
+    scoreOpen = true;
+  }
+  function closeScore(refocus = false) {
+    scoreOpen = false;
+    confirmReset = false;
+    if (refocus) scoreBox?.querySelector('.score')?.focus();
+  }
+  async function askReset(on) {
+    confirmReset = on;
+    await tick();
+    scoreBox?.querySelector(on ? '.keep' : '.ask-reset')?.focus();
+  }
+  // Close only when focus has really moved elsewhere; a button that the panel redraws should not close it.
+  function onScoreFocusOut() {
+    setTimeout(() => {
+      const a = document.activeElement;
+      if (scoreOpen && a && a !== document.body && !scoreBox?.contains(a)) closeScore();
+    });
+  }
+  async function resetScore() {
+    game.reset();
+    closeScore(true);
+    await resetView();
+  }
 
   function onKey(event) {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
@@ -103,7 +172,16 @@
   }
 </script>
 
-<svelte:window onkeydown={onKey} onhashchange={onHashChange} onclick={(e) => menuEl?.open && !menuEl.contains(e.target) && closeMenu()} />
+<svelte:window
+  onkeydown={onKey}
+  onhashchange={onHashChange}
+  onclick={(e) => {
+    // The path is fixed when the click happens, so it still holds a button the click itself removed.
+    const path = e.composedPath();
+    if (menuEl?.open && !path.includes(menuEl)) closeMenu();
+    if (scoreOpen && !path.includes(scoreBox)) closeScore();
+  }}
+/>
 
 <div class="tkc" data-theme={theme === 'auto' ? undefined : theme} bind:this={root}>
   <header class="bar">
@@ -133,9 +211,25 @@
             </li>
           {/each}
         </ol>
-        {#key game.score}
-          <span class="score tkc-num" class:pulse={game.score > 0} title="Puzzle points"><span aria-hidden="true">★ {game.score}/{game.max}</span><span class="tkc-sr">Score: {game.score} of {game.max} points</span></span>
-        {/key}
+        <div class="scorebox" bind:this={scoreBox} onfocusout={onScoreFocusOut} onkeydown={(e) => e.key === 'Escape' && scoreOpen && closeScore(true)}>
+          <button type="button" class="score tkc-num" class:pulse aria-expanded={scoreOpen} aria-controls="{prefix}-score-panel" onclick={() => (scoreOpen ? closeScore() : openScore())} onanimationend={() => (pulse = false)}>
+            <span aria-hidden="true">★ {Math.round(shownScore.current)}/{game.max}</span><span class="tkc-sr">Score: {game.score} of {game.max} points</span>
+          </button>
+          {#if scoreOpen}
+            <div class="score-panel" id="{prefix}-score-panel" role="group" aria-label="Your score" style:left="{panelLeft}px">
+              <p class="score-line"><strong>{game.score} of {game.max} points</strong> · {game.solved} of {game.ids.length} puzzles solved</p>
+              {#if confirmReset}
+                <p class="score-note">This clears all your points and opens every puzzle again.</p>
+                <div class="score-row">
+                  <button type="button" class="tkc-btn tkc-btn--small danger" onclick={resetScore}>Clear my score</button>
+                  <button type="button" class="tkc-btn tkc-btn--small keep" onclick={() => askReset(false)}>Keep it</button>
+                </div>
+              {:else}
+                <button type="button" class="tkc-btn tkc-btn--small ask-reset" onclick={() => askReset(true)}>Reset score</button>
+              {/if}
+            </div>
+          {/if}
+        </div>
         <span class="where tkc-num" aria-hidden="true">
           {index === 0 ? 'Start' : `${index} / ${total} · ${current.short}`}
         </span>
@@ -163,8 +257,8 @@
   </header>
 
   <main class="page" bind:this={top}>
-    {#key index}
-      <div class="view">
+    {#key `${index}:${fresh}`}
+      <div class="view" class:vt={useTransitions}>
         <Current />
       </div>
     {/key}
@@ -349,6 +443,56 @@
     color: var(--tkc-options-ink);
     white-space: nowrap;
   }
+  .scorebox {
+    position: relative;
+    flex: none;
+  }
+  .score {
+    border: 0;
+    background: none;
+    padding: 6px 4px;
+    min-height: 32px;
+    cursor: pointer;
+    border-radius: 6px;
+  }
+  .score:hover {
+    background: var(--tkc-options-wash);
+  }
+  .score:focus-visible {
+    outline: 2px solid var(--tkc-focus);
+    outline-offset: 1px;
+  }
+  .score-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    z-index: 30;
+    width: min(280px, calc(100vw - 32px));
+    display: grid;
+    gap: 10px;
+    justify-items: start;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--tkc-hair);
+    background: var(--tkc-surface);
+    box-shadow: var(--tkc-shadow, 0 8px 24px rgb(0 0 0 / 0.12));
+    font-size: 0.875rem;
+    color: var(--tkc-ink-2);
+  }
+  .score-line strong {
+    color: var(--tkc-ink);
+  }
+  .score-note {
+    color: var(--tkc-muted);
+  }
+  .score-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .danger {
+    color: var(--tkc-conditions-ink);
+    border-color: var(--tkc-conditions);
+  }
   .score.pulse {
     animation: score-pulse 600ms ease-out;
   }
@@ -381,6 +525,10 @@
   }
   .view {
     animation: enter 320ms ease-out both;
+  }
+  .view.vt {
+    animation: none;
+    view-transition-name: tkc-view;
   }
   @keyframes enter {
     from {

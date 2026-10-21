@@ -30,8 +30,9 @@ export function typicalFactor(stake, pool = 1) {
 }
 
 /**
- * Simulate `players` players for `rounds` rounds. Returns log10 wealth for a
- * sample of pools, the median over all players per round, and summary shares.
+ * Simulate `players` players for `rounds` rounds. Returns wealth paths for a
+ * sample of pools; per round, the median and the actual average over all players
+ * and the share of all wealth held by the richest 1%; and the expected value.
  */
 export function simulateCoin({ players = 2000, rounds = 100, stake = 1, pool = 1, seed = 5, sample = 40 }) {
   const rng = makeRng(seed);
@@ -42,6 +43,11 @@ export function simulateCoin({ players = 2000, rounds = 100, stake = 1, pool = 1
   median[0] = 1;
   const scratch = new Float64Array(pools);
   const lost = new Float64Array(rounds + 1);
+  const mean = new Float64Array(rounds + 1);
+  const topShare = new Float64Array(rounds + 1);
+  mean[0] = 1;
+  topShare[0] = 0.01;
+  const top = Math.max(1, Math.round(pools * 0.01));
   for (let t = 1; t <= rounds; t++) {
     for (let i = 0; i < pools; i++) {
       let sum = 0;
@@ -51,6 +57,12 @@ export function simulateCoin({ players = 2000, rounds = 100, stake = 1, pool = 1
     scratch.set(wealth);
     scratch.sort();
     median[t] = pools % 2 ? scratch[(pools - 1) / 2] : (scratch[pools / 2 - 1] + scratch[pools / 2]) / 2;
+    let total = 0;
+    for (let i = 0; i < pools; i++) total += scratch[i];
+    let richest = 0;
+    for (let i = pools - top; i < pools; i++) richest += scratch[i];
+    mean[t] = total / pools;
+    topShare[t] = total > 0 ? richest / total : 0;
     for (let i = 0; i < paths.length; i++) paths[i][t] = wealth[i];
     let below = 0;
     for (let i = 0; i < pools; i++) if (wealth[i] < 1) below++;
@@ -59,6 +71,8 @@ export function simulateCoin({ players = 2000, rounds = 100, stake = 1, pool = 1
   for (const p of paths) p[0] = 1;
   return {
     median,
+    mean,
+    topShare,
     paths,
     lost,
     lostShare: lost[rounds],

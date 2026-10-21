@@ -2,7 +2,11 @@
 // answer is worth X hours: positive when it helps, negative when it is wrong.
 // X is normally distributed around MEAN_HELP with the given spread.
 
+import { makeRng, normal } from './rng.js';
+
 export const MEAN_HELP = 0.5;
+export const STEADY = 0.3; // spread of the steady AI's usefulness, in hours
+export const ERRATIC = 2; // and of the erratic one
 export const CHECK_COST = 0.1; // time spent looking at a suggestion before deciding to use it
 export const GATE_CAP = 0.5; // a gate saves at most what the process was designed around
 export const GATE_MULTIPLIER = 3; // when a gate gets it wrong, the work behind it waits too
@@ -34,3 +38,9 @@ export { density };
 
 /** Chance a rigid workflow of `steps` steps, each `reliability` likely to succeed, succeeds end to end. */
 export const chainSuccess = (steps, reliability) => reliability ** steps;
+
+/** Draft values for `n` requests. Both AIs get the same luck, scaled by their spread, so they compare fairly. */
+export function sampleRequests(n, spread, seed = 1) {
+  const rng = makeRng(seed);
+  return Array.from({ length: n }, () => MEAN_HELP + spread * normal(rng));
+}
