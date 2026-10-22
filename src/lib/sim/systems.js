@@ -1,4 +1,4 @@
-// Interlinked systems (chapter 3, and the check-up tool in chapter 14).
+// Interlinked systems (chapter 3).
 //
 // A request has to be entered into a chain of systems, each built by a different
 // specialist team. Entering it into one system takes a day of work and can leave

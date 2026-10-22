@@ -7,7 +7,7 @@
   const game = getContext('tkc-game');
   // A returning reader picks up at the first chapter whose puzzle is still open.
   const started = $derived(game.ids.some((id) => !game.isOpen(id)));
-  const resume = $derived(CHAPTERS.findIndex((c, i) => i > 0 && game.isOpen(c.id)));
+  const resume = $derived(CHAPTERS.findIndex((c, i) => i > 0 && game.ids.includes(c.id) && game.isOpen(c.id)));
   const standing = (id) => {
     const e = game.entry(id);
     return e.status === 'solved' ? `✓ ${e.points} point${e.points === 1 ? '' : 's'}` : e.status === 'shown' ? 'Answer shown' : '';
@@ -20,24 +20,24 @@
     specialization: 'When does adding specialists make things cheaper, and not just longer?',
     systems: 'One loan, six linked systems, and a wrong field that travels.',
     queues: 'Four busy experts and one stream of reviews: where does the waiting come from?',
-    async: 'A breakfast, a pit stop and a loan: what really sets the pace?',
-    emergence: 'Rush hour and no money for new roads: how do you speed up every journey?',
-    tools: 'Three ways to add the same AI: which one survives its bad days?',
-    ergodicity: 'A bet that wins on average and still ruins most players.',
+    async: 'Five pieces of one client request: what really sets the pace?',
+    emergence: 'Forty deals, two committees and a new fast track: does every deal get quicker?',
+    tools: 'The same AI as an optional tool or a mandatory gate: which one gains when the AI turns erratic?',
+    ergodicity: 'A bet that pays 5% a round on paper and leaves most players poorer.',
     contagion: 'Forty-eight banks, five failures at once: how much capital holds the line?',
-    'black-swans': 'Four project files and one claim to test: which do you open?',
+    'black-swans': 'Four project files and one claim about Category A projects: which do you open?',
     extinction: 'Two species, forty islands, and the year the weather turns.',
-    winners: 'Twenty equal firms and one market: does the best one win?',
     graph: 'Sixty people who must all work with each other: how much gets done?',
     modules: 'Two watchmakers, the same watch, and a phone that keeps ringing.',
-    monday: 'One last puzzle: speed up a slow process without removing a single control.',
+    disbursement: 'One signed loan, twelve conditions, two thousand tries: when does the money move?',
+    monday: 'The patterns behind the puzzles, and your score.',
   };
 
 </script>
 
 <section class="intro" aria-labelledby="{prefix}-story-title">
   <header class="masthead">
-    <div class="tkc-eyebrow">An interactive story in {total + 1} puzzles · every chart is live</div>
+    <div class="tkc-eyebrow">An interactive story in {game.ids.length} puzzles · every chart is live</div>
     <h1 class="tkc-display title" id="{prefix}-story-title" tabindex="-1">Two Kinds of Chains</h1>
     <p class="deck">
       Why some complexity makes a bank smarter, some makes it stall, and why the stall, when it comes, comes all at

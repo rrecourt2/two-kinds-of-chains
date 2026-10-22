@@ -1,59 +1,12 @@
 <script>
-  import { getContext, untrack, tick } from 'svelte';
-  import Instrument from '../lib/ui/Instrument.svelte';
-  import Slider from '../lib/ui/Slider.svelte';
-  import Segmented from '../lib/ui/Segmented.svelte';
-  import Stat from '../lib/ui/Stat.svelte';
-  import { announce } from '../lib/ui/announce.js';
-  import Puzzle from '../lib/ui/Puzzle.svelte';
-  import { diagnose } from '../lib/sim/diagnose.js';
-  import { HORIZON } from '../lib/sim/systems.js';
+  import { getContext, tick } from 'svelte';
   import { CHAPTERS } from './index.js';
-  import { linear, barRight } from '../lib/scales.js';
-  import { pct, shortDays } from '../lib/format.js';
 
   const go = getContext('tkc-go');
   const game = getContext('tkc-game');
   const prefix = getContext('tkc-id') ?? 'tkc';
   const total = getContext('tkc-total') ?? 12;
   const numberOf = (id) => CHAPTERS.findIndex((c) => c.id === id);
-
-  let systems = $state(6);
-  let problems = $state(10);
-  let info = $state('copies');
-  let approvals = $state('each');
-  let availability = $state(85);
-  let busy = $state(85);
-  let standIns = $state(0);
-  let width = $state(560);
-
-  // Each change re-runs eight simulations, so wait until a slider rests for a moment.
-  const read = () => ({ systems, problems: problems / 100, info, approvals, availability: availability / 100, busy: busy / 100, standIns });
-  let inputs = $state(read());
-  $effect(() => {
-    const next = read();
-    if (JSON.stringify(next) === JSON.stringify(untrack(() => inputs))) return;
-    const id = setTimeout(() => (inputs = next), 150);
-    return () => clearTimeout(id);
-  });
-  const d = $derived(diagnose(inputs));
-
-  // The final challenge: the example process, made fast and safe without removing anything.
-  const fair = $derived(inputs.systems >= 6 && inputs.problems >= 0.1 && inputs.availability <= 0.85);
-  const fast = $derived(d.now.median <= 5);
-  const safe = $derived(d.now.slipped < 0.02);
-  const puzzle = $derived({
-    goal: 'Final challenge: make the example process fast and safe without removing anything.',
-    met: fair && fast && safe,
-    checks: [
-      { label: 'All six systems, a problem in one form in ten, approvers in on no more than 85% of days', ok: fair },
-      { label: `Typical request five working days or fewer (now ${shortDays(d.now.median, HORIZON)})`, ok: fast },
-      { label: `Problems slip through on fewer than 2% of requests (now ${pct(d.now.slipped, 1)})`, ok: safe },
-    ],
-    hints: ['Three earlier chapters each hold part of the answer: the riddle, linked systems and queues.', 'Start with how the systems get their data. Then ask who covers for an approver who is away, and how full their days are.'],
-    found: 'One shared record, every approval kept and run side by side, and a stand-in for every approver, with a little spare capacity. The same six systems and the same checks: four working days instead of 24.',
-  });
-  const showAnswer = () => ((systems = 6), (problems = 10), (availability = 85), (info = 'shared'), (approvals = 'each'), (standIns = 1), (busy = 70));
 
   // The reader's score across every puzzle in the story.
   const entries = $derived(game.ids.map((id) => ({ id, ...game.entry(id) })));
@@ -73,27 +26,18 @@
     game.reset();
     go('start');
   }
-  const rows = $derived([...d.options, { id: 'together', label: d.together.label, median: d.together.median, p90: d.together.p90, slipped: d.together.slipped, together: true }]);
-
-  // Lever chart: horizontal bars of the typical lead time. On a phone each label sits above its bar.
-  const stacked = $derived(width < 520);
-  const rowH = $derived(stacked ? 44 : 34);
-  const labelW = $derived(stacked ? 0 : Math.min(230, width * 0.46));
-  const H = $derived(rows.length * rowH + 30);
-  const xMax = $derived(Math.max(d.now.median, ...rows.map((r) => r.median)) * 1.15 || 1);
-  const x = $derived(linear(0, xMax, labelW, width - 44));
 
   const moves = [
     { title: 'Alternatives everywhere', text: 'Every approval can be given by more than one qualified person, and every critical system has a tested fallback. No link depends on one name.', ch: 'riddle' },
     { title: 'Data entered once, at its source', text: 'Each piece of data has one home, close to the people who create it. Every system reads it from there, and checks run as it is typed, so a problem is caught before anything is built on it.', ch: 'systems' },
-    { title: 'Spare capacity', text: 'Key reviewers and key systems run below about 80% of capacity, and share one queue.', ch: 'queues' },
-    { title: 'Work in parallel', text: 'Every piece that can start, starts. Reviews run side by side on the same record, not one after another.', ch: 'async' },
-    { title: 'Measure the whole', text: 'Every team shares one measure of the whole journey, from request to answer, and each measure comes with its counterpart: speed with errors, volume with quality.', ch: 'emergence' },
-    { title: 'Tools before gates', text: 'AI and automation carry complexity for people as tools, not as extra steps. Their value lies in the steps and waits they remove.', ch: 'tools' },
+    { title: 'Parallel work', text: 'Every piece that can start, starts. Reviews run side by side on the same record, not one after another.', ch: 'async' },
+    { title: 'One measure of the whole', text: 'Every team shares one measure of the whole journey, from request to answer, so no shortcut can look good at the others’ expense.', ch: 'emergence' },
     { title: 'Care in proportion to the risk', text: 'Small, reversible decisions get light checks, or a sample checked while the work flows on. Decisions that cannot be undone get several reviewers working at the same time.', ch: 'ergodicity' },
-    { title: 'Hubs with a second route', text: 'The people, committees and systems that everything passes through each have a deputy or a fallback, and enough slack to absorb a busy week.', ch: 'contagion' },
-    { title: 'Claims that have met a test', text: 'Fire drills, reverse stress tests and near misses test the safest-looking assumptions. Waiting, rework and abandoned requests are counted alongside incidents, so the cost of a control is as visible as its reason.', ch: 'black-swans' },
-    { title: 'Work in modules', text: 'Work is saved in finished pieces, each with a clear owner and a clear interface, so an interruption costs only the piece in hand and trouble in one part stays there.', ch: 'modules' },
+    { title: 'Hubs with slack and a second route', text: 'The people, committees and systems that everything passes through run below about 80% of capacity, share one queue, and each have a deputy or a fallback.', ch: 'contagion' },
+    { title: 'Claims that have met a test', text: 'Fire drills, reverse stress tests and near misses test the safest-looking assumptions, and categories leave room for the case nobody foresaw.', ch: 'black-swans' },
+    { title: 'Tools before gates', text: 'AI and automation carry complexity for people as options they can use, not as extra steps everything must pass.', ch: 'tools' },
+    { title: 'Modular work', text: 'Work is saved in finished pieces, each with a clear owner and a clear interface, so an interruption costs only the piece in hand and trouble in one part stays there.', ch: 'modules' },
+    { title: 'Few conditions before the money moves', text: 'Only the conditions that must truly come first stand before disbursement; the rest become promises with deadlines, and a late document can be met another way where one exists.', ch: 'disbursement' },
   ];
 
   const sources = [
@@ -105,20 +49,21 @@
     ['J. F. C. Kingman', '1961', '“The single server queue in heavy traffic”, Proceedings of the Cambridge Philosophical Society', 'Why waiting explodes near full utilization.'],
     ['Adrian Bagust, Michael Place and John Posnett', '1999', '“Dynamics of bed use in accommodating emergency admissions”, BMJ', 'Why hospitals run into bed crises above about 85% occupancy.'],
     ['Donald Reinertsen', '2009', 'The Principles of Product Development Flow', 'Queues, utilization and batch size in knowledge work.'],
-    ['Andrew S. Grove', '1983', 'High Output Management', 'The breakfast factory: the limiting step, catching problems at the lowest-value stage, gates and monitors, paired indicators.'],
+    ['Andrew S. Grove', '1983', 'High Output Management', 'The limiting step, and catching problems at the lowest-value stage.'],
     ['Yuki Sugiyama and colleagues', '2008', '“Traffic jams without bottlenecks”, New Journal of Physics', 'A jam that emerges on a circular track with no cause but the drivers themselves.'],
-    ['Dietrich Braess', '1968', '“Über ein Paradoxon aus der Verkehrsplanung”, Unternehmensforschung', 'Adding a road can make every journey slower.'],
+    ['Dietrich Braess', '1968', '“Über ein Paradoxon aus der Verkehrsplanung”, Unternehmensforschung', 'A new road, or a shortcut, can make every journey slower.'],
     ['Gina Kolata', '1990', '“What if they closed 42d Street and nobody noticed?”, The New York Times, 25 December', 'Braess’s paradox in Manhattan.'],
     ['Ole Peters', '2019', '“The ergodicity problem in economics”, Nature Physics', 'The coin game, and time averages versus ensemble averages.'],
     ['Ole Peters and Alexander Adamou', '2015', '“An evolutionary advantage of cooperation”', 'Pooling raises the growth rate a typical member experiences.'],
     ['Duncan J. Watts', '2002', '“A simple model of global cascades on random networks”, PNAS', 'Cascade windows and robust-yet-fragile networks.'],
-    ['Prasanna Gai and Sujit Kapadia', '2010', '“Contagion in financial networks”, Proceedings of the Royal Society A', 'The interbank model behind chapter 9.'],
+    ['Prasanna Gai and Sujit Kapadia', '2010', '“Contagion in financial networks”, Proceedings of the Royal Society A', 'The interbank model behind chapter 8.'],
     ['Andrew Haldane', '2009', '“Rethinking the financial network”, speech, Amsterdam', 'The financial system as robust yet fragile.'],
     ['Andrew Haldane and Robert May', '2011', '“Systemic risk in banking ecosystems”, Nature', 'A central banker and an ecologist on banks as an ecosystem.'],
+    ['International Finance Corporation', '2012', 'Performance Standards on Environmental and Social Sustainability', 'Eight outcome-based standards, from risk assessment and labour to cultural heritage; an update is under way.'],
+    ['International Finance Corporation', '2012', 'Policy on Environmental and Social Sustainability', 'The categories A, B and C, and FI-1 to FI-3 for lending through banks and funds.'],
+    ['Equator Principles Association', '2020', 'The Equator Principles (EP4)', 'The framework many commercial banks apply to project finance, built on the IFC standards.'],
     ['Karl Popper', '1959', 'The Logic of Scientific Discovery', 'Theories can be falsified, never proven by examples.'],
     ['Peter C. Wason', '1966', '“Reasoning”, in New Horizons in Psychology', 'The selection task: most people test a rule by looking for cases that agree with it.'],
-    ['Bertrand Russell', '1912', 'The Problems of Philosophy, chapter 6', 'The chicken fed every day of its life.'],
-    ['Gary Klein', '2007', '“Performing a project premortem”, Harvard Business Review', 'Imagine the project has failed, then ask why.'],
     ['Nassim Nicholas Taleb', '2012, 2018', 'Antifragile; Skin in the Game', 'Convexity, and one person at the casino a hundred times.'],
     ['David Weston, Microsoft', '2024', '“Helping our customers through the CrowdStrike outage”, Official Microsoft Blog, 20 July', 'About 8.5 million Windows devices affected.'],
     ['Lian Pin Koh and colleagues', '2004', '“Species coextinctions and the biodiversity crisis”, Science', 'Species that disappear with the species they depend on.'],
@@ -126,9 +71,6 @@
     ['John Gall', '1975', 'General Systemantics', 'A complex system that works has evolved from a simple system that worked.'],
     ['Frederick P. Brooks', '1975', 'The Mythical Man-Month', 'Adding people to a late project makes it later.'],
     ['Luís Bettencourt and colleagues', '2007', '“Growth, innovation, scaling, and the pace of life in cities”, PNAS', 'Why bigger cities produce more per person.'],
-    ['W. Brian Arthur', '1989', '“Competing Technologies, Increasing Returns, and Lock-In by Historical Events”, Economic Journal', 'Markets that tip to a winner decided by early luck.'],
-    ['William Jack and Tavneet Suri', '2014', '“Risk Sharing and Transactions Costs: Evidence from Kenya’s Mobile Money Revolution”, American Economic Review', 'How fast M-Pesa spread, and what it did for households.'],
-    ['David Autor and colleagues', '2020', '“The Fall of the Labor Share and the Rise of Superstar Firms”, Quarterly Journal of Economics', 'Sales concentrating in fewer, larger firms.'],
     ['Réka Albert, Hawoong Jeong and Albert-László Barabási', '2000', '“Error and attack tolerance of complex networks”, Nature', 'Hub networks shrug off random failures and collapse when a hub fails.'],
   ];
 </script>
@@ -149,24 +91,24 @@
     <div class="cell good" role="cell">
       <span class="cell-tag" aria-hidden="true">There is an alternative</span>
       <span class="cell-name">Specialization</span>
-      <span>Good complexity. Protect it and give it volume. <em>Examples: a pool of credit analysts; a platform any team can use.</em></span>
+      <span>Good complexity: it grows stronger with volume. <em>Examples: a pool of credit analysts; a platform any team can use.</em></span>
     </div>
     <div class="cell" role="cell">
       <span class="cell-tag" aria-hidden="true">Only one person or system can do it</span>
       <span class="cell-name">Key-person risk</span>
-      <span>Valuable but fragile. Train a second person, add a fallback. <em>Example: the one person who can fix a legacy system.</em></span>
+      <span>Valuable but fragile: one absence stops it; a second person or a fallback is what makes it sturdy. <em>Example: the one person who can fix a legacy system.</em></span>
     </div>
 
     <div class="rowhead" role="rowheader">It checks the work</div>
     <div class="cell" role="cell">
       <span class="cell-tag" aria-hidden="true">There is an alternative</span>
       <span class="cell-name">Light control</span>
-      <span>Keep it fast and automatic where you can. <em>Examples: a check as data is typed; a four-eyes check by any qualified colleague.</em></span>
+      <span>Cheapest when it is fast and automatic. <em>Examples: a check as data is typed; a four-eyes check by any qualified colleague.</em></span>
     </div>
     <div class="cell bad" role="cell">
       <span class="cell-tag" aria-hidden="true">Only one person or system can do it</span>
       <span class="cell-name">Bad complexity</span>
-      <span>Redesign this first: keep the check and give it a second route. <em>Examples: a named sign-off everything waits for; a form that re-keys data another system already has.</em></span>
+      <span>The step everything waits for; a second route keeps the check and removes the wait. <em>Examples: a named sign-off everything waits for; a form that re-keys data another system already has.</em></span>
     </div>
   </div>
 
@@ -183,79 +125,6 @@
         {/each}
       </ol>
     </section>
-
-    <div class="tool">
-      <Instrument title="Check a process you know" sub="Example values are filled in. Solve the challenge with them, then set them to match a real request.">
-        <Puzzle id="monday" {...puzzle} onshow={showAnswer} />
-        <div class="tkc-controls">
-          <Slider id="m-n" label="Systems the request passes through" bind:value={systems} min={2} max={8} />
-          <Slider id="m-p" label="Chance a form has a problem" bind:value={problems} min={0} max={30} format={(v) => `${v}%`} />
-          <Segmented
-            name="m-info"
-            label="How systems get their data"
-            bind:value={info}
-            options={[
-              { value: 'copies', label: 'Each copies the last' },
-              { value: 'shared', label: 'One shared record' },
-            ]}
-          />
-          <Segmented
-            name="m-appr"
-            label="Approvals"
-            bind:value={approvals}
-            options={[
-              { value: 'each', label: 'At every system' },
-              { value: 'end', label: 'Once, at the end' },
-            ]}
-          />
-          <Slider id="m-avail" label="Approvers are in" bind:value={availability} min={60} max={99} format={(v) => `${v}% of days`} />
-          <Slider id="m-busy" label="Approvers are busy" bind:value={busy} min={50} max={95} format={(v) => `${v}% of their time`} />
-          <Slider id="m-stand" label="Stand-ins per approver" bind:value={standIns} min={0} max={3} />
-        </div>
-
-        <div class="tkc-stats tkc-stats--4" use:announce>
-          <Stat label="Typical request" value="{shortDays(d.now.median, HORIZON)} days" sub="median, working days" />
-          <Stat label="1 in 10 takes more than" value="{shortDays(d.now.p90, HORIZON)} days" />
-          <Stat label="Problems that slip through" value={pct(d.now.slipped, d.now.slipped < 0.1 ? 1 : 0)} />
-          <Stat label="Time actually worked" value={pct(d.now.workShare)} sub="of the elapsed working hours" />
-        </div>
-
-        <div class="tkc-chart" bind:clientWidth={width}>
-          <div class="tkc-fig-title small">What would help most?</div>
-          <p class="tkc-small">Typical lead time after each single change, from the same simulated requests.</p>
-          <svg {width} height={H} role="img" aria-label="Typical lead time after each change.">
-            <line class="today" x1={x(d.now.median)} x2={x(d.now.median)} y1="4" y2={H - 22} />
-            <text class="tkc-axis-label" x={x(d.now.median)} y={H - 6} text-anchor="middle">As set: {shortDays(d.now.median, HORIZON)} days</text>
-            {#each rows as r, i (r.id)}
-              {@const yy = 8 + i * rowH}
-              {@const by = stacked ? yy + 18 : yy + 4}
-              <text class="tkc-label-2" x="0" y={stacked ? yy + 12 : yy + 15}>{r.label}</text>
-              <path d={barRight(labelW, by, Math.max(2, x(r.median) - labelW), 16)} class="lever" class:together={r.together} />
-              <text class="tkc-label tkc-halo" x={x(r.median) + 6} y={by + 12}>{shortDays(r.median, HORIZON)}</text>
-            {/each}
-          </svg>
-          <details class="tkc-note">
-            <summary>Numbers behind this chart</summary>
-            <div class="tkc-scroll-x">
-              <table class="tkc-table">
-                <thead><tr><th>Change</th><th>Typical (days)</th><th>1 in 10 longer than (days)</th><th>Problems slip through</th></tr></thead>
-                <tbody>
-                  <tr><td>As set</td><td>{shortDays(d.now.median, HORIZON)}</td><td>{shortDays(d.now.p90, HORIZON)}</td><td>{pct(d.now.slipped, 1)}</td></tr>
-                  {#each rows as r (r.id)}
-                    <tr><td>{r.label}</td><td>{shortDays(r.median, HORIZON)}</td><td>{shortDays(r.p90, HORIZON)}</td><td>{pct(r.slipped, 1)}</td></tr>
-                  {/each}
-                </tbody>
-              </table>
-            </div>
-          </details>
-        </div>
-
-        {#snippet model()}
-          <p>The linked-systems model from chapter 3, with approver absences of four days on average, plus busy approvers from chapter 4: a request waits in each approver’s queue behind other work, and stand-ins share that queue.</p>
-          <p>Each bar applies one change and re-runs the same 1,000 requests. “Check data as it is typed” halves the chance that a form has a problem. The last bar applies every change except removing a system: every system stays{#if d.parallel}, but the approvals become one at the end. Keeping parallel approvals instead gives {shortDays(d.parallel.median, HORIZON)} days for a typical request, with {pct(d.parallel.slipped, 1)} of problems slipping through{/if}.</p>
-        {/snippet}
-      </Instrument>
-    </div>
   </div>
 
   <section class="close" aria-label="Summary">
@@ -407,11 +276,10 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 28px;
   }
-  @container tkc (min-width: 1000px) {
-    .grid {
-      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-      column-gap: clamp(32px, 4cqi, 56px);
-      align-items: start;
+  @container tkc (min-width: 900px) {
+    .moves ol {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: clamp(28px, 4cqi, 48px);
     }
   }
   .moves {
@@ -472,21 +340,6 @@
     cursor: pointer;
     text-decoration: underline;
     text-underline-offset: 2px;
-  }
-  .small {
-    font-size: 0.9375rem;
-  }
-  .today {
-    stroke: var(--tkc-ink);
-    stroke-width: 1;
-  }
-  .lever {
-    fill: var(--tkc-ink-2);
-    opacity: 0.75;
-  }
-  .lever.together {
-    fill: var(--tkc-options);
-    opacity: 1;
   }
   .close {
     display: grid;

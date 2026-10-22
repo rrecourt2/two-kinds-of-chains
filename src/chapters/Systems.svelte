@@ -1,7 +1,6 @@
 <script>
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
-  import Slider from '../lib/ui/Slider.svelte';
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
@@ -11,24 +10,19 @@
   import { linear, ticks, barUp } from '../lib/scales.js';
   import { pct, shortDays } from '../lib/format.js';
 
-  const START = { systems: 6, problems: 10, info: 'copies', approvals: 'each', availability: 85, meanSpell: 4, standIns: 0 };
+  // Fixed assumptions: six systems, a one-in-ten chance of a hidden problem in each form, approvers in 85% of days.
+  const FIXED = { systems: 6, problems: 0.1, availability: 0.85, meanSpell: 4, standIns: 0 };
+  const START = { info: 'copies', approvals: 'each' };
+  const systems = FIXED.systems;
 
-  let systems = $state(START.systems);
-  let problems = $state(START.problems);
   let info = $state(START.info);
   let approvals = $state(START.approvals);
-  let availability = $state(START.availability);
-  let meanSpell = $state(START.meanSpell);
-  let standIns = $state(START.standIns);
-  let journeyIndex = $state(0);
   let width = $state(560);
   let hover = $state(null);
 
-  const options = (o) => ({ ...o, problems: o.problems / 100, availability: o.availability / 100 });
-  const current = $derived({ systems, problems, info, approvals, availability, meanSpell, standIns });
-  const result = $derived(simulateSystems(options(current), { journeys: 12 }));
-  const baseline = simulateSystems(options(START));
-  const isStart = $derived(Object.keys(START).every((k) => current[k] === START[k]));
+  const result = $derived(simulateSystems({ ...FIXED, info, approvals }, { journeys: 12 }));
+  const baseline = simulateSystems({ ...FIXED, ...START });
+  const isStart = $derived(info === START.info && approvals === START.approvals);
 
   // Histogram of lead times.
   const MAX = 60;
@@ -42,31 +36,34 @@
   const binW = $derived(Math.max(1, x(1) - x(0) - 2));
   const baseOutline = $derived(baseBins.reduce((d, c, i) => d + `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(c).toFixed(1)}H${x(i + 1).toFixed(1)}`, ''));
 
-  // One request's journey, day by day.
-  const journey = $derived(result.journeys[journeyIndex % result.journeys.length] ?? []);
+  // One typical request's journey, day by day: the recorded journey closest to the median,
+  // preferring one where a problem was found.
+  const stopsIn = (j) => j.filter((d) => d.gates.includes(STOP) || d.final === STOP).length;
+  const journey = $derived.by(() => {
+    const off = (j) => Math.abs(j.length - result.median);
+    return result.journeys.reduce((a, j) => (off(j) < off(a) || (off(j) === off(a) && stopsIn(j) > stopsIn(a)) ? j : a), result.journeys[0] ?? []);
+  });
   const shownDays = $derived(Math.min(journey.length, MAX));
   const rows = $derived([...SYSTEMS.slice(0, systems), ...(approvals === 'end' ? ['Final approval'] : [])]);
   const labelW = 112;
-  const cellW = $derived(Math.max(3, Math.min(14, (width - labelW) / Math.max(shownDays, 20))));
+  const cellW = $derived(Math.max(3, Math.min(14, (width - labelW - 44) / Math.max(shownDays, 14))));
   const rowH = 12;
-  const journeyStops = $derived(journey.filter((d) => d.gates.includes(STOP) || d.final === STOP).length);
+  const journeyStops = $derived(stopsIn(journey));
   const cellClass = { [ENTER]: 'enter', [FIX]: 'fix', [AWAY]: 'away', [QUEUED]: 'queued', [OK]: 'ok', [STOP]: 'stop' };
 
   const fast = $derived(result.median < 10);
   const safe = $derived(result.slipped < 0.02);
-  const fair = $derived(systems >= START.systems && problems >= START.problems);
   const puzzle = $derived({
-    goal: 'Without dropping a system, make the typical request faster and safer at the same time.',
-    met: fair && fast && safe,
+    goal: 'All six systems stay. Make the typical request faster and safer at the same time.',
+    met: fast && safe,
     checks: [
-      { label: 'All six systems, and a problem in at least one form in ten', ok: fair },
       { label: `Typical request under two weeks (now ${shortDays(result.median, HORIZON)} working days)`, ok: fast },
       { label: `Problems slip through on fewer than 2% of requests (now ${pct(result.slipped, 1)})`, ok: safe },
     ],
     hints: ['Cutting checks is not the only way to speed things up. Look at how the systems get their data.', 'Which setting changes how many places a problem has to be fixed?'],
     found: 'One shared record, with every approval kept: a typical request takes about a week, and almost no problems slip through.',
   });
-  const showAnswer = () => ((systems = START.systems), (problems = START.problems), (info = 'shared'), (approvals = 'each'));
+  const showAnswer = () => ((info = 'shared'), (approvals = 'each'));
 </script>
 
 <Chapter
@@ -83,7 +80,8 @@
     </p>
     <p>
       Then a client request arrives that needs all of them. Each system has its own form to fill in, its own approval
-      and its own copy of the client’s data, taken from the system before it. The systems are linked in one long chain.
+      and its own copy of the client’s data, taken from the system before it. Each approval is a gate: the request
+      cannot move on until it has passed. The systems are linked in one long chain.
     </p>
     <p>
       Two things happen in a chain like that. Approvers are sometimes away, so the request waits. And a problem entered
@@ -93,11 +91,9 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title={`One request, ${systems} linked systems`} sub="1,500 simulated requests. Filling in a system takes a day, and so does each approval.">
+    <Instrument title="One request, six linked systems" sub="How long 1,500 simulated requests take. Filling in a system takes a day, and so does each approval. Each form has a one-in-ten chance of a hidden problem.">
       <Puzzle id="systems" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls">
-        <Slider id="s-n" label="Systems the request passes through" bind:value={systems} min={2} max={8} />
-        <Slider id="s-p" label="Chance a form has a problem" bind:value={problems} min={0} max={30} format={(v) => `${v}%`} />
         <Segmented
           name="s-info"
           label="How systems get their data"
@@ -117,14 +113,6 @@
           ]}
         />
       </div>
-      <details class="assume">
-        <summary>Change the assumptions about approvers</summary>
-        <div class="tkc-controls">
-          <Slider id="s-avail" label="Approver is in" bind:value={availability} min={60} max={99} format={(v) => `${v}% of days`} />
-          <Slider id="s-spell" label="Typical absence" bind:value={meanSpell} min={1} max={10} format={(v) => `${v} day${v > 1 ? 's' : ''}`} />
-          <Slider id="s-stand" label="Stand-ins per approver" bind:value={standIns} min={0} max={2} />
-        </div>
-      </details>
 
       <div class="tkc-stats tkc-stats--4" use:announce>
         <Stat label="Typical request" value="{shortDays(result.median, HORIZON)} days" sub="median, working days" />
@@ -182,53 +170,52 @@
         </div>
       </div>
 
-      <div class="journey">
-        <div class="journey-head">
-          <span class="tkc-fig-title small">One request’s journey</span>
-          <button type="button" class="tkc-btn tkc-btn--small" onclick={() => (journeyIndex += 1)}>Show another request</button>
-        </div>
-        <p class="tkc-small">
-          {journey.length >= HORIZON ? 'More than a year' : `${journey.length} working days`}{journeyStops
-            ? `, stopped ${journeyStops === 1 ? 'once' : `${journeyStops} times`} by a problem`
-            : ', no problems found'}.
-        </p>
-        <div class="tkc-scroll-x">
-          <svg width={labelW + shownDays * cellW + 44} height={rows.length * (rowH + 3) + 22} role="img" aria-label="Day-by-day journey of one request through the systems.">
-            {#each rows as label, r}
-              <text class="tkc-axis-label" x="0" y={r * (rowH + 3) + rowH - 2}>{label}</text>
-            {/each}
-            {#each journey.slice(0, shownDays) as day, d}
-              {#each [...day.gates] as c, g}
-                {#if c !== IDLE}
-                  <rect x={labelW + d * cellW} y={g * (rowH + 3)} width={Math.max(1, cellW - 1)} height={rowH} rx="2" class="cell {cellClass[c]}" />
+      <details class="journey">
+        <summary>Follow one request</summary>
+        <div class="journey-body">
+          <p class="tkc-small">
+            A typical request, day by day: {journey.length >= HORIZON ? 'more than a year' : `${journey.length} working day${journey.length === 1 ? '' : 's'}`}{journeyStops
+              ? `, stopped ${journeyStops === 1 ? 'once' : `${journeyStops} times`} by a problem`
+              : ', no problems found'}.
+          </p>
+          <div class="tkc-scroll-x">
+            <svg width={labelW + shownDays * cellW + 44} height={rows.length * (rowH + 3) + 22} role="img" aria-label="Day-by-day journey of one typical request through the systems: {journey.length} working days.">
+              {#each rows as label, r}
+                <text class="tkc-axis-label" x="0" y={r * (rowH + 3) + rowH - 2}>{label}</text>
+              {/each}
+              {#each journey.slice(0, shownDays) as day, d}
+                {#each [...day.gates] as c, g}
+                  {#if c !== IDLE}
+                    <rect x={labelW + d * cellW} y={g * (rowH + 3)} width={Math.max(1, cellW - 1)} height={rowH} rx="2" class="cell {cellClass[c]}" />
+                  {/if}
+                {/each}
+                {#if approvals === 'end' && day.final !== IDLE}
+                  <rect x={labelW + d * cellW} y={systems * (rowH + 3)} width={Math.max(1, cellW - 1)} height={rowH} rx="2" class="cell {cellClass[day.final]}" />
                 {/if}
               {/each}
-              {#if approvals === 'end' && day.final !== IDLE}
-                <rect x={labelW + d * cellW} y={systems * (rowH + 3)} width={Math.max(1, cellW - 1)} height={rowH} rx="2" class="cell {cellClass[day.final]}" />
-              {/if}
-            {/each}
-            {#each [0, 10, 20, 30, 40, 50] as t}
-              {#if t < shownDays}
-                <text class="tkc-axis-label" x={labelW + t * cellW} y={rows.length * (rowH + 3) + 14}>Day {t + 1}</text>
-              {/if}
-            {/each}
-          </svg>
+              {#each [0, 10, 20, 30, 40, 50] as t}
+                {#if t < shownDays}
+                  <text class="tkc-axis-label" x={labelW + t * cellW} y={rows.length * (rowH + 3) + 14}>Day {t + 1}</text>
+                {/if}
+              {/each}
+            </svg>
+          </div>
+          {#if journey.length > MAX}
+            <p class="tkc-caption">Showing the first {MAX} days of {journey.length >= HORIZON ? 'more than 250' : journey.length}.</p>
+          {/if}
+          <div class="tkc-legend">
+            <span><span class="tkc-swatch sw-enter"></span>Filling in</span>
+            <span><span class="tkc-swatch sw-ok"></span>Approved</span>
+            <span><span class="tkc-swatch sw-away"></span>Waiting: approver away</span>
+            <span><span class="tkc-swatch sw-stop"></span>Problem found: stopped</span>
+            <span><span class="tkc-swatch sw-fix"></span>Fixing where it spread</span>
+          </div>
         </div>
-        {#if journey.length > MAX}
-          <p class="tkc-caption">Showing the first {MAX} days of {journey.length >= HORIZON ? 'more than 250' : journey.length}.</p>
-        {/if}
-        <div class="tkc-legend">
-          <span><span class="tkc-swatch sw-enter"></span>Filling in</span>
-          <span><span class="tkc-swatch sw-ok"></span>Approved</span>
-          <span><span class="tkc-swatch sw-away"></span>Waiting: approver away</span>
-          <span><span class="tkc-swatch sw-stop"></span>Problem found: stopped</span>
-          <span><span class="tkc-swatch sw-fix"></span>Fixing where it spread</span>
-        </div>
-      </div>
+      </details>
 
       {#snippet model()}
-        <p>Filling in a system takes two hours of work, and each step takes a day because the next person picks it up the next day. Each form has a {problems}% chance of a hidden problem, such as a wrong date or a missing identifier.</p>
-        <p>An approver at a system sees only that system’s data and spots each hidden problem in it half the time. With copies, that data includes every problem copied in from earlier systems. With one shared record, every approver sees the whole record and spots each problem half the time, independently of the others, so six together miss a problem about 1 time in 64. If approvers tend to miss the same problems, parallel reviews catch far fewer. One approver at the end sees the whole request and spots 90%. A spotted problem stops the request. With copies, it is corrected in the system where it started and in every later system it reached, and each of those is approved again. With one shared record, it is corrected once. Approvers are in {availability}% of days, and absences last {meanSpell} day{meanSpell > 1 ? 's' : ''} on average.</p>
+        <p>Filling in a system takes two hours of work, and each step takes a day because the next person picks it up the next day. The request passes through six systems. Each form has a 10% chance of a hidden problem, such as a wrong date or a missing identifier.</p>
+        <p>An approver at a system sees only that system’s data and spots each hidden problem in it half the time. With copies, that data includes every problem copied in from earlier systems. With one shared record, every approver sees the whole record and spots each problem half the time, independently of the others, so six together miss a problem about 1 time in 64. If approvers tend to miss the same problems, parallel reviews catch far fewer. One approver at the end sees the whole request and spots 90%. A spotted problem stops the request. With copies, it is corrected in the system where it started and in every later system it reached, and each of those is approved again. With one shared record, it is corrected once. Approvers are in 85% of days, absences last four days on average, and nobody stands in for them.</p>
       {/snippet}
     </Instrument>
   {/snippet}
@@ -244,10 +231,10 @@
       changed, and nobody can say where it changed. Each copy is a chance for a field to drift, and each fix has to be
       made and approved again, system by system.
     </p>
-    <h3>Same controls, different shape</h3>
+    <h3>Same checks, different shape</h3>
     <p>
       With one shared record, the data is entered once and a problem is fixed in one place. Every approver sees the
-      whole request, so the approvals can run at the same time. Nothing is removed, and the request is both faster and
+      whole request, so the approvals can run at the same time. Every gate stays, and the request is both faster and
       safer.
     </p>
     <p>
@@ -278,16 +265,6 @@
 </Chapter>
 
 <style>
-  .assume summary {
-    cursor: pointer;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--tkc-ink-2);
-    padding: 2px 0;
-  }
-  .assume[open] summary {
-    margin-bottom: 10px;
-  }
   .bin {
     fill: var(--tkc-ink-2);
     opacity: 0.78;
@@ -314,23 +291,23 @@
     stroke-width: 1.5;
   }
   .journey {
+    min-width: 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--tkc-hair);
+  }
+  .journey-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     min-width: 0;
     gap: 8px;
-    padding-top: 4px;
-    border-top: 1px solid var(--tkc-hair);
+    padding-top: 8px;
   }
-  .journey-head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding-top: 12px;
-  }
-  .small {
-    font-size: 0.9375rem;
+  .journey summary {
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--tkc-ink-2);
+    padding-block: 3px;
   }
   .cell.enter,
   .sw-enter {

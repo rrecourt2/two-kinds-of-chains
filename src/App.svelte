@@ -15,7 +15,8 @@
   const total = CHAPTERS.length - 1;
   setContext('tkc-id', prefix);
   setContext('tkc-total', total);
-  const game = createGame(CHAPTERS.map((c) => c.id));
+  // Every chapter has a puzzle except the playbook at the end.
+  const game = createGame(CHAPTERS.filter((c) => c.puzzle !== false).map((c) => c.id));
   setContext('tkc-game', game);
   const solvedHere = (id) => game.entry(id).status === 'solved';
   const shownHere = (id) => game.entry(id).status === 'shown';

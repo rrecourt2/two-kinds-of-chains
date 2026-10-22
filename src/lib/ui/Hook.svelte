@@ -327,7 +327,7 @@
         {/if}
         <div class="next">
           <button type="button" class="tkc-btn tkc-btn--primary" onclick={() => go?.(1)}>Start the story →</button>
-          <span class="tkc-small">{total} more puzzles about why this happens, and what to change.</span>
+          <span class="tkc-small">{(game?.ids.length ?? total + 1) - 1} more puzzles about why this happens, and what changes it.</span>
         </div>
       </div>
     {/if}

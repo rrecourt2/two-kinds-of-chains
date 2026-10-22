@@ -1,4 +1,7 @@
 <script>
+  import { getContext, onMount } from 'svelte';
+  import { Tween } from 'svelte/motion';
+  import { cubicOut } from 'svelte/easing';
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
@@ -7,191 +10,391 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { equilibrium, bestForAll, BYPASS } from '../lib/sim/braess.js';
-  import { int } from '../lib/format.js';
-  import { getContext } from 'svelte';
+  import { equilibrium, ROUTES, REVIEW_DAYS } from '../lib/sim/fasttrack.js';
+  import { linear } from '../lib/scales.js';
+  import { prefersReducedMotion } from '../lib/motion.js';
 
-  const game = getContext('tkc-game');
-
-  let cars = $state(4000);
-  let link = $state('open');
-  let width = $state(560);
-
-  const open = $derived(link === 'open');
-  const before = $derived(equilibrium(cars, false));
-  const now = $derived(equilibrium(cars, open));
-  const best = $derived(bestForAll(cars));
-  const mins = (v) => `${Math.round(v)} min`;
-
-  // The road network: Start on the left, End on the right, two junctions between.
-  const H = 290;
-  const pad = $derived(width < 420 ? 34 : 56);
-  const S = $derived({ x: pad, y: H / 2 });
-  const E = $derived({ x: width - pad, y: H / 2 });
-  const N = $derived({ x: width / 2, y: 50 });
-  const So = $derived({ x: width / 2, y: H - 56 });
-  const maxCars = 6000;
-  const thick = (n) => 2 + (10 * n) / maxCars;
-  const roads = $derived([
-    { id: 'sn', a: S, b: N, kind: 'main', carsOn: now.top + now.link, minutes: now.mainMinutes, name: 'Main road' },
-    { id: 'ne', a: N, b: E, kind: 'bypass', carsOn: now.top, minutes: BYPASS, name: 'Bypass' },
-    { id: 'ss', a: S, b: So, kind: 'bypass', carsOn: now.bottom, minutes: BYPASS, name: 'Bypass' },
-    { id: 'se', a: So, b: E, kind: 'main', carsOn: now.bottom + now.link, minutes: now.mainMinutes, name: 'Main road' },
-  ]);
-  const mid = (r) => ({ x: (r.a.x + r.b.x) / 2, y: (r.a.y + r.b.y) / 2 });
-
-  // Until the puzzle is done, the journey time is not compared with the network without the link.
-  const revealed = $derived(!game.isOpen('emergence'));
-  const puzzle = {
-    goal: 'Rush hour: 4,000 cars, and every journey takes 80 minutes. If the city closed the new link again, what would happen to every driver’s journey?',
-    choices: [
-      { value: 'longer', label: 'It would get longer: there is one road fewer' },
-      { value: 'same', label: 'No change: drivers would simply take other routes' },
-      { value: 'shorter', label: 'It would get shorter' },
-    ],
-    answer: 'shorter',
-    wrong: () => 'Close the link in the figure and watch the main roads.',
-    hints: ['Every driver takes the fastest route for them. Which road do they all choose?', 'With the link open, everyone drives both main roads. How long does a main road take with 4,000 cars on it?'],
-    found: 'Shorter: every journey falls from 80 to 65 minutes, although each driver was only ever taking the fastest route. Nothing was built; something was taken away.',
-  };
   // A prediction: the controls open after the first answer or a hint.
+  const game = getContext('tkc-game');
   const live = $derived(game.engaged('emergence'));
+  // Until the puzzle is done, a closed fast track is not compared with an open one.
+  const revealed = $derived(!game.isOpen('emergence'));
+
+  const START = 40;
+  let deals = $state(START);
+  let track = $state('closed');
+  let width = $state(560);
+  let chart = $state();
+
+  const open = $derived(track === 'open');
+  const now = $derived(equilibrium({ deals, fastTrack: open }));
+  const other = $derived(equilibrium({ deals, fastTrack: !open }));
+
+  const num = (v) => String(Math.round(v * 10) / 10);
+  const dealsText = (v) => `${num(v)} deal${v === 1 ? '' : 's'}`;
+  const daysText = (v) => `${num(v)} day${v === 1 ? '' : 's'}`;
+
+  // Deals per route and committee days glide to their new values; the fast track fades in and out.
+  const toTween = (e) => [e.split.route1, e.split.route2, e.split.fast, e.stage.regional, e.stage.head, e.fastTrack ? 1 : 0];
+  const tween = new Tween(toTween(equilibrium({ deals: START, fastTrack: false })), { duration: 650, easing: cubicOut });
+  $effect(() => {
+    tween.set(toTween(now), { duration: prefersReducedMotion() ? 0 : 650 });
+  });
+
+  // Geometry: one row per route (name and count, a dot per deal, then the bar), and a day axis.
+  const MAX_DAYS = 40;
+  const BAR_TOP = 38;
+  const BAR_H = 38;
+  const ROW = 94;
+  const AXIS = 2 * ROW + BAR_TOP + BAR_H + 8;
+  const H = AXIS + 24;
+  const DOT_PITCH = 8;
+  const PER_LINE = 20;
+  const GAP = 2;
+  const PAD = 5;
+  const x = $derived(linear(0, MAX_DAYS, 0, width));
+
+  // Text inside a segment: the longest version that fits its width.
+  let fontFamily = $state('system-ui, sans-serif');
+  let ctx = null;
+  onMount(() => {
+    fontFamily = getComputedStyle(chart).fontFamily || fontFamily;
+  });
+  function textWidth(s, weight) {
+    try {
+      ctx ??= document.createElement('canvas').getContext('2d');
+      ctx.font = `${weight} 12px ${fontFamily}`;
+      return ctx.measureText(s).width;
+    } catch {
+      return s.length * 7;
+    }
+  }
+  const fits = (lines, room) => lines.every((l, i) => textWidth(l, i === 0 && lines.length > 1 ? 650 : 400) <= room);
+
+  const STAGES = {
+    regional: { name: 'Regional committee', short: 'Regional' },
+    head: { name: 'Head-office committee', short: 'Head office' },
+    review: { name: 'Outside opinion', short: 'Opinion' },
+  };
+  function label(stage, w) {
+    const s = STAGES[stage];
+    const room = w - 2 * PAD;
+    const options =
+      stage === 'review'
+        ? [
+            [s.name, `always ${daysText(REVIEW_DAYS)}`],
+            [s.short, daysText(REVIEW_DAYS)],
+            [daysText(REVIEW_DAYS)],
+          ]
+        : [
+            [s.name, `${dealsText(now.agenda[stage])} · ${daysText(now.stage[stage])}`],
+            [s.short, `${dealsText(now.agenda[stage])} · ${daysText(now.stage[stage])}`],
+            [s.short, dealsText(now.agenda[stage])],
+            [dealsText(now.agenda[stage])],
+          ];
+    return options.find((o) => fits(o, room)) ?? [];
+  }
+
+  const rows = $derived(
+    ROUTES.map((route, k) => {
+      const shown = route.id === 'fast' ? tween.current[5] : 1;
+      const days = { regional: tween.current[3], head: tween.current[4], review: REVIEW_DAYS };
+      let left = 0;
+      const segs = route.stages.map((stage) => {
+        const w = Math.max(0, x(days[stage]) * shown);
+        const seg = { stage, x: left, w: Math.max(0, w - GAP), lines: shown > 0.6 ? label(stage, w - GAP) : [] };
+        left += w;
+        return seg;
+      });
+      const count = now.split[route.id];
+      const closed = route.id === 'fast' && !open;
+      const summary = closed ? 'closed' : count > 0 ? `${dealsText(count)} · ${daysText(now.times[route.id])}` : `0 deals · would take ${daysText(now.times[route.id])}`;
+      return { ...route, top: k * ROW, segs, dots: Math.round(tween.current[k]), shown, closed, summary, empty: !closed && count === 0 };
+    }),
+  );
+  const CLOSED_NOTE = 'Closed: every deal has an outside opinion';
+  const closedNote = $derived(textWidth(CLOSED_NOTE, 400) + 2 * PAD <= width ? CLOSED_NOTE : 'Closed');
+
+  const ariaLabel = $derived(
+    `${deals} deals a quarter, fast track ${track}. ` +
+      rows.map((r) => (r.closed ? 'Fast track: closed.' : `${r.name}: ${r.summary}.`)).join(' ') +
+      ` Each committee has ${dealsText(now.agenda.regional)} on its agenda. Every deal takes ${daysText(now.time)}.`,
+  );
+
+  const timeSub = $derived(
+    open ? `was ${daysText(other.time)} before the fast track` : revealed ? `${daysText(other.time)} with the fast track open` : 'each team on the quickest route for its deal',
+  );
+  const agendaSub = $derived(
+    open ? `was ${num(other.agenda.regional)} before the fast track` : revealed ? `${num(other.agenda.regional)} with the fast track open` : 'a day in committee for every two',
+  );
+
+  const puzzle = {
+    goal: 'Forty deals a quarter, 30 days each. The bank opens the fast track, skipping the 20-day outside opinion. Each deal team picks the quickest route for its own deal. What happens to the time a deal takes?',
+    choices: [
+      { value: 'shorter', label: 'Shorter: it skips a 20-day outside opinion' },
+      { value: 'same', label: 'About the same' },
+      { value: 'longer', label: 'Longer' },
+    ],
+    answer: 'longer',
+    wrong: (v) =>
+      v === 'shorter'
+        ? 'That is what the first team to take it finds. Open the fast track in the figure and watch both committees’ agendas.'
+        : 'Open the fast track in the figure and watch both committees’ agendas.',
+    hints: [
+      'A deal on the fast track goes through both committees. Whose agendas does it join?',
+      'Suppose every team takes the fast track. How many deals does each committee then have, and how long does it take?',
+    ],
+    found:
+      'Longer: 40 days instead of 30. The fast track removed a step from each deal and added a condition to all of them.',
+  };
 </script>
 
 <Chapter
   n={6}
-  kicker="Emergence"
-  title="When every part does its best"
+  kicker="Shortcuts"
+  title="The fast track"
   lede="When every part does what is best for itself, what does the whole do?"
   puzzle="emergence"
 >
   {#snippet setup()}
     <p>
       Nobody plans a traffic jam. In 2008, Japanese physicists asked 22 drivers to circle a 230-metre track at a steady
-      30 km/h. Soon a jam formed and rolled backwards around the track, with no accident and no bottleneck. Small,
-      sensible adjustments by each driver added up to a stop-start wave that nobody intended: what scientists call
-      emergence.
+      30 km/h, and soon a jam formed and rolled backwards around the track, with no accident and no bottleneck. Sensible
+      drivers, each adjusting a little, made a jam that none of them intended: what scientists call emergence.
     </p>
     <p>
-      The city below has just opened a new link between its two junctions, a road so short that it takes no time at
-      all. Every driver picks the fastest route for themselves.
+      Banks have their rush hours too, when every deal team wants a place on the same agendas. Say every deal needs two
+      independent opinions before signing: a committee’s, and one other. Deals of this size may go to either committee.
+      Route 1: the regional committee, then an outside adviser’s second opinion. Route 2: the adviser’s opinion first,
+      because head office wants it in hand, then the head-office committee. Each deal team takes the route that will be quicker for its deal.
+    </p>
+    <p>
+      A committee takes a working day for every two deals on its agenda; the outside opinion always takes 20 working
+      days. Today forty deals a quarter split evenly between the two routes: 10 days in committee and 20 for the
+      opinion, 30 days in all.
+    </p>
+    <p>
+      Now the bank considers a fast track: a second committee counts as the second opinion, so a deal cleared by the
+      regional committee may go straight to the head-office committee, with no adviser.
     </p>
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="A city’s roads at rush hour" sub="Main roads slow down with traffic: a minute for every 100 cars. Bypasses always take 45 minutes. The new link takes no time at all.">
-      <Puzzle id="emergence" {...puzzle} predict onshow={() => ((link = 'closed'), (cars = 4000))} />
+    <Instrument
+      title="How long a deal takes, route by route"
+      sub="Each bar is one route to approval, in working days. A committee takes a day for every two deals on its agenda; an outside opinion always takes 20 days."
+    >
+      <Puzzle id="emergence" {...puzzle} predict onshow={() => ((track = 'open'), (deals = START))} />
       <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
         <Segmented
-          name="l-link"
-          label="The new link"
-          bind:value={link}
+          name="ft-track"
+          label="Fast track"
+          bind:value={track}
           options={[
             { value: 'closed', label: 'Closed' },
             { value: 'open', label: 'Open' },
           ]}
         />
-        <Slider id="l-cars" label="Cars on the road" bind:value={cars} min={1000} max={6000} step={500} format={(v) => int(v)} />
+        <Slider id="ft-deals" label="Deals a quarter" bind:value={deals} min={8} max={60} step={4} ends={['8', '60']} />
       </div>
 
-      <div class="tkc-chart" bind:clientWidth={width}>
-        <svg {width} height={H} role="img" aria-label="Road network with {int(cars)} cars. The new link is {link}. Every journey takes {mins(now.time)}.">
-          <line x1={N.x} y1={N.y} x2={So.x} y2={So.y} class="link" class:open style:stroke-width={open ? thick(now.link) : 2} />
-          {#each roads as r (r.id)}
-            <line x1={r.a.x} y1={r.a.y} x2={r.b.x} y2={r.b.y} class="road {r.kind}" style:stroke-width={thick(r.carsOn)} />
+      <div class="tkc-stats pair" use:announce>
+        <Stat label="Every deal takes" value={daysText(now.time)} sub={timeSub} />
+        <Stat label="Each committee’s agenda" value={dealsText(now.agenda.regional)} sub={agendaSub} />
+      </div>
+
+      <div class="tkc-chart" bind:clientWidth={width} bind:this={chart}>
+        <svg {width} height={H} role="img" aria-label={ariaLabel}>
+          {#each rows as r (r.id)}
+            {@const barY = r.top + BAR_TOP}
+            <text class="tkc-label" x="0" y={r.top + 12}>{r.name}</text>
+            <text class="tkc-label-2 count" class:muted={r.closed || r.empty} x={width} y={r.top + 12} text-anchor="end">{r.summary}</text>
+            {#each Array(Math.min(r.dots, 2 * PER_LINE)) as _, i (i)}
+              <circle class="deal" cx={3 + (i % PER_LINE) * DOT_PITCH} cy={r.top + 22 + Math.floor(i / PER_LINE) * DOT_PITCH} r="2.8" />
+            {/each}
+            {#each [10, 20, 30] as t (t)}
+              <line class="tkc-grid" x1={x(t)} x2={x(t)} y1={barY - 3} y2={barY + BAR_H + 3} />
+            {/each}
+            {#if r.id === 'fast' && r.shown < 1}
+              <rect class="shut" x="0.5" y={barY + 0.5} width={Math.max(0, width - 1)} height={BAR_H - 1} rx="5" opacity={1 - r.shown} />
+              {#if r.shown < 0.4}
+                <text class="tkc-label-2 shut-text" x={PAD + 2} y={barY + BAR_H / 2 + 4} opacity={1 - r.shown}>{closedNote}</text>
+              {/if}
+            {/if}
+            {#each r.segs as s (s.stage)}
+              {#if s.w > 0.5}
+                {#if r.empty}<rect class="under" x={s.x} y={barY} width={s.w} height={BAR_H} rx="5" />{/if}
+                <rect class="seg {s.stage}" class:empty={r.empty} x={s.x} y={barY} width={s.w} height={BAR_H} rx="5" />
+                {#if s.lines.length === 2}
+                  <text class="seg-text {s.stage}" x={s.x + PAD} y={barY + 16}>
+                    <tspan class="seg-name">{s.lines[0]}</tspan>
+                    <tspan x={s.x + PAD} dy="15">{s.lines[1]}</tspan>
+                  </text>
+                {:else if s.lines.length === 1}
+                  <text class="seg-text {s.stage}" x={s.x + PAD} y={barY + BAR_H / 2 + 4}>{s.lines[0]}</text>
+                {/if}
+              {/if}
+            {/each}
           {/each}
-          {#each roads as r (r.id)}
-            {@const m = mid(r)}
-            {@const up = r.id === 'sn' || r.id === 'ne'}
-            {@const dx = (r.id === 'sn' || r.id === 'ss' ? -1 : 1) * Math.min(40, width * 0.06)}
-            <text class="tkc-label-2 tkc-halo" x={m.x + dx} y={up ? m.y - 30 : m.y + 28} text-anchor="middle">{r.name}</text>
-            <text class="tkc-axis-label tkc-halo" x={m.x + dx} y={up ? m.y - 16 : m.y + 42} text-anchor="middle">{int(r.carsOn)} cars · {mins(r.minutes)}</text>
+          <line class="tkc-base" x1="0" x2={width} y1={AXIS} y2={AXIS} />
+          {#each [0, 10, 20, 30, 40] as t (t)}
+            <line class="tick" x1={x(t)} x2={x(t)} y1={AXIS} y2={AXIS + 4} />
+            <text class="tkc-axis-label" x={x(t)} y={AXIS + 17} text-anchor={t === 0 ? 'start' : t === MAX_DAYS ? 'end' : 'middle'}>{t === MAX_DAYS ? `${t} days` : t}</text>
           {/each}
-          <text class="tkc-axis-label tkc-halo" x={width < 460 ? N.x - 8 : N.x + 8} y={H / 2 + 4} text-anchor={width < 460 ? 'end' : 'start'}>
-            <tspan>New link</tspan>
-            <tspan x={width < 460 ? N.x - 8 : N.x + 8} dy="14">{open ? `${int(now.link)} cars` : 'closed'}</tspan>
-          </text>
-          {#each [{ p: S, t: 'Start' }, { p: E, t: 'End' }] as node (node.t)}
-            <circle cx={node.p.x} cy={node.p.y} r="7" class="node" />
-            <text class="tkc-label" x={node.p.x} y={node.p.y + 24} text-anchor="middle">{node.t}</text>
-          {/each}
-          <circle cx={N.x} cy={N.y} r="5" class="junction" />
-          <circle cx={So.x} cy={So.y} r="5" class="junction" />
         </svg>
-      </div>
-
-      <div class="tkc-stats tkc-stats--3" use:announce>
-        <Stat label="Every driver’s journey" value={mins(now.time)} sub={open && revealed ? `${now.time > before.time ? 'up' : now.time < before.time ? 'down' : 'no change'} from ${mins(before.time)} without the link` : 'each takes the fastest route'} swatch={open && revealed && now.time > before.time ? 'var(--tkc-conditions)' : 'var(--tkc-ink-2)'} />
-        <Stat label="If routes were planned for everyone" value={mins(open ? best : before.time)} sub="the best the roads can do" />
-        <Stat label="Cars on the new link" value={open ? int(now.link) : '0'} sub={open ? 'the shortest way across' : 'the link is closed'} />
+        <div class="tkc-legend">
+          <span><span class="tkc-swatch key regional"></span>Regional committee</span>
+          <span><span class="tkc-swatch key head"></span>Head-office committee</span>
+          <span><span class="tkc-swatch key review"></span>Outside opinion</span>
+          <span><span class="tkc-swatch key dot"></span>One deal</span>
+        </div>
       </div>
 
       {#snippet model()}
-        <p>{int(cars)} cars travel from Start to End. Each main road takes one minute per 100 cars on it; each bypass takes 45 minutes whatever the traffic. Every driver chooses the route that is fastest for them, so the traffic settles where nobody can save time by switching alone (a Nash equilibrium).</p>
-        <p>“Planned for everyone” assigns routes to give the shortest average journey. The ratio of the two is what game theorists call the price of anarchy.</p>
+        <p>
+          {deals} deals a quarter each need two independent opinions: a committee’s and one other. Route 1 goes to the
+          regional committee, then an outside adviser; route 2 to the adviser, then the head-office committee; the fast
+          track to the regional committee, then the head-office committee. A committee takes half a working day for each
+          deal on its agenda, so it slows as its agenda grows. The outside opinion takes 20 working days however many
+          deals there are, as each deal has its own adviser. The outside step is a second opinion that a committee can
+          stand in for, not the independent environmental and social review that higher-risk projects need in any case.
+        </p>
+        <p>
+          Each team takes the route that is quickest for its own deal, so the deals settle where no team can save time by
+          switching alone: a Nash equilibrium. With the fast track closed, the deals split evenly. With it open, every
+          deal takes it as long as two committees beat a committee and an adviser; beyond 40 deals the committees fill
+          until each takes 20 days, as long as the adviser.
+        </p>
       {/snippet}
     </Instrument>
   {/snippet}
 
   {#snippet after()}
     <p>
-      The mathematician Dietrich Braess found this in 1968. With the link open, each driver does the smart thing and
-      takes it. Once everyone does, both main roads are
-      packed, and every journey is 15 minutes longer than before the link existed. Nobody can do better by switching
-      back alone, so the jam is stable. With fewer than 3,000 cars the link helps; above that it hurts.
+      At forty deals, the first team to take the fast track saves nearly ten days. So the next team takes it, and the
+      next. But each deal on the fast track joins both agendas, and once all forty have moved, each committee takes 20
+      days. Going back is no better: the old routes now pass a 20-day committee and a 20-day opinion. No team can gain
+      by switching alone, so the slower pattern is stable.
     </p>
-    <p>It happens in real cities. When New York closed 42nd Street for Earth Day in 1990, traffic in the area was reported to flow better, not worse.</p>
+    <p>
+      The outside opinion was the link that did not mind volume: each deal had its own adviser, so it took 20 days
+      however many deals came. A committee is shared, and every deal on its agenda slows all the others. The fast track
+      looked like a shorter chain, but it swapped a link that scales for a second shared one.
+    </p>
+    <p>
+      So whether it helps depends on the traffic. With 12 deals a quarter it cuts every deal from 23 days to 12. Below
+      about 27 deals a quarter it saves time; from there up to 80, it costs time. Scale decides which kind of
+      complexity a rule turns out to be.
+    </p>
     <h3>Local best, global worse</h3>
     <p>
-      This is the risk of optimizing locally. A team that makes its own part faster, safer or cheaper does not always
-      make the whole better. A new system that serves one team well can add a step for everyone else. A control that
-      removes one risk can push another somewhere out of sight.
+      The mathematician Dietrich Braess described the same effect on roads in 1968: a new road can make every journey
+      slower, because every driver takes it. Cities have seen it happen. When New York closed 42nd Street for Earth Day
+      in 1990, traffic in the area flowed better, not worse, as Gina Kolata reported in The New York Times.
+    </p>
+    <p>
+      Every team chose well for its own deal, and together they made every deal slower. In
+      the same way, a new system that serves one team well can add a step for everyone else, and a control that removes
+      one risk can push another somewhere out of sight.
     </p>
     <p>
       Picture five lenders financing one wind farm. Each adds a condition that protects its own position: a reserve
       account here, a consent right there. Each condition is sensible. Together they can make the project too slow or
       too costly to build, and then every lender loses.
     </p>
-    <p>The remedy is not to ask every part to be selfless. It is to measure the whole.</p>
+    <p>A measure of the whole journey, across all deals, is the one number no shortcut can improve at the others’ expense.</p>
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Which of our measures can improve while the whole gets worse?">
+    <BankNote ask="Which of our shortcuts would still save time if every deal took it?">
       <p>
-        Every team is judged on some number. The question is whether that number can look better while a client waits
-        longer or a risk moves elsewhere. A measure of the whole journey, from request to answer, is one that no part
-        can improve at the expense of the rest.
+        A shortcut is usually judged by the first deals that use it. Its full cost shows only once every deal does: in
+        the agendas it fills and the queues it joins.
       </p>
     </BankNote>
   {/snippet}
 </Chapter>
 
 <style>
-  .road {
-    stroke-linecap: round;
+  .count {
+    font-variant-numeric: tabular-nums;
   }
-  .road.main {
-    stroke: var(--tkc-conditions);
+  .count.muted {
+    fill: var(--tkc-muted);
   }
-  .road.bypass {
-    stroke: var(--tkc-ink-2);
-    opacity: 0.7;
+  .pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
-  .link {
-    stroke: var(--tkc-rule);
-    stroke-dasharray: 5 5;
-    stroke-linecap: round;
+  @container fig (max-width: 299px) {
+    .pair {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
-  .link.open {
-    stroke: var(--tkc-conditions);
-    stroke-dasharray: none;
+  .deal {
+    fill: var(--tkc-ink-2);
   }
-  .node {
-    fill: var(--tkc-ink);
-  }
-  .junction {
+  .under {
     fill: var(--tkc-surface);
-    stroke: var(--tkc-ink-2);
-    stroke-width: 2;
+  }
+  .seg.regional {
+    fill: color-mix(in srgb, var(--tkc-conditions) 72%, var(--tkc-surface));
+  }
+  .seg.head {
+    fill: color-mix(in srgb, var(--tkc-conditions) 26%, var(--tkc-surface));
+    stroke: var(--tkc-conditions);
+    stroke-width: 1.5;
+  }
+  .seg.review {
+    fill: var(--tkc-sunken);
+    stroke: var(--tkc-rule);
+    stroke-width: 1;
+  }
+  .seg.empty {
+    opacity: 0.55;
+  }
+  .seg-text {
+    font-size: 12px;
+    fill: var(--tkc-ink);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+  .seg-text.review {
+    fill: var(--tkc-ink-2);
+  }
+  .seg-name {
+    font-weight: 650;
+  }
+  .shut {
+    fill: none;
+    stroke: var(--tkc-rule);
+    stroke-width: 1.5;
+    stroke-dasharray: 6 5;
+  }
+  .shut-text {
+    fill: var(--tkc-muted);
+  }
+  .tick {
+    stroke: var(--tkc-rule);
+  }
+  .key {
+    border-radius: 3px;
+  }
+  .key.regional {
+    background: color-mix(in srgb, var(--tkc-conditions) 72%, var(--tkc-surface));
+  }
+  .key.head {
+    background: color-mix(in srgb, var(--tkc-conditions) 26%, var(--tkc-surface));
+    box-shadow: inset 0 0 0 1.5px var(--tkc-conditions);
+  }
+  .key.review {
+    background: var(--tkc-sunken);
+    box-shadow: inset 0 0 0 1px var(--tkc-rule);
+  }
+  .key.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--tkc-ink-2);
   }
 </style>

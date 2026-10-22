@@ -11,7 +11,6 @@
   import { int, pct } from '../lib/format.js';
 
   let exponent = $state(2); // pins ordered per day = 10^exponent
-  let picked = $state(null); // { roles, demand }: a design the reader clicked, for this market size only
   let width = $state(560);
   let hover = $state(null);
 
@@ -20,7 +19,6 @@
   const designs = $derived(ROLE_OPTIONS.map((r) => workshop(demand, r)));
   const best = $derived(bestDesign(demand));
   const solo = $derived(designs[0]);
-  const shown = $derived((picked?.demand === demand && designs.find((d) => d.roles === picked.roles)) || best);
 
   // Bar chart geometry.
   const H = 220;
@@ -44,10 +42,10 @@
     found: '794 pins a day on the slider; strictly, the switch comes just past 720, about seventy times a village. Even there the twelve specialists are idle for almost half the day.',
   });
 
-  // The chain diagram for the design on show.
+  // The chain diagram follows the cheapest design.
   const chainW = $derived(width);
   const linkGap = 6;
-  const linkW = $derived(Math.min(64, (chainW - linkGap * (shown.roles - 1)) / shown.roles));
+  const linkW = $derived(Math.min(64, (chainW - linkGap * (best.roles - 1)) / best.roles));
 </script>
 
 <Chapter
@@ -74,8 +72,8 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="The pin workshop" sub="How many specialist roles should the 12 operations be split into?">
-      <Puzzle id="specialization" {...puzzle} onshow={() => ((exponent = 2.9), (picked = null))} />
+    <Instrument title="The pin workshop" sub="What a pin costs in worker-minutes, for each way of splitting the 12 operations into specialist roles. The cheapest design is coloured, and drawn as a chain below.">
+      <Puzzle id="specialization" {...puzzle} onshow={() => (exponent = 2.9)} />
       <div class="tkc-controls tkc-controls--wide">
         <Slider
           id="p-market"
@@ -90,7 +88,7 @@
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
-        <svg {width} height={H} role="img" aria-label="Worker-minutes per pin for each number of specialist roles. Best: {best.roles} roles at {fmtMin(best.minutesPerPin)} minutes.">
+        <svg {width} height={H} role="img" aria-label="Worker-minutes per pin for each number of specialist roles: {designs.map((d) => `${d.roles} role${d.roles > 1 ? 's' : ''}, ${fmtMin(d.minutesPerPin)}`).join('; ')}. Cheapest: {best.roles} role{best.roles > 1 ? 's' : ''}.">
           {#each yTicks as t}
             <line class="tkc-grid" x1={m.left} x2={width - m.right} y1={y(t)} y2={y(t)} />
             <text class="tkc-axis-label" x={m.left - 8} y={y(t) + 4} text-anchor="end">{t}</text>
@@ -98,23 +96,11 @@
           <line class="tkc-base" x1={m.left} x2={width - m.right} y1={y(0)} y2={y(0)} />
           {#each designs as d, i (d.roles)}
             {@const isBest = d.roles === best.roles}
-            {@const isShown = d.roles === shown.roles}
-            <g
-              class="bar"
-              role="button"
-              tabindex="0"
-              aria-label="{d.roles} role{d.roles > 1 ? 's' : ''}: {fmtMin(d.minutesPerPin)} worker-minutes per pin"
-              onclick={() => (picked = { roles: d.roles, demand })}
-              onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), (picked = { roles: d.roles, demand }))}
-              onpointerenter={() => (hover = i)}
-              onpointerleave={() => (hover = null)}
-              onfocus={() => (hover = i)}
-              onblur={() => (hover = null)}
-            >
+            <g role="presentation" onpointerenter={() => (hover = i)} onpointerleave={() => (hover = null)}>
               <rect x={m.left + band * i} y={m.top} width={band} height={H - m.top - m.bottom} fill="transparent" />
               <path
                 d={barUp(bx(i), y(d.minutesPerPin), barW, y(0) - y(d.minutesPerPin))}
-                fill={isBest ? 'var(--tkc-options)' : isShown ? 'var(--tkc-ink-2)' : 'var(--tkc-rule)'}
+                fill={isBest ? 'var(--tkc-options)' : 'var(--tkc-rule)'}
                 opacity={hover === i ? 0.82 : 1}
               />
               <text
@@ -141,29 +127,29 @@
 
       <div class="chain" aria-hidden="true">
         <svg width={chainW} height="54">
-          {#each Array(shown.roles) as _, i}
+          {#each Array(best.roles) as _, i}
             {@const x0 = i * (linkW + linkGap)}
             {#if i > 0}<line x1={x0 - linkGap - 1} x2={x0 + 1} y1="18" y2="18" class="joint" />{/if}
-            <rect x={x0} y="4" width={linkW} height="28" rx="8" class="link" class:best={shown.roles === best.roles} />
+            <rect x={x0} y="4" width={linkW} height="28" rx="8" class="link" />
             {#if linkW > 26}
-              <text class="tkc-label-2" x={x0 + linkW / 2} y="22" text-anchor="middle">×{int(shown.perRole)}</text>
+              <text class="tkc-label-2" x={x0 + linkW / 2} y="22" text-anchor="middle">×{int(best.perRole)}</text>
             {/if}
           {/each}
           <text class="tkc-caption-svg" x="0" y="50">
-            {shown.roles === 1 ? 'One link: everyone does all 12 operations' : chainW < 340 ? `${shown.roles} links, ${12 / shown.roles} of the 12 operations each` : `A ${shown.roles}-link chain: each link does ${12 / shown.roles} of the 12 operations`}
+            {best.roles === 1 ? 'One link: everyone does all 12 operations' : chainW < 340 ? `${best.roles} links, ${12 / best.roles} of the 12 operations each` : `A ${best.roles}-link chain: each link does ${12 / best.roles} of the 12 operations`}
           </text>
         </svg>
       </div>
 
       <div class="tkc-stats tkc-stats--3" use:announce>
         <Stat label="Best design at this market size" value="{best.roles} role{best.roles > 1 ? 's' : ''}" sub="{int(best.workers)} worker{best.workers > 1 ? 's' : ''} in total" swatch="var(--tkc-options)" />
-        <Stat label="Worker-minutes per pin" value={fmtMin(shown.minutesPerPin)} sub={shown.roles === 1 ? 'Everyone does everything' : `${(solo.minutesPerPin / shown.minutesPerPin).toFixed(1)}× cheaper than working alone`} />
-        <Stat label="Specialists busy" value={pct(shown.utilization)} sub={shown.utilization < 0.4 ? 'Mostly idle: the market is too small' : 'of each working day'} />
+        <Stat label="Worker-minutes per pin" value={fmtMin(best.minutesPerPin)} sub={best.roles === 1 ? 'Everyone does everything' : `${(solo.minutesPerPin / best.minutesPerPin).toFixed(1)}× cheaper than working alone`} />
+        <Stat label="Specialists busy" value={pct(best.utilization)} sub={best.utilization < 0.4 ? 'Mostly idle: the market is too small' : 'of each working day'} />
       </div>
 
       {#snippet model()}
         <p>A trained pin-maker working alone makes 10 pins a day. Split the 12 operations among n specialist roles and each specialist works n times faster at their share.</p>
-        <p>Every role needs at least one whole person, so a small market leaves specialists idle. Worker-minutes per pin = everyone’s working time ÷ pins made. Roughly, the best number of roles grows with the square root of demand, in jumps and not always upwards: because every role needs a whole person, a design with fewer roles sometimes wins for a while. Click a bar to see that design’s chain.</p>
+        <p>Every role needs at least one whole person, so a small market leaves specialists idle. Worker-minutes per pin = everyone’s working time ÷ pins made. Roughly, the best number of roles grows with the square root of demand, in jumps and not always upwards: because every role needs a whole person, a design with fewer roles sometimes wins for a while. The chain under the chart shows the cheapest design; hovering over a bar shows how that design is staffed.</p>
       {/snippet}
     </Instrument>
   {/snippet}
@@ -205,25 +191,13 @@
 </Chapter>
 
 <style>
-  .bar {
-    cursor: pointer;
-    outline: none;
-  }
-  .bar:focus-visible path {
-    stroke: var(--tkc-focus);
-    stroke-width: 2;
-  }
   .chain {
     overflow: hidden;
   }
   .link {
-    fill: var(--tkc-surface);
-    stroke: var(--tkc-ink-2);
-    stroke-width: 2;
-  }
-  .link.best {
     stroke: var(--tkc-options);
     fill: var(--tkc-options-wash);
+    stroke-width: 2;
   }
   .joint {
     stroke: var(--tkc-ink-2);

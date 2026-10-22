@@ -9,24 +9,24 @@ ships as one file, with no external requests, so it can run inside a locked-down
 |---|---------|------------------------|
 | 0 | Two Kinds of Chains | Guess how many of 100 loans clear six checks, then watch them flow |
 | | **Part 1 · Two kinds of chains** | |
-| 1 | A riddle about chains | Better attendance or a stand-in per role? A month calendar of people or systems (AND vs OR) |
+| 1 | A riddle about chains | Better attendance or a stand-in per role? A month calendar (AND vs OR) |
 | 2 | Why longer chains get cheaper | The smallest market in which twelve specialists pay off; the chip industry's long chain |
 | | **Part 2 · How a chain grows rigid** | |
-| 3 | When systems lean on each other | Faster and safer without dropping a system: copies vs one shared record, which need not be a central hub |
+| 3 | When systems lean on each other | Faster and safer without dropping a system: copies vs one shared record, gates at every step or once |
 | 4 | Why full calendars make long queues | Get the wait under an hour with reviewers at least 80% busy: named lines vs one shared line |
-| 5 | Don't wait for each other | Which two speed-ups help most when the work runs in parallel; Grove's breakfast |
-| 6 | When every part does its best | Braess's paradox as a prediction: what closing a road does to every journey |
-| 7 | Tool, rule or gate? | Twenty requests, a steady or an erratic AI, and which pairing saves the most time |
+| 5 | Don't wait for each other | Which two speed-ups help most when a client request runs in parallel |
+| 6 | The fast track | Forty deals, two committees and a fast track that skips the outside opinion: a prediction of what it does to every deal's time |
 | | **Part 3 · When the world pulls on the chain** | |
-| 8 | When the average lies | Ole Peters' coin game: the paper value, the players' actual average, and the typical player |
-| 9 | 2008: when links became conditions | A stress test on a 48-bank network; hubs inside organizations |
-| 10 | How to find a black swan | Wason's selection task with four project files; Popper and Russell's turkey |
-| 11 | Why species go extinct | Where the generalist overtakes the specialist as the years get more volatile |
-| 12 | Why the winner takes most | Where a better product most often wins, among twenty equal firms |
+| 7 | When the average lies | Ole Peters' coin game: the paper value against the typical player; staking less and pooling |
+| 8 | 2008: when links became conditions | A stress test on 48 banks: how much capital holds when five fail at once; hubs inside organizations |
+| 9 | How to find a black swan | Wason's selection task with IFC project categories; the box nobody drew |
+| 10 | Why species go extinct | Where the generalist overtakes the specialist as the years get more volatile |
 | | **Part 4 · Chains that bend** | |
-| 13 | The shape of the network | What sixty fully linked people produce; coordination costs; mesh, hub and modules |
-| 14 | Two watchmakers | Herbert Simon's parable as a live race: one long chain against modules; Gall's law |
-| 15 | What it means on Monday | A final challenge on the check-up tool, ten patterns, and the reader's score |
+| 11 | Tool or gate? | One AI, twenty requests, built in as an optional tool or a mandatory gate; a steady or an erratic AI |
+| 12 | The shape of the network | What sixty fully linked people produce; mesh, hub and modules |
+| 13 | Two watchmakers | Herbert Simon's parable as a live race: one long chain against modules; Gall's law |
+| 14 | Time to disbursement | A Monte Carlo of conditions precedent: when nine loans in ten are ready to disburse |
+| 15 | What it means on Monday | Ten patterns and the reader's score |
 
 ### Puzzles and score
 
@@ -93,7 +93,7 @@ src/
   lib/sim/*.js            the models (pure JavaScript, seeded random numbers, unit-tested)
   lib/ui/*.svelte         slider, segmented control, stat tile, chapter layout, "Back at the bank" box
   theme.css               colour tokens for light and dark, type, shared styles
-test/sims.test.js         sanity checks: simulations match analytic results
+test/*.test.js            sanity checks: simulations match analytic results
 sharepoint/               hosting guide, SPFx web part, iframe snippet
 ```
 

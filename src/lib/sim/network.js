@@ -1,4 +1,4 @@
-// Interbank contagion (chapter 9), after Watts (2002) and Gai & Kapadia (2010).
+// Interbank contagion (chapter 8), after Watts (2002) and Gai & Kapadia (2010).
 // Each bank lends 20% of its balance sheet to its counterparties, split
 // evenly. A failed counterparty's loan is lost in full. A bank fails when its
 // losses exceed its capital.
@@ -93,9 +93,68 @@ export function mostConnected(adj) {
   return best;
 }
 
+// ---------------------------------------------------------------------------
+// The chapter's stress test: two kinds of network, three shocks, capital 2–10%.
+
+export const BANKS = 48;
+export const TRIALS = 40;
+export const CAPITALS = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+export const SHOCKS = ['one', 'five', 'biggest'];
+
 /**
- * Monte Carlo sweep for the strip chart: for each average number of
- * counterparties, the share of banks that end up failing after a shock.
+ * Many similar banks: a random network, about ten counterparties each.
+ * A few giants: preferential attachment, about four counterparties on average.
+ * The seeds are fixed, so every reader sees the same 40 networks of each kind;
+ * they were picked so that the averages over 40 networks sit within a few
+ * points of a run over 4,000 networks (see test/contagion.test.js).
+ */
+export const NETWORKS = {
+  similar: { shape: 'random', links: 10, seed: 2100 },
+  giants: { shape: 'hubs', links: 4, seed: 15200 },
+};
+
+/** Network number `t` of one kind, and the banks each shock brings down first. */
+export function stressNetwork(kind, t, n = BANKS, seed = NETWORKS[kind].seed) {
+  const { shape, links } = NETWORKS[kind];
+  const adj = buildNetwork(shape, n, links, seed + t);
+  const five = pickSeeds(makeRng(seed * 31 + t), adj, 5);
+  return { adj, first: { one: five.slice(0, 1), five, biggest: [mostConnected(adj)] } };
+}
+
+/**
+ * The stress test behind the line chart. For each shock and capital level:
+ * the share of banks that fail in each of `trials` networks of one kind, the
+ * average share, and the number of networks in which most banks fail. Also
+ * the network whose results sit closest to the averages (drawn as the example).
+ */
+export function stressTest(kind, { n = BANKS, trials = TRIALS, capitals = CAPITALS, seed = NETWORKS[kind].seed } = {}) {
+  const shares = Object.fromEntries(SHOCKS.map((s) => [s, capitals.map(() => new Float64Array(trials))]));
+  for (let t = 0; t < trials; t++) {
+    const { adj, first } = stressNetwork(kind, t, n, seed);
+    for (const s of SHOCKS) capitals.forEach((c, i) => (shares[s][i][t] = cascade(adj, c, first[s]).count / n));
+  }
+  const mean = Object.fromEntries(SHOCKS.map((s) => [s, shares[s].map((v) => v.reduce((a, b) => a + b, 0) / trials)]));
+  const collapses = Object.fromEntries(SHOCKS.map((s) => [s, shares[s].map((v) => v.filter((x) => x > 0.5).length)]));
+  let typical = 0;
+  let best = Infinity;
+  for (let t = 0; t < trials; t++) {
+    let err = 0;
+    for (const s of SHOCKS) capitals.forEach((_, i) => (err += (shares[s][i][t] - mean[s][i]) ** 2));
+    if (err < best) (best = err), (typical = t);
+  }
+  return { kind, n, trials, capitals, shares, mean, collapses, typical };
+}
+
+/** The lowest capital at which, on average, fewer than `limit` of all banks fail (null if none). */
+export function lowestCapital(test, shock, limit = 0.25) {
+  const i = test.mean[shock].findIndex((m) => m < limit);
+  return i < 0 ? null : test.capitals[i];
+}
+
+/**
+ * Monte Carlo sweep by number of counterparties (random networks): for each
+ * average number of counterparties, the share of banks that end up failing
+ * after a shock. No longer drawn in the chapter; kept for the tests.
  */
 export function sweep({ n = 48, capitalPct = 4, shock = 1, trials = 40, maxLinks = 12, seed = 99 }) {
   const rng = makeRng(seed);

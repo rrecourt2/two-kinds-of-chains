@@ -1,5 +1,5 @@
 // Absence model shared by the calendar (chapter 1) and the linked-systems
-// model (chapters 3 and 14). Each person is either in or away; absences come in
+// model (chapter 3). Each person is either in or away; absences come in
 // spells (a week of holiday, three days of training), not single random days.
 
 import { makeRng } from './rng.js';
@@ -43,23 +43,31 @@ export const DAY_SYSTEMS = [
 ];
 
 /**
+ * One person's month: true on the days they are in. Each person draws from
+ * their own stream, and a day's draw is compared with a threshold that only
+ * falls as availability rises, so adding a stand-in leaves everyone else's
+ * month as it was, and better attendance only ever removes absences.
+ */
+function personMonth(rng, availability, { back, leave }, days) {
+  const month = [];
+  let away = rng() < 1 - availability;
+  for (let d = 0; d < days; d++) {
+    if (d > 0) away = rng() < (away ? 1 - back : leave);
+    month.push(!away);
+  }
+  return month;
+}
+
+/**
  * One month of working days for each role. A role is covered on a day when
  * its named person or any of its stand-ins is in.
  */
 export function simulateMonth({ roles, standIns, availability, meanSpell = 3, days = 21, seed = 1 }) {
-  const rng = makeRng(seed);
   const params = absenceParams(availability, meanSpell);
   const grid = [];
   for (let r = 0; r < roles; r++) {
-    const people = Array.from({ length: standIns + 1 }, () => rng() < availability);
-    const row = [];
-    for (let d = 0; d < days; d++) {
-      if (d > 0) for (let p = 0; p < people.length; p++) people[p] = nextState(people[p], rng, params);
-      const main = people[0];
-      const covered = people.some(Boolean);
-      row.push({ main, covered });
-    }
-    grid.push(row);
+    const people = Array.from({ length: standIns + 1 }, (_, p) => personMonth(makeRng(seed * 1000 + r * 10 + p + 1), availability, params, days));
+    grid.push(Array.from({ length: days }, (_, d) => ({ main: people[0][d], covered: people.some((m) => m[d]) })));
   }
   const allIn = Array.from({ length: days }, (_, d) => grid.every((row) => row[d].covered));
   // The longest run of working days on which the work had to wait for someone.

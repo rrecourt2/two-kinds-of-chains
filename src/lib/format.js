@@ -11,7 +11,7 @@ export function shortDays(v, cap) {
   return `${n}`;
 }
 
-/** Wealth multiples: ×131, ×1.6, ×0.42, ×0.005. */
+/** Wealth multiples: ×132, ×1.6, ×0.42, ×0.005. */
 export function multiple(v) {
   if (!Number.isFinite(v)) return '—';
   if (v >= 100) return `×${Math.round(v).toLocaleString('en-US')}`;

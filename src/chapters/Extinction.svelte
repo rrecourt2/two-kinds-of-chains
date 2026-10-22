@@ -2,7 +2,6 @@
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
-  import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
@@ -17,15 +16,15 @@
 
   const ISLANDS = 40;
   const YEARS = 100;
+  const START = 100; // animals of each species per island in year 0
+  const SEED = 21;
   let swing = $state(10); // ± percent change in a plant's food supply between good and bad years
-  let start = $state(100);
-  let seed = $state(21);
   let width = $state(560);
   let curveW = $state(560);
   let hover = $state(null);
 
   const v = $derived(swing / 100);
-  const sim = $derived(simulateIslands({ v, start, islands: ISLANDS, years: YEARS, seed }));
+  const sim = $derived(simulateIslands({ v, start: START, islands: ISLANDS, years: YEARS, seed: SEED }));
   const gs = $derived(longRunGrowth('specialist', v));
   const gg = $derived(longRunGrowth('generalist', v));
 
@@ -77,7 +76,7 @@
 </script>
 
 <Chapter
-  n={11}
+  n={10}
   kicker="Extinction"
   title="Why species go extinct"
   lede="Efficiency or variety? The answer depends on how calm the world is, and the world is getting less calm."
@@ -101,20 +100,10 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="Specialist or generalist?" sub="40 islands, 100 years, the same weather for both species.">
+    <Instrument title="Specialist or generalist?" sub="Each line is one island’s population over a century, from 100 animals at the start. Both species live through the same good and bad years.">
       <Puzzle id="extinction" {...puzzle} onshow={() => (swing = firstAhead)} />
       <div class="tkc-controls">
-        <Slider id="x-swing" label="How variable are the years?" bind:value={swing} min={0} max={70} step={5} format={(s) => `±${s}% food`} ends={['Calm', 'Volatile']} />
-        <Segmented
-          name="x-start"
-          label="Animals per island at the start"
-          bind:value={start}
-          options={[
-            { value: 10, label: '10' },
-            { value: 100, label: '100' },
-            { value: 1000, label: '1,000' },
-          ]}
-        />
+        <Slider id="x-swing" label="Swing in food between good and bad years" bind:value={swing} min={0} max={70} step={5} format={(s) => `±${s}%`} ends={['Calm', 'Volatile']} />
       </div>
 
       <div class="tkc-stats" use:announce>
@@ -144,10 +133,6 @@
         {/each}
       </div>
 
-      <div class="tkc-row">
-        <button type="button" class="tkc-btn tkc-btn--small" onclick={() => (seed += 1)}>Run another century</button>
-      </div>
-
       <div class="tkc-chart curve" bind:clientWidth={curveW}>
         <div class="tkc-fig-title small">Who grows faster in the long run?</div>
         <svg width={curveW} height={CH} role="img" aria-label="Long-run growth of each species against how variable the years are{done ? `. The generalist overtakes the specialist at about ±${crossing}% food` : `, drawn up to ±${swing}% food`}.">
@@ -157,7 +142,7 @@
           {/each}
           {#if done}
             <rect x={cx(crossing)} y={cm.top} width={Math.max(0, cx(70) - cx(crossing))} height={CH - cm.top - cm.bottom} class="zone" />
-            <text class="tkc-axis-label" x={cx(crossing) + 6} y={cm.top + 12}>Generalist ahead</text>
+            <text class="tkc-axis-label tkc-halo" x={cx(crossing) + 6} y={cm.top + 12}>Generalist ahead</text>
           {/if}
           <path d={curve('specialist')} class="cv" style:stroke="var(--tkc-conditions)" />
           <path d={curve('generalist')} class="cv" style:stroke="var(--tkc-options)" />
@@ -192,7 +177,7 @@
 
       {#snippet model()}
         <p>Each year, each of four plants independently has a good year (food × (1 + swing)) or a bad one (food × (1 − swing)). The specialist eats only the first plant and grows 10% in an average year; the generalist eats all four and grows 6%.</p>
-        <p>Births and deaths are random (Poisson), so small populations can die out by chance. Each island holds at most {CAPACITY.toLocaleString('en-US')} animals. Long-run growth is the geometric mean, the growth rate that a single population actually experiences over time.</p>
+        <p>Each island starts with {START} animals of each species. Births and deaths are random (Poisson), so small populations can die out by chance. Each island holds at most {CAPACITY.toLocaleString('en-US')} animals. Long-run growth is the geometric mean, the growth rate that a single population actually experiences over time.</p>
       {/snippet}
     </Instrument>
   {/snippet}
@@ -202,8 +187,9 @@
       In a calm world the specialist wins: it grows faster and fills its islands first. As the years get more
       variable, its one plant fails it again and again, and it disappears from island after island. The generalist is
       not better at anything. It just never depends on a single plant. The change is not gradual, either: past the
-      crossing point, each extra bit of variability costs the specialist more than the last. A chain of named people and
-      single systems is a specialist many times over: it needs every one of its plants to have a good year at once.
+      crossing point, each extra bit of variability costs the specialist more than the last. This specialist is not the
+      pin-maker of chapter 2: its trouble is not its skill but its single source of food. A chain of named people and
+      single systems has that trouble many times over: it needs every one of its plants to have a good year at once.
     </p>
     <p>
       A changing climate makes many years more variable. That is why it worries ecologists, farmers and lenders alike:
@@ -211,7 +197,12 @@
       specialist, with a better income in a normal year and nothing to fall back on in a drought. One who also keeps a
       second crop and a few animals earns less in a good year, and is still farming after a bad one.
     </p>
-    <p><strong>Small populations die of bad luck</strong>, even when the average year is good: start with 10 animals per island instead of 100, and both species die out on several islands even in a calm world.</p>
+    <p>
+      <strong>Small populations die of bad luck</strong>, even when the average year is good. Births and deaths are
+      partly chance, and a few animals can vanish in an unlucky run that a larger group rides out. In this model, even
+      in a calm world, ten generalists on an island die out about one time in three within a century; a hundred almost
+      never do.
+    </p>
     <p>
       Scale protects, but only when it is diverse. The Gros Michel banana was grown by the billion, but every plant was
       a clone. When Panama disease spread through the plantations, the export trade had to switch to another variety

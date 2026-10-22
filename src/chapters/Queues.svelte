@@ -162,7 +162,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="Four reviewers, one stream of requests" sub="Each review takes an hour on average. Requests arrive at random.">
+    <Instrument title="Four reviewers, one stream of requests" sub="Requests queueing for four reviewers, live, and below it the average wait at every level of busyness. Requests arrive at random; each review takes an hour on average.">
       <Puzzle id="queues" {...puzzle} onshow={() => ((mode = 'pooled'), (busy = 80))} />
       <div class="tkc-controls">
         <Slider id="q-busy" label="How busy are the reviewers?" bind:value={busy} min={50} max={98} format={(v) => `${v}% of their time`} />

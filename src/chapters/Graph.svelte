@@ -15,16 +15,13 @@
   const MAX = 60;
   let nodes = $state(24);
   let kind = $state('mesh');
-  let what = $state('people');
   let diagramW = $state(320);
   let width = $state(560);
   let hover = $state(null);
 
-  const sys = $derived(what === 'systems');
   const now = $derived(structure(kind, nodes));
   const spof = $derived(singlePoints(kind, nodes));
   const COLORS = { mesh: 'var(--tkc-conditions)', hub: 'var(--tkc-ink-2)', teams: 'var(--tkc-options)' };
-  const labelOf = (s) => (sys ? s.systems : s.label);
   const curves = STRUCTURES.map((s) => ({ ...s, values: outputCurve(s.id, MAX) }));
 
   // Diagram of required links for the structure on show.
@@ -101,8 +98,8 @@
 </script>
 
 <Chapter
-  n={13}
-  kicker="Graph theory"
+  n={12}
+  kicker="Networks"
   title="The shape of the network"
   lede="Every chapter so far has been about a network. Its shape, more than its size, decides whether growth makes an organization smarter or slower."
   puzzle="graph"
@@ -122,25 +119,16 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="Grow the network" sub="Each required link costs both ends 2% of their capacity.">
-      <Puzzle id="graph" {...puzzle} predict onshow={() => ((kind = 'mesh'), (nodes = 60), (what = 'people'))} />
+    <Instrument title="Grow the network" sub="The links each way of working requires, and the useful work left once they are kept up. Each required link costs both people 2% of their time.">
+      <Puzzle id="graph" {...puzzle} predict onshow={() => ((kind = 'mesh'), (nodes = 60))} />
       <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
-        <Segmented
-          name="g-what"
-          label="The nodes are"
-          bind:value={what}
-          options={[
-            { value: 'people', label: 'People' },
-            { value: 'systems', label: 'Systems' },
-          ]}
-        />
-        <Slider id="g-nodes" label={sys ? 'Systems' : 'People'} bind:value={nodes} min={2} max={MAX} />
-        <Segmented name="g-kind" label="Shape" bind:value={kind} options={STRUCTURES.map((s) => ({ value: s.id, label: labelOf(s) }))} />
+        <Slider id="g-nodes" label="Number of people" bind:value={nodes} min={2} max={MAX} />
+        <Segmented name="g-kind" label="Who must work with whom" bind:value={kind} options={STRUCTURES.map((s) => ({ value: s.id, label: s.label }))} />
       </div>
 
       <div class="split">
         <div class="diagram" bind:clientWidth={diagramW}>
-          <svg width={size} height={size} role="img" aria-label="{int(now.links)} required links among {nodes} {sys ? 'systems' : 'people'}.">
+          <svg width={size} height={size} role="img" aria-label="{int(now.links)} required links among {nodes} people.">
             {#each graph.edges as [a, b]}
               <line x1={graph.pts[a].x} y1={graph.pts[a].y} x2={graph.pts[b].x} y2={graph.pts[b].y} class="rel" style:stroke={COLORS[kind]} style:opacity={kind === 'mesh' ? Math.max(0.08, 0.6 - nodes / 110) : 0.55} />
             {/each}
@@ -150,10 +138,10 @@
           </svg>
         </div>
         <div class="tkc-stats tkc-stats--4 side-stats" use:announce>
-          <Stat label={sys ? 'Links to maintain' : 'Required relationships'} value={int(now.links)} sub={kind === 'mesh' ? 'every pair' : kind === 'hub' ? 'everything to the centre' : `inside modules of about ${TEAM_SIZE}, plus between them`} />
-          <Stat label={sys ? 'Effort spent on links' : 'Time spent coordinating'} value={pct(now.overhead)} sub="on average" />
-          <Stat label={sys ? 'Capacity left for new work' : 'Useful output'} value={now.output.toFixed(1)} sub={now.overloaded ? (sys ? 'the hub is the limit' : 'the approver is the limit') : sys ? 'systems’ worth' : 'people’s worth'} swatch={COLORS[kind]} />
-          <Stat label="Single points of failure" value={spof} sub={spof === 0 ? 'no one node cuts the network' : spof === 1 ? 'the centre' : 'one bridge per module'} />
+          <Stat label="Required relationships" value={int(now.links)} sub={kind === 'mesh' ? 'every pair' : kind === 'hub' ? 'everyone to the approver' : `inside teams of about ${TEAM_SIZE}, plus between them`} />
+          <Stat label="Time spent coordinating" value={pct(now.overhead)} sub="on average" />
+          <Stat label="Useful output" value={now.output.toFixed(1)} sub={now.overloaded ? 'the approver is the limit' : 'people’s worth'} swatch={COLORS[kind]} />
+          <Stat label="Single points of failure" value={spof} sub={spof === 0 ? 'nobody’s absence splits the group' : spof === 1 ? 'the approver' : 'one link person per team'} />
         </div>
       </div>
 
@@ -174,28 +162,28 @@
             <circle cx={x(nodes)} cy={y(p.values[nodes - 1])} r={p.id === kind ? 5.5 : 4} class="pt" style:fill={COLORS[p.id]} />
           {/each}
           {#if hover !== null}<line class="cross" x1={x(hover)} x2={x(hover)} y1={m.top} y2={y(0)} />{/if}
-          <text class="tkc-axis-title" x={m.left + (width - m.left - m.right) / 2} y={H - 4} text-anchor="middle">{sys ? 'Systems' : 'People'}</text>
-          <text class="tkc-axis-title" x={m.left - 34} y={m.top - 4}>{sys ? 'Capacity for new work' : 'Useful output'}</text>
+          <text class="tkc-axis-title" x={m.left + (width - m.left - m.right) / 2} y={H - 4} text-anchor="middle">People</text>
+          <text class="tkc-axis-title" x={m.left - 34} y={m.top - 4}>Useful output, in people’s worth</text>
           <rect x={m.left} y={m.top} width={Math.max(0, width - m.left - m.right)} height={H - m.top - m.bottom} fill="transparent" role="presentation" onpointermove={onMove} onpointerleave={() => (hover = null)} />
         </svg>
         {#if hover !== null}
           <div class="tkc-tip" style:left="{Math.min(width - 240, Math.max(0, x(hover) + 10))}px" style:top="24px">
-            <div>{hover} {sys ? 'systems' : 'people'}</div>
+            <div>{hover} people</div>
             {#each paths as p (p.id)}
-              <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background={COLORS[p.id]}></span><strong>{p.values[hover - 1].toFixed(1)}</strong> {labelOf(p).toLowerCase()}</div>
+              <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background={COLORS[p.id]}></span><strong>{p.values[hover - 1].toFixed(1)}</strong> {p.label.toLowerCase()}</div>
             {/each}
           </div>
         {/if}
         <div class="tkc-legend">
           {#each STRUCTURES as s (s.id)}
-            <span><span class="tkc-swatch tkc-swatch--line" style:background={COLORS[s.id]}></span>{labelOf(s)}</span>
+            <span><span class="tkc-swatch tkc-swatch--line" style:background={COLORS[s.id]}></span>{s.label}</span>
           {/each}
         </div>
       </div>
 
       {#snippet model()}
-        <p>Every required link costs each end 2% of its capacity. In the first shape every pair is linked. In the second, every node links to one centre, which can handle the work of about 12 nodes. In the third, nodes form modules of about {TEAM_SIZE} that are fully linked inside, and one node per module links to the other modules.</p>
-        <p>A single point of failure is a node whose loss would cut the network in two. In the modular shape each module has one bridge to the rest; giving each module two bridges would remove them, at the cost of a few more links.</p>
+        <p>Every required working relationship costs each person in it 2% of their time. In the first shape every pair is linked. In the second, everyone links to one approver, who can sign off the work of about 12 people. In the third, people form teams of about {TEAM_SIZE} that are fully linked inside, and one person per team links to the other teams.</p>
+        <p>A single point of failure is a person whose absence would cut the network in two. In the team shape each team has one link person to the rest; giving each team two would remove them, at the cost of a few more links. The same arithmetic applies to systems linked by data feeds.</p>
       {/snippet}
     </Instrument>
   {/snippet}
@@ -203,14 +191,13 @@
   {#snippet after()}
     <p>
       When everyone depends on everyone, output peaks at around 25 people and then falls: each newcomer adds more
-      coordination than work. Economists call this the cost of coordination, and when every pair must keep in touch it
-      grows with the square of the group. Fred Brooks saw it in software in 1975: adding people to a late project makes
+      coordination than work. When every pair must keep in touch, the cost of keeping in touch grows with the square of
+      the group. Fred Brooks saw it in software in 1975: adding people to a late project makes
       it later. The same holds for systems, where every new point-to-point link is one more thing to maintain and one
       more path for a problem to travel.
     </p>
     <p>
-      Cities show the upside of scale. Wages, patents and economic output grow faster than population: a city twice as
-      big produces roughly 2.2 times as much. In a city you can work with almost anyone and have to coordinate with
+      Cities show the other side of scale: a city twice as big produces roughly 2.2 times as much. In a city you can work with almost anyone and have to coordinate with
       almost no one. Possible links are options. Required links are conditions.
     </p>
     <p>

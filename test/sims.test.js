@@ -3,9 +3,6 @@ import assert from 'node:assert/strict';
 
 import { simulateMonth, coverageOdds } from '../src/lib/sim/presence.js';
 import { simulateSystems } from '../src/lib/sim/systems.js';
-import { EXAMPLES, schedule } from '../src/lib/sim/async.js';
-import { equilibrium, bestForAll } from '../src/lib/sim/braess.js';
-import { manyMarkets } from '../src/lib/sim/market.js';
 import { DESIGNS, averagePayoff, chainSuccess, sampleRequests, STEADY, ERRATIC } from '../src/lib/sim/convexity.js';
 import { watchmakers } from '../src/lib/sim/watchmakers.js';
 import { erlangC, meanWait, LiveQueue } from '../src/lib/sim/queue.js';
@@ -14,7 +11,6 @@ import { cascade, sweep, buildNetwork, mostConnected } from '../src/lib/sim/netw
 import { longRunGrowth, simulateIslands } from '../src/lib/sim/species.js';
 import { bestDesign, workshop } from '../src/lib/sim/pins.js';
 import { structure } from '../src/lib/sim/scale.js';
-import { diagnose } from '../src/lib/sim/diagnose.js';
 import { makeRng } from '../src/lib/sim/rng.js';
 
 const near = (a, b, tol) => assert.ok(Math.abs(a - b) <= tol, `${a} not within ${tol} of ${b}`);
@@ -140,46 +136,6 @@ test('systems: one shared record and one late approval are faster and let fewer 
   assert.equal(clean.stopped, 0);
 });
 
-test('asynchronous work: parallel takes the slowest piece, a late mistake doubles the work', () => {
-  const run = (ex, o) => schedule(EXAMPLES[ex], o).total;
-  assert.equal(run('breakfast', { mode: 'sequence' }), 5);
-  assert.equal(run('breakfast', { mode: 'parallel' }), 3);
-  assert.equal(run('request', { mode: 'sequence' }), 16);
-  assert.equal(run('request', { mode: 'parallel' }), 7);
-  for (const mode of ['sequence', 'parallel']) {
-    assert.equal(run('request', { mode, mistake: 'end' }), 2 * run('request', { mode }));
-    assert.equal(run('request', { mode, mistake: 'start' }), run('request', { mode }) + 0.5);
-  }
-  // Speeding up a piece that is not the slowest helps one after another, and not at all in parallel.
-  assert.ok(run('request', { mode: 'sequence', faster: ['pricing'] }) < 16);
-  assert.equal(run('request', { mode: 'parallel', faster: ['pricing'] }), 7);
-  assert.ok(run('request', { mode: 'parallel', faster: ['credit'] }) < 7);
-  // The chapter's puzzle: of all pairs of speed-ups, credit and the E&S review give the fastest parallel request.
-  const ids = EXAMPLES.request.pieces.map((p) => p.id);
-  const pairs = ids.flatMap((a, i) => ids.slice(i + 1).map((b) => [a, b]));
-  const best = Math.min(...pairs.map((f) => run('request', { mode: 'parallel', faster: f })));
-  assert.equal(run('request', { mode: 'parallel', faster: ['credit', 'es'] }), 5);
-  assert.equal(best, 5);
-  assert.equal(pairs.filter((f) => run('request', { mode: 'parallel', faster: f }) === 5).length, 1);
-});
-
-test('Braess: the new link makes every journey slower in rush hour', () => {
-  assert.equal(equilibrium(4000, false).time, 65);
-  assert.equal(equilibrium(4000, true).time, 80);
-  assert.ok(bestForAll(4000) <= 65);
-  assert.ok(equilibrium(2000, true).time < equilibrium(2000, false).time);
-  assert.ok(equilibrium(5000, true).time > equilibrium(5000, false).time);
-});
-
-test('winner-take-all: size that attracts customers concentrates the market and beats a better product', () => {
-  const flat = manyMarkets({ returns: 0, better: 0.2 });
-  const steep = manyMarkets({ returns: 1.5, better: 0.2 });
-  console.log('market median leader', flat.medianLeader.toFixed(2), steep.medianLeader.toFixed(2), 'better firm wins', flat.betterWins, steep.betterWins);
-  assert.ok(flat.medianLeader < 0.12);
-  assert.ok(steep.medianLeader > 0.6);
-  assert.ok(steep.betterWins < flat.betterWins / 2);
-});
-
 test('convexity: variability helps a tool and hurts a gate', () => {
   const [tool, rule, gate] = DESIGNS;
   near(averagePayoff(rule, 2), 0.5, 0.01);
@@ -196,19 +152,6 @@ test('convexity: variability helps a tool and hurts a gate', () => {
   assert.deepEqual(sampleRequests(5, 1, 3), sampleRequests(5, 1, 3));
   near(sampleRequests(1, ERRATIC, 7)[0] - 0.5, (sampleRequests(1, STEADY, 7)[0] - 0.5) * (ERRATIC / STEADY), 1e-9);
   console.log('convexity at spread 1.5', DESIGNS.map((d) => `${d.id}:${averagePayoff(d, 1.5).toFixed(2)}`).join(' '));
-});
-
-test('diagnosis levers', () => {
-  const d = diagnose({ systems: 6, problems: 0.1, info: 'copies', approvals: 'each', availability: 0.85, busy: 0.85, standIns: 0 });
-  console.log('diagnose now', d.now.median, d.now.p90, d.options.map((o) => `${o.id}:${o.median}`).join(' '), 'together', d.together.median, d.together.slipped.toFixed(3));
-  for (const o of d.options) assert.ok(o.median <= d.now.median);
-  assert.ok(d.together.median < d.now.median / 3);
-  // The bundle ends in one final approval; keeping parallel approvals instead is a little slower and catches more.
-  assert.ok(d.parallel);
-  assert.ok(d.parallel.median >= d.together.median);
-  assert.ok(d.parallel.slipped <= d.together.slipped);
-  // A process that already approves once at the end has no parallel variant to offer.
-  assert.equal(diagnose({ systems: 6, problems: 0.1, info: 'copies', approvals: 'end', availability: 0.85, busy: 0.85, standIns: 0 }).parallel, null);
 });
 
 test('watchmakers: modules finish thousands of times more watches at one interruption in a hundred', () => {

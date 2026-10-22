@@ -1,4 +1,4 @@
-// Ole Peters' coin game (chapter 8). Heads: wealth grows 50%. Tails: it
+// Ole Peters' coin game (chapter 7). Heads: wealth grows 50%. Tails: it
 // shrinks 40%. Players may stake only part of their wealth, and may pool:
 // a pool shares everything equally after every round.
 
@@ -29,10 +29,43 @@ export function typicalFactor(stake, pool = 1) {
   return Math.exp(g);
 }
 
+const headsChance = (rounds, h) => Math.exp(logChoose(rounds, h) - rounds * Math.LN2);
+const wealthAfter = (rounds, h, stake = 1) => Math.pow(1 + stake * UP, h) * Math.pow(1 - stake * DOWN, rounds - h);
+
+/** Fewest heads in `rounds` throws that leave a lone player richer than at the start. */
+export function breakEvenHeads(rounds, stake = 1) {
+  for (let h = 0; h <= rounds; h++) if (wealthAfter(rounds, h, stake) > 1) return h;
+  return Infinity;
+}
+
+/** Chance that a lone player ends poorer than at the start (exact, from the binomial distribution). */
+export function poorerChance(rounds, stake = 1) {
+  let p = 0;
+  for (let h = 0; h <= rounds; h++) if (wealthAfter(rounds, h, stake) < 1) p += headsChance(rounds, h);
+  return p;
+}
+
+/**
+ * Runs of at least `heads` heads in `rounds` throws, for a lone player staking everything:
+ * how likely they are, and what share of the paper value (the expected wealth) they make up.
+ */
+export function luckyRuns(rounds, heads) {
+  let chance = 0;
+  let value = 0;
+  for (let h = heads; h <= rounds; h++) {
+    const p = headsChance(rounds, h);
+    chance += p;
+    value += p * wealthAfter(rounds, h);
+  }
+  return { chance, paperShare: value / Math.pow(expectedFactor(1), rounds) };
+}
+
 /**
  * Simulate `players` players for `rounds` rounds. Returns wealth paths for a
- * sample of pools; per round, the median and the actual average over all players
- * and the share of all wealth held by the richest 1%; and the expected value.
+ * sample of pools; per round, the median, the share of players poorer than at
+ * the start, the mean over all players and the share of all wealth held by the
+ * richest 1% (kept for the tests; the chapter does not show them); and the
+ * expected value.
  */
 export function simulateCoin({ players = 2000, rounds = 100, stake = 1, pool = 1, seed = 5, sample = 40 }) {
   const rng = makeRng(seed);

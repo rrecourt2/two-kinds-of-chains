@@ -11,7 +11,7 @@
     <span class="tkc-eyebrow">Back at the bank</span>
   </div>
   <div class="tkc-prose">{@render children()}</div>
-  {#if ask}<p class="tkc-ask"><strong>Ask your team:</strong> {ask}</p>{/if}
+  {#if ask}<p class="tkc-ask"><strong>The question it raises:</strong> {ask}</p>{/if}
 </aside>
 
 <style>

@@ -145,7 +145,7 @@
 </script>
 
 <Chapter
-  n={14}
+  n={13}
   kicker="Modules"
   title="Two watchmakers"
   lede="Two watchmakers, equally skilled, make the same watch. One prospers, and the other loses his shop. The difference is the shape of the work."
@@ -164,11 +164,11 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="The two workshops" sub="Each places one part at a time. An interruption undoes the work in hand.">
+    <Instrument title="The two workshops" sub="Both watchmakers at work, one part a minute. An interruption undoes the work in hand: all of Tempus’s unfinished watch, only Hora’s current module.">
       <Puzzle id="modules" {...puzzle} predict onshow={() => (interrupt = 10)} />
 
       <div class="tkc-controls tkc-controls--wide" class:tkc-wait={!live} inert={live ? undefined : true}>
-        <Slider id="w-int" label="Chance of an interruption per part" bind:value={interrupt} min={0} max={20} format={(v) => `${(v / 10).toFixed(1)}%`} ends={['Quiet', 'Busy']} />
+        <Slider id="w-int" label="Chance of an interruption with each part" bind:value={interrupt} min={0} max={20} format={(v) => `${(v / 10).toFixed(1)}%`} ends={['Quiet', 'Busy']} />
       </div>
 
       <div class="race" bind:this={panel} bind:clientWidth={width}>
@@ -207,7 +207,6 @@
           {:else}
             {int(steps / 60)} working hours so far, at one part a minute.
             <button type="button" class="tkc-btn tkc-btn--small inline" onclick={() => (paused = !paused)}>{paused ? 'Resume' : 'Pause'}</button>
-            <button type="button" class="tkc-btn tkc-btn--small inline" onclick={restart}>Start again</button>
           {/if}
         </p>
       </div>

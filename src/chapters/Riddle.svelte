@@ -3,38 +3,23 @@
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
-  import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { simulateMonth, coverageOdds, ROLES, DAY_SYSTEMS } from '../lib/sim/presence.js';
+  import { simulateMonth, coverageOdds, ROLES } from '../lib/sim/presence.js';
   import { pct } from '../lib/format.js';
 
   const DAYS = 21;
-  const MODES = {
-    people: { count: 6, availability: 90, spell: 3, names: ROLES },
-    systems: { count: 6, availability: 97, spell: 1, names: DAY_SYSTEMS },
-  };
+  const COUNT = 6; // six roles must all be in for the decision
+  const SEED = 58; // a month close to the long-run odds for the settings in the puzzle
 
-  let what = $state('people');
-  let count = $state(6);
   let availability = $state(90);
   let backups = $state(0);
-  let seed = $state(4);
   let width = $state(600);
 
-  const sys = $derived(what === 'systems');
-  const mode = $derived(MODES[what]);
-  const month = $derived(simulateMonth({ roles: count, standIns: backups, availability: availability / 100, meanSpell: mode.spell, days: DAYS, seed }));
-  const odds = $derived(coverageOdds(count, backups, availability / 100));
-
-  function switchTo(next) {
-    what = next;
-    count = MODES[next].count;
-    availability = MODES[next].availability;
-    backups = 0;
-  }
+  const month = $derived(simulateMonth({ roles: COUNT, standIns: backups, availability: availability / 100, days: DAYS, seed: SEED }));
+  const odds = $derived(coverageOdds(COUNT, backups, availability / 100));
 
   // Calendar geometry: 21 working days in 4+ weeks. Labels sit left of each row,
   // or above it on narrow screens so the days keep their size.
@@ -47,16 +32,13 @@
   const dayX = (d) => labelW + d * (cell + gap) + Math.floor(d / 5) * weekGap;
   const rowY = (r) => (stacked ? 50 : 34) + r * (cell + gap + (stacked ? 18 : 4));
   const labelY = (r) => (stacked ? rowY(r) - 5 : rowY(r) + cell / 2 + 4);
-  const height = $derived(stacked ? rowY(count) - 12 : rowY(count) + 8);
-  const label = (r) => {
-    const name = mode.names[r];
-    return narrow && !stacked ? name.replace('Investment officer', 'Investment').replace('E&S specialist', 'E&S').replace('Department head', 'Dept. head').replace('Booking platform', 'Booking') : name;
-  };
+  const height = $derived(stacked ? rowY(COUNT) - 12 : rowY(COUNT) + 8);
+  const label = (r) => (narrow && !stacked ? ROLES[r].replace('Investment officer', 'Investment').replace('E&S specialist', 'E&S') : ROLES[r]);
 
   const formula = $derived.by(() => {
     const a = (availability / 100).toFixed(2);
-    if (backups === 0) return `${a} multiplied ${count} time${count === 1 ? '' : 's'} = ${pct(odds.allCovered)}`;
-    return `Each link is covered ${pct(odds.roleCovered, 1)} of the time; ${pct(odds.roleCovered, 1)} multiplied ${count} times = ${pct(odds.allCovered)}`;
+    if (backups === 0) return `${a} multiplied ${COUNT} times = ${pct(odds.allCovered)}`;
+    return `each role is covered ${pct(odds.roleCovered, 1)} of the time; ${pct(odds.roleCovered, 1)} multiplied ${COUNT} times = ${pct(odds.allCovered)}`;
   });
 
   const puzzle = {
@@ -74,7 +56,7 @@
   // A prediction: the controls open after the first answer or a hint.
   const game = getContext('tkc-game');
   const live = $derived(game.engaged('riddle'));
-  const showAnswer = () => ((what = 'people'), (count = 6), (availability = 90), (backups = 1));
+  const showAnswer = () => ((availability = 90), (backups = 1));
 </script>
 
 <Chapter
@@ -99,29 +81,19 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title={sys ? 'What is up this month?' : 'Who is in this month?'} sub={sys ? 'Each square is one working day. Systems fail in incidents and maintenance windows.' : 'Each square is one working day. Absences come in runs: a week of holiday, a few days of training.'}>
+    <Instrument title="Who is in this month?" sub="Six people who must all be in for a decision, over one month. Each square is a working day; the strip on top shows the days the decision could be made.">
       <Puzzle id="riddle" {...puzzle} predict onshow={showAnswer} />
       <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
-        <Segmented
-          name="r-what"
-          label="The work needs"
-          value={what}
-          options={[
-            { value: 'people', label: 'People' },
-            { value: 'systems', label: 'Systems' },
-          ]}
-          onchange={switchTo}
-        />
-        <Slider id="r-count" label={sys ? 'Systems needed at once' : 'Roles that must sign off'} bind:value={count} min={1} max={10} />
-        <Slider id="r-avail" label={sys ? 'Each system is up' : 'Each person is in'} bind:value={availability} min={70} max={99} format={(v) => `${v}% of days`} />
-        <Slider id="r-backup" label={sys ? 'Backups per system' : 'Qualified stand-ins per role'} bind:value={backups} min={0} max={3} />
+        <Slider id="r-avail" label="Each person is in" bind:value={availability} min={70} max={99} format={(v) => `${v}% of days`} />
+        <Slider id="r-backup" label="Qualified stand-ins per role" bind:value={backups} min={0} max={3} format={(v) => (v === 0 ? 'None' : String(v))} />
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
-        <svg width={width} height={height} role="img" aria-label="Calendar of {count} {sys ? 'systems' : 'roles'} over {DAYS} working days. The work could be done on {month.possibleDays} days.">
+        <svg width={width} height={height} role="img" aria-label="Calendar of {COUNT} roles over {DAYS} working days. The decision could be made on {month.possibleDays} days.">
           {#each [0, 1, 2, 3] as wk}
             <text class="tkc-axis-label" x={dayX(wk * 5)} y="12">Week {wk + 1}</text>
           {/each}
+          {#if !stacked}<text class="tkc-axis-label" x="0" y="26">{narrow ? 'Decision' : 'Decision possible'}</text>{/if}
           {#each month.allIn as ok, d}
             <rect x={dayX(d)} y="18" width={cell} height="8" rx="2" fill={ok ? 'var(--tkc-options)' : 'var(--tkc-conditions)'} />
           {/each}
@@ -133,32 +105,28 @@
           {/each}
         </svg>
         <div class="tkc-legend">
-          <span><span class="tkc-swatch sw-in"></span>{sys ? 'System up' : 'Named person in'}</span>
-          {#if backups > 0}<span><span class="tkc-swatch sw-cover"></span>{sys ? 'Backup takes over' : 'Stand-in covers'}</span>{/if}
-          <span><span class="tkc-swatch sw-gap"></span>{sys ? 'Down, no backup' : 'Nobody in for this role'}</span>
-          <span><span class="tkc-swatch" style:background="var(--tkc-options)"></span>Work possible</span>
+          <span><span class="tkc-swatch sw-in"></span>Named person in</span>
+          {#if backups > 0}<span><span class="tkc-swatch sw-cover"></span>Stand-in covers</span>{/if}
+          <span><span class="tkc-swatch sw-gap"></span>Nobody in for this role</span>
+          <span><span class="tkc-swatch" style:background="var(--tkc-options)"></span>Decision possible</span>
           <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>Blocked</span>
         </div>
       </div>
 
       <div class="tkc-stats" use:announce>
-        <Stat label="Days this month the work could be done" value="{month.possibleDays} of {DAYS}" sub="In the long run: {pct(odds.allCovered)} of days" />
+        <Stat label="Days this month the decision could be made" value="{month.possibleDays} of {DAYS}" sub="In the long run: {pct(odds.allCovered)} of days" />
         <Stat
-          label="Longest wait for everyone to be {sys ? 'up' : 'in'}"
+          label="Longest wait for everyone to be in"
           value={month.longestWait === 0 ? 'No wait' : `${month.longestWait} working day${month.longestWait === 1 ? '' : 's'}`}
-          sub={month.longestWait > 0 ? 'in a row with something missing' : 'the work never had to wait'}
+          sub={month.longestWait > 0 ? 'in a row with someone missing' : 'the decision never had to wait'}
           swatch="var(--tkc-conditions)"
         />
       </div>
 
-      <div class="tkc-row" class:tkc-wait={!live} inert={live ? undefined : true}>
-        <button type="button" class="tkc-btn tkc-btn--small" onclick={() => (seed += 1)}>Simulate another month</button>
-      </div>
-
       {#snippet model()}
-        <p>Each {sys ? 'system is up' : 'person is in'} on {availability}% of days in the long run. {sys ? 'Outages last about a day.' : 'Absences last three days on average, so they cluster the way holidays and training do.'}</p>
-        <p>A link is covered on a day when its main {sys ? 'system' : 'person'} or any {sys ? 'backup' : 'stand-in'} is available. The work needs every link covered on the same day. Over many months that happens on {pct(odds.allCovered)} of days: {formula}.</p>
-        <p>{sys ? 'Each system fails independently of the others. A backup that shares its main system’s weak points, such as the same network or the same update, would help less.' : 'Each person’s absences are independent of everyone else’s. Stand-ins who take the same holidays as the people they cover would help less.'}</p>
+        <p>Each person is in on {availability}% of days in the long run. Absences last three days on average, so they cluster the way holidays and training do.</p>
+        <p>A role is covered on a day when its named person or any stand-in is in. The decision needs all six roles covered on the same day. Over many months that happens on {pct(odds.allCovered)} of days: {formula}.</p>
+        <p>Each person’s absences are independent of everyone else’s. Stand-ins who take the same holidays as the people they cover would help less.</p>
       {/snippet}
     </Instrument>
   {/snippet}

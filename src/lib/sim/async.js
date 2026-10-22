@@ -1,36 +1,23 @@
-// Asynchronous work (chapter 5), after Andrew Grove's breakfast factory. The same
-// pieces of work are done one after another, each waiting for a handoff, or in
-// parallel, starting together and meeting once at the end. A mistake in the first
-// piece can be caught at the start or found only when the pieces come together.
+// Asynchronous work (chapter 5). The same client request is done one piece after
+// another, each piece waiting for a handoff, or in parallel, with every piece starting
+// as soon as the client data it is built on is ready and the pieces meeting once at the
+// end. A mistake in the client data can be caught at the start or found only when the
+// pieces come together.
 
-export const EXAMPLES = {
-  breakfast: {
-    unit: 'minutes',
-    short: 'min',
-    handoff: 0,
-    mistake: 'A bad egg',
-    // Nothing depends on anything else: all three start at once.
-    pieces: [
-      { id: 'egg', label: 'Egg', time: 3 },
-      { id: 'toast', label: 'Toast', time: 1 },
-      { id: 'coffee', label: 'Coffee', time: 1 },
-    ],
-  },
-  request: {
-    unit: 'days',
-    short: 'days',
-    handoff: 1,
-    mistake: 'A mistake in the client data',
-    // The client data is the shared record every other piece is built on.
-    pieces: [
-      { id: 'data', label: 'Client data', time: 1, base: true },
-      { id: 'credit', label: 'Credit analysis', time: 4 },
-      { id: 'es', label: 'E&S review', time: 3 },
-      { id: 'legal', label: 'Legal documents', time: 2 },
-      { id: 'pricing', label: 'Pricing', time: 1 },
-    ],
-  },
+export const REQUEST = {
+  unit: 'days',
+  handoff: 1,
+  // The client data is the shared record every other piece is built on.
+  pieces: [
+    { id: 'data', label: 'Client data', time: 1, base: true },
+    { id: 'credit', label: 'Credit analysis', time: 4 },
+    { id: 'es', label: 'E&S review', time: 3 },
+    { id: 'legal', label: 'Legal documents', time: 2 },
+    { id: 'pricing', label: 'Pricing', time: 1 },
+  ],
 };
+
+export const EXAMPLES = { request: REQUEST };
 
 export const CHECK_TIME = 0.5; // catching a bad input at the start: a quick check and a fix
 
@@ -41,7 +28,7 @@ export const CHECK_TIME = 0.5; // catching a bad input at the start: a quick che
  * Returns { bars: [{ row, start, end, kind }], total, waiting, rework, slowest }.
  * kind: 'work' | 'wait' | 'redo' | 'check'.
  */
-export function schedule(example, { mode, handoff = example.handoff, faster = [], mistake = 'none' }) {
+export function schedule(example = REQUEST, { mode, handoff = example.handoff, faster = [], mistake = 'none' } = {}) {
   const pieces = example.pieces.map((p, row) => ({ ...p, row, time: faster.includes(p.id) ? p.time / 2 : p.time }));
   const base = pieces.find((p) => p.base);
   const rest = pieces.filter((p) => !p.base);
@@ -92,15 +79,11 @@ export function schedule(example, { mode, handoff = example.handoff, faster = []
   }
   let total = pass(t, 'work');
   if (mistake === 'end') {
-    // Found when the pieces meet: fix the first piece, then redo everything built on it.
+    // Found when the pieces meet: fix the piece the others are built on, then redo everything built on it.
+    const root = base ?? first;
     const before = total;
-    if (base) {
-      bars.push({ row: base.row, start: total, end: total + base.time, kind: 'redo' });
-      total = pass(total + base.time, 'redo', true);
-    } else {
-      bars.push({ row: first.row, start: total, end: total + first.time, kind: 'redo' });
-      total += first.time;
-    }
+    bars.push({ row: root.row, start: total, end: total + root.time, kind: 'redo' });
+    total = base ? pass(total + root.time, 'redo', true) : total + root.time;
     rework = total - before;
   }
   const group = base ? rest : pieces;
