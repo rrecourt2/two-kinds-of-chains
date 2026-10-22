@@ -165,7 +165,7 @@
         {/if}
         <div class="tkc-legend">
           <span><span class="tkc-swatch" style:background="var(--tkc-ink-2)"></span>Requests by lead time</span>
-          <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>Slowest 10%</span>
+          <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>At or beyond the 90th-percentile day</span>
           {#if !isStart}<span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-muted)"></span>Starting setup</span>{/if}
         </div>
       </div>
@@ -215,7 +215,7 @@
 
       {#snippet model()}
         <p>Filling in a system takes two hours of work, and each step takes a day because the next person picks it up the next day. The request passes through six systems. Each form has a 10% chance of a hidden problem, such as a wrong date or a missing identifier.</p>
-        <p>An approver at a system sees only that system’s data and spots each hidden problem in it half the time. With copies, that data includes every problem copied in from earlier systems. With one shared record, every approver sees the whole record and spots each problem half the time, independently of the others, so six together miss a problem about 1 time in 64. If approvers tend to miss the same problems, parallel reviews catch far fewer. One approver at the end sees the whole request and spots 90%. A spotted problem stops the request. With copies, it is corrected in the system where it started and in every later system it reached, and each of those is approved again. With one shared record, it is corrected once. Approvers are in 85% of days, absences last four days on average, and nobody stands in for them.</p>
+        <p>An approver at a system sees only that system’s data and spots each hidden problem in it half the time. With copies, that data includes every problem copied in from earlier systems. With one shared record, every approver sees the whole record and spots each problem half the time, independently of the others, so six together miss a problem about 1 time in 64. If approvers tend to miss the same problems, parallel reviews catch far fewer. One approver at the end sees the whole request and spots 90%. A spotted problem stops the request. With copies, it is corrected in the system where it started and in every later system it reached, and each of those is approved again; none is filled in again. With one shared record, it is corrected once. Approvers are in 85% of days, absences last four days on average, and nobody stands in for them.</p>
       {/snippet}
     </Instrument>
   {/snippet}
@@ -238,9 +238,10 @@
       safer.
     </p>
     <p>
-      One approval at the end is the fastest design, but lets more problems through than parallel reviews of a shared
-      record. It is a trade-off between speed and safety, and the right balance differs between decisions that can be
-      undone and those that cannot.
+      One approval at the end, on a shared record, is the fastest design. It lets more problems through: about 4
+      requests in 100, with copies or a shared record alike, against fewer than 1 in 100 when six approvers review the
+      shared record side by side. It is a trade-off between speed and safety, and the right balance differs between
+      decisions that can be undone and those that cannot.
     </p>
     <p>
       Shared does not have to mean central. A single database that every request must pass through is itself a hub:

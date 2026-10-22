@@ -112,15 +112,18 @@ function simulateOne(rng, o, params, record) {
   const spot = (candidates, p) => candidates.filter(() => rng() < p);
 
   if (o.info === 'copies' && o.approvals === 'each') {
+    // Entry and approval are separate: a system is entered once per request. A correction
+    // sends the approvals back to where the problem started, but a system that was already
+    // entered is corrected and approved again, never entered afresh.
     let k = 0;
-    let entered = false;
+    const entered = new Array(n).fill(false);
     const state = { queued: -1 };
     while (day < HORIZON && k < n) {
-      if (!entered) {
+      if (!entered[k]) {
         enter(k);
         row({ gates: set(k, ENTER), final: IDLE });
         day++;
-        entered = true;
+        entered[k] = true;
         state.queued = -1;
         continue;
       }
@@ -137,7 +140,7 @@ function simulateOne(rng, o, params, record) {
         row({ gates: set(k, OK), final: IDLE });
         day++;
         k++;
-        entered = false;
+        state.queued = -1; // the next system's approver has their own queue
         continue;
       }
       // The request stops. Correct the problem where it started and everywhere it spread.
@@ -152,8 +155,7 @@ function simulateOne(rng, o, params, record) {
         workHours += FIX_HOURS;
         day++;
       }
-      k = origin; // every corrected system is approved again, in order
-      entered = true;
+      k = origin; // every corrected system is approved again, in order; none is entered again
       state.queued = -1;
     }
   } else if (o.info === 'copies' && o.approvals === 'end') {

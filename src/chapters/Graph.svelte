@@ -119,7 +119,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['Every required working link costs both people 2% of their time.', 'Three shapes: everyone linked to everyone; everyone linked to one approver; teams joined by one person each.', 'Useful work is the time left once the links are kept up.']} title="Grow the network" sub="The links each way of working requires, and the useful work left once they are kept up. Each required link costs both people 2% of their time.">
+    <Instrument rules={['Every required working link costs both people 2% of their time.', 'Three shapes: everyone linked to everyone; everyone linked to one approver; teams joined by one person each.', 'Useful work is the time left once the links are kept up.', 'With a whole day free, the approver can sign off the work of 12 people; their own links come out of that day first.']} title="Grow the network" sub="The links each way of working requires, and the useful work left once they are kept up. Each required link costs both people 2% of their time.">
       <Puzzle id="graph" {...puzzle} predict onshow={() => ((kind = 'mesh'), (nodes = 60))} />
       <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
         <Slider id="g-nodes" label="Number of people" bind:value={nodes} min={2} max={MAX} />
@@ -139,8 +139,8 @@
         </div>
         <div class="tkc-stats tkc-stats--4 side-stats" use:announce>
           <Stat label="Required relationships" value={int(now.links)} sub={kind === 'mesh' ? 'every pair' : kind === 'hub' ? 'everyone to the approver' : `inside teams of about ${TEAM_SIZE}, plus between them`} />
-          <Stat label="Time spent coordinating" value={pct(now.overhead)} sub="on average" />
-          <Stat label="Useful output" value={now.output.toFixed(1)} sub={now.overloaded ? 'the approver is the limit' : 'people’s worth'} swatch={COLORS[kind]} />
+          <Stat label="Time keeping up relationships" value={pct(now.overhead)} sub="average per person" />
+          <Stat label="Useful output" value={now.output.toFixed(1)} sub={kind === 'hub' && now.approvalTime === 0 ? 'no time left to approve' : now.overloaded ? 'the approver is the limit' : 'people’s worth'} swatch={COLORS[kind]} />
           <Stat label="Single points of failure" value={spof} sub={spof === 0 ? 'nobody’s absence splits the group' : spof === 1 ? 'the approver' : 'one link person per team'} />
         </div>
       </div>
@@ -182,7 +182,7 @@
       </div>
 
       {#snippet model()}
-        <p>Every required working relationship costs each person in it 2% of their time. In the first shape every pair is linked. In the second, everyone links to one approver, who can sign off the work of about 12 people. In the third, people form teams of about {TEAM_SIZE} that are fully linked inside, and one person per team links to the other teams.</p>
+        <p>Every required working relationship costs each person in it 2% of their time. In the first shape every pair is linked. In the second, everyone links to one approver, who could sign off the work of about 12 people if approving were all they did. Their links come first: each one leaves 2% less of the day for approving, so 50 links leave none. In the third, people form teams of about {TEAM_SIZE} that are fully linked inside, and one person per team links to the other teams.</p>
         <p>A single point of failure is a person whose absence would cut the network in two. In the team shape each team has one link person to the rest; giving each team two would remove them, at the cost of a few more links. The same arithmetic applies to systems linked by data feeds.</p>
       {/snippet}
     </Instrument>
@@ -201,9 +201,11 @@
       almost no one. Possible links are options. Required links are conditions.
     </p>
     <p>
-      A single central hub keeps links low, but output stops growing at whatever the centre can handle, and the centre is
-      a single point of failure. Small modules with clear interfaces keep growing almost in proportion. They have a
-      second advantage, which the next chapter is about: they survive interruptions.
+      A single central hub keeps links few, but every one of them ends at the approver. Output peaks at about ten
+      people’s worth, with eleven people, and then falls: each newcomer brings more work to approve and takes time
+      away from approving it. From 51 people the approver’s whole day goes on keeping up, and nothing is signed off.
+      The centre is also a single point of failure. Small modules with clear interfaces keep growing almost in
+      proportion. They have a second advantage, which the next chapter is about: they survive interruptions.
     </p>
   {/snippet}
 

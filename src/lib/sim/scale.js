@@ -1,6 +1,7 @@
 // How three team structures scale (chapter 12). Every mandatory working
 // relationship costs each side 2% of their time. Output is counted in
-// "people's worth" of useful work.
+// "people's worth" of useful work. `overhead` is the share of everyone's time
+// spent keeping up relationships (not approving, not waiting).
 
 export const LINK_COST = 0.02;
 export const TEAM_SIZE = 6;
@@ -25,16 +26,22 @@ export function structure(kind, people) {
     return { links: (people * (people - 1)) / 2, overhead, output: people * (1 - overhead), overloaded: false };
   }
   if (kind === 'hub') {
-    if (people === 1) return { links: 0, overhead: 0, output: 1, overloaded: false };
+    if (people === 1) return { links: 0, overhead: 0, output: 1, overloaded: false, approvalTime: 1 };
     const makers = people - 1;
     const work = makers * (1 - LINK_COST);
-    // The approver spends their time approving, plus 2% per relationship.
-    const overhead = (makers * LINK_COST + 1) / people;
+    // Each relationship costs the approver 2% too, and that time is gone before any approving.
+    // With all their time free they could sign off the work of APPROVER_CAPACITY people.
+    const approvalTime = Math.max(0, 1 - makers * LINK_COST);
+    const capacity = APPROVER_CAPACITY * approvalTime;
+    // Time keeping up relationships, averaged over everyone: 2% for each maker, and the
+    // approver's share, which cannot exceed all of their time.
+    const overhead = (makers * LINK_COST + Math.min(1, makers * LINK_COST)) / people;
     return {
       links: makers,
       overhead,
-      output: Math.min(work, APPROVER_CAPACITY),
-      overloaded: work > APPROVER_CAPACITY,
+      output: Math.min(work, capacity),
+      overloaded: work > capacity,
+      approvalTime,
     };
   }
   const sizes = teamSizes(people);

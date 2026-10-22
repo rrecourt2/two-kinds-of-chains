@@ -106,12 +106,13 @@ test('pin workshop: the best chain lengthens with the market', () => {
   near(workshop(144000, 12).minutesPerPin, 4, 1e-9);
 });
 
-test('scale: mesh peaks then falls, hub plateaus, teams keep growing', () => {
+test('scale: mesh peaks then falls, hub peaks early then falls, teams keep growing', () => {
   const mesh = Array.from({ length: 60 }, (_, i) => structure('mesh', i + 1).output);
   const peak = mesh.indexOf(Math.max(...mesh)) + 1;
   console.log('mesh peak at', peak, 'output', Math.max(...mesh).toFixed(1), 'teams@60', structure('teams', 60).output.toFixed(1));
   assert.ok(peak >= 24 && peak <= 27);
-  assert.equal(structure('hub', 40).output, 12);
+  near(structure('hub', 11).output, 9.6, 1e-9);
+  assert.equal(structure('hub', 51).output, 0);
   assert.ok(structure('teams', 60).output > 50);
 });
 
