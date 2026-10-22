@@ -35,7 +35,7 @@
     { title: 'Care in proportion to the risk', text: 'Small, reversible decisions get light checks, or a sample checked while the work flows on. Decisions that cannot be undone get several reviewers working at the same time.', ch: 'ergodicity' },
     { title: 'Hubs with slack and a second route', text: 'The people, committees and systems that everything passes through run below about 80% of capacity, share one queue, and each have a deputy or a fallback.', ch: 'contagion' },
     { title: 'Claims that have met a test', text: 'Fire drills, reverse stress tests and near misses test the safest-looking assumptions, and categories leave room for the case nobody foresaw.', ch: 'black-swans' },
-    { title: 'Tools before gates', text: 'AI and automation carry complexity for people as options they can use, not as extra steps everything must pass.', ch: 'tools' },
+    { title: 'A person where the AI swings', text: 'Where AI or automation is erratic, a person keeps the good results and drops the bad ones before they move on; autopilot is kept for work that is steady, or whose mistakes are small, visible and easy to undo.', ch: 'tools' },
     { title: 'Modular work', text: 'Work is saved in finished pieces, each with a clear owner and a clear interface, so an interruption costs only the piece in hand and trouble in one part stays there.', ch: 'modules' },
     { title: 'Few conditions before the money moves', text: 'Only the conditions that must truly come first stand before disbursement; the rest become promises with deadlines, and a late document can be met another way where one exists.', ch: 'disbursement' },
   ];

@@ -22,7 +22,7 @@
     queues: 'Four busy experts and one stream of reviews: where does the waiting come from?',
     async: 'Five pieces of one client request: what really sets the pace?',
     emergence: 'Forty deals, two committees and a new fast track: does every deal get quicker?',
-    tools: 'The same AI as an optional tool or a mandatory gate: which one gains when the AI turns erratic?',
+    tools: 'The same AI with a person in the loop or on autopilot: which one gains when the AI turns erratic?',
     ergodicity: 'A bet that pays 5% a round on paper and leaves most players poorer.',
     contagion: 'Forty-eight banks, five failures at once: how much capital holds the line?',
     'black-swans': 'Four project files and one claim about Category A projects: which do you open?',

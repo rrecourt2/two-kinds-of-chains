@@ -1,7 +1,7 @@
 <script>
   import { getContext, tick } from 'svelte';
 
-  let { title, sub = '', children, model } = $props();
+  let { title, sub = '', rules = [], children, model } = $props();
   const prefix = getContext('tkc-id') ?? 'tkc';
   // Provided by the story shell: builds the chapter afresh, so every control returns to where it started.
   const reset = getContext('tkc-reset');
@@ -21,6 +21,15 @@
     </span>
     {#if sub}<span class="tkc-small">{sub}</span>{/if}
   </figcaption>
+  <!-- The model's few assumptions, in plain words, before the puzzle asks anything. -->
+  {#if rules.length}
+    <div class="rules">
+      <span class="tkc-eyebrow">In this model</span>
+      <ul>
+        {#each rules as rule (rule)}<li>{rule}</li>{/each}
+      </ul>
+    </div>
+  {/if}
   {@render children()}
   {#if model}
     <details class="tkc-note">
@@ -61,5 +70,21 @@
   .model {
     display: grid;
     gap: 6px;
+  }
+  .rules {
+    display: grid;
+    gap: 4px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--tkc-sunken);
+  }
+  .rules ul {
+    margin: 0;
+    padding-left: 1.1em;
+    display: grid;
+    gap: 2px;
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    color: var(--tkc-ink-2);
   }
 </style>

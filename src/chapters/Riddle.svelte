@@ -81,7 +81,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="Who is in this month?" sub="Six people who must all be in for a decision, over one month. Each square is a working day; the strip on top shows the days the decision could be made.">
+    <Instrument rules={['Six roles; a decision needs all six covered on the same day.', 'At the start, each person is in on 90% of days; absences come in spells of about three days.', 'A qualified stand-in can cover a role when its named person is away.', 'Nobody’s absences depend on anyone else’s.']} title="Who is in this month?" sub="Six people who must all be in for a decision, over one month. Each square is a working day; the strip on top shows the days the decision could be made.">
       <Puzzle id="riddle" {...puzzle} predict onshow={showAnswer} />
       <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
         <Slider id="r-avail" label="Each person is in" bind:value={availability} min={70} max={99} format={(v) => `${v}% of days`} />

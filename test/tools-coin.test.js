@@ -1,63 +1,69 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { DESIGNS, SHOWN, TOOL, GATE, averagePayoff, chainSuccess, runDesign, sampleRequests, STEADY, ERRATIC } from '../src/lib/sim/convexity.js';
+import { DESIGNS, SHOWN, PERSON, AUTOPILOT, averagePayoff, chainSuccess, runDesign, sampleRequests, wrongChance, STEADY, ERRATIC } from '../src/lib/sim/convexity.js';
 import { typicalFactor, expectedFactor, simulateCoin, breakEvenHeads, poorerChance, luckyRuns } from '../src/lib/sim/coin.js';
 
 const near = (a, b, tol) => assert.ok(Math.abs(a - b) <= tol, `${a} not within ${tol} of ${b}`);
 const minutes = (h) => Math.round(h * 60);
 
-test('tool or gate: the chapter shows two designs, optional and mandatory', () => {
+test('person in the loop: the chapter shows two designs, a person in the loop and autopilot', () => {
   assert.equal(DESIGNS.length, 3);
-  assert.deepEqual(SHOWN.map((d) => d.id), ['tool', 'gate']);
-  assert.equal(TOOL.id, 'tool');
-  assert.equal(GATE.id, 'gate');
-  // The gate keeps at most its half hour, and a wrong answer counts three times.
-  assert.equal(GATE.payoff(3), 0.5);
-  near(GATE.payoff(-1), -3, 1e-12);
-  near(TOOL.payoff(-1), -0.1, 1e-12);
-  near(TOOL.payoff(3), 2.9, 1e-12);
+  assert.deepEqual(SHOWN.map((d) => d.id), ['tool', 'autopilot']);
+  assert.equal(PERSON, DESIGNS[0]);
+  assert.equal(AUTOPILOT.id, 'autopilot');
+  // The person drops a bad draft for six minutes; autopilot keeps a good answer in full and pays three times for a wrong one.
+  near(PERSON.payoff(-1), -0.1, 1e-12);
+  near(PERSON.payoff(3), 2.9, 1e-12);
+  assert.equal(AUTOPILOT.payoff(3), 3);
+  near(AUTOPILOT.payoff(-1), -3, 1e-12);
+  // Rules box: the steady AI is wrong about one time in twenty, the erratic one four in ten.
+  console.log('wrong chance', wrongChance(STEADY).toFixed(4), wrongChance(ERRATIC).toFixed(4));
+  near(wrongChance(STEADY), 0.05, 0.005);
+  near(wrongChance(ERRATIC), 0.4, 0.01);
 });
 
-test('tool or gate: long-run numbers in the text and the found line', () => {
-  const steadyTool = averagePayoff(TOOL, STEADY);
-  const steadyGate = averagePayoff(GATE, STEADY);
-  const erraticTool = averagePayoff(TOOL, ERRATIC);
-  const erraticGate = averagePayoff(GATE, ERRATIC);
-  console.log('tool/gate long run (h)', steadyTool.toFixed(4), steadyGate.toFixed(4), erraticTool.toFixed(4), erraticGate.toFixed(4));
-  near(steadyTool, 0.41, 0.005);
-  near(steadyGate, 0.37, 0.005);
-  near(erraticTool, 0.97, 0.005);
-  near(erraticGate, -1.44, 0.005);
-  // “About 58 minutes saved (24 with the steady AI) … about 87 minutes lost (22 saved with the steady AI).”
-  assert.equal(minutes(erraticTool), 58);
-  assert.equal(minutes(steadyTool), 24);
-  assert.equal(minutes(erraticGate), -87);
-  assert.equal(minutes(steadyGate), 22);
-  // The answer: the optional tool saves more, the mandatory gate less (it starts to cost).
-  assert.ok(erraticTool > steadyTool);
-  assert.ok(erraticGate < steadyGate && erraticGate < 0);
+test('person in the loop: long-run minutes in the text and the found line', () => {
+  const [steadyPerson, steadyAuto] = SHOWN.map((d) => averagePayoff(d, STEADY) * 60);
+  const [erraticPerson, erraticAuto] = SHOWN.map((d) => averagePayoff(d, ERRATIC) * 60);
+  console.log('person/autopilot long run (min)', steadyPerson.toFixed(2), steadyAuto.toFixed(2), erraticPerson.toFixed(2), erraticAuto.toFixed(2));
+  // Spec: steady 24.4 vs 29.3; erratic 58.4 vs −38.7.
+  assert.equal(steadyPerson.toFixed(1), '24.4');
+  assert.equal(steadyAuto.toFixed(1), '29.3');
+  assert.equal(erraticPerson.toFixed(1), '58.4');
+  assert.equal(erraticAuto.toFixed(1), '-38.7');
+  // Found: “about 58 minutes a request, up from 24; autopilot goes from 29 minutes saved to 39 lost.”
+  assert.equal(Math.round(erraticPerson), 58);
+  assert.equal(Math.round(steadyPerson), 24);
+  assert.equal(Math.round(steadyAuto), 29);
+  assert.equal(Math.round(erraticAuto), -39);
+  // The story: steady, autopilot wins; erratic, the person in the loop wins and autopilot loses.
+  assert.ok(steadyAuto > steadyPerson);
+  assert.ok(erraticPerson > steadyPerson && erraticPerson > erraticAuto && erraticAuto < 0);
   // Both AIs are worth half an hour on average (the rule design earns the plain average).
   near(averagePayoff(DESIGNS[1], STEADY), 0.5, 0.01);
   near(averagePayoff(DESIGNS[1], ERRATIC), 0.5, 0.01);
 });
 
-test('tool or gate: the twenty requests shown follow the long run', () => {
+test('person in the loop: the twenty requests shown follow the long run', () => {
   const steady = sampleRequests(20, STEADY, 1);
   const erratic = sampleRequests(20, ERRATIC, 1);
-  const [st, sg] = SHOWN.map((d) => runDesign(d, steady));
-  const [et, eg] = SHOWN.map((d) => runDesign(d, erratic));
-  console.log('twenty requests: steady', st.total.toFixed(1), sg.total.toFixed(1), st.wrong, 'erratic', et.total.toFixed(1), eg.total.toFixed(1), et.wrong);
-  // Steady: the two designs are close, both save; the AI is rarely wrong.
-  assert.ok(st.total > 0 && sg.total > 0 && Math.abs(st.total - sg.total) < 2);
-  assert.ok(st.wrong <= 2);
-  // Erratic: the tool saves more than before, the gate loses.
-  assert.ok(et.total > st.total);
-  assert.ok(eg.total < 0);
-  assert.equal(et.wrong, eg.wrong);
+  const [sp, sa] = SHOWN.map((d) => runDesign(d, steady));
+  const [ep, ea] = SHOWN.map((d) => runDesign(d, erratic));
+  console.log('twenty requests (h): steady', sp.total.toFixed(2), sa.total.toFixed(2), sp.wrong, '| erratic', ep.total.toFixed(2), ea.total.toFixed(2), ep.wrong);
+  // Steady: “8.2 h saved” with the person, “9.7 h saved” on autopilot; one wrong draft.
+  assert.equal(sp.total.toFixed(1), '8.2');
+  assert.equal(sa.total.toFixed(1), '9.7');
+  assert.equal(sp.wrong, 1);
+  assert.ok(sa.total > sp.total);
+  // Erratic: “20.4 h saved” with the person, “14.5 h lost” on autopilot; six wrong answers.
+  assert.equal(ep.total.toFixed(1), '20.4');
+  assert.equal(ea.total.toFixed(1), '-14.5');
+  assert.equal(ep.wrong, 6);
+  assert.equal(ea.wrong, ep.wrong);
 });
 
-test('tool or gate: a 20-step chain at 95% a step works about one time in three', () => {
+test('person in the loop: a 20-step chain at 95% a step works about one time in three', () => {
   near(chainSuccess(20, 0.95), 1 / 3, 0.03);
 });
 

@@ -1,10 +1,11 @@
-// The same AI built into a process in different ways (chapter "Tool or gate?"). On each
+// The same AI built into a process in different ways (chapter "A person in the loop"). On each
 // request the AI's answer is worth X hours: positive when it helps, negative when it is wrong.
 // X is normally distributed around MEAN_HELP with the given spread.
 //
-// The chapter shows two designs: optional (a tool a person may use) and mandatory (the AI is
-// the gate every request must pass). The "rule" design (always use the answer, no gate) stays
-// here for the tests and as a reference: it earns exactly the average, whatever the spread.
+// The chapter compares two designs: a person in the loop (the AI drafts, a person keeps a good
+// draft and drops a bad one) and autopilot (the answer is used as it is, with nobody looking).
+// DESIGNS keeps the older reference designs for the tests: the person in the loop (`tool`), a
+// plain rule that earns exactly the average whatever the spread, and a capped mandatory step.
 
 import { makeRng, normal } from './rng.js';
 
@@ -12,19 +13,27 @@ export const MEAN_HELP = 0.5;
 export const STEADY = 0.3; // spread of the steady AI's usefulness, in hours
 export const ERRATIC = 2; // and of the erratic one
 export const CHECK_COST = 0.1; // six minutes spent looking at a draft before keeping or dropping it
-export const GATE_CAP = 0.5; // the steps after a gate are planned around the half hour it was built to save
-export const GATE_MULTIPLIER = 3; // a wrong answer stops this request and those queued behind it
+export const GATE_CAP = 0.5; // reference design only: a mandatory step saves at most its planned half hour
+export const GATE_MULTIPLIER = 3; // reference design only: a wrong answer stops the work queued behind it
+export const AUTOPILOT_MULTIPLIER = 3; // a wrong answer used as is gets built on before anyone notices
 
 export const DESIGNS = [
-  { id: 'tool', label: 'Optional (tool): a person keeps a good draft and drops a bad one', short: 'Optional (tool)', payoff: (x) => Math.max(x, 0) - CHECK_COST },
+  { id: 'tool', label: 'With a person in the loop: a person keeps a good draft and drops a bad one', short: 'Person in the loop', payoff: (x) => Math.max(x, 0) - CHECK_COST },
   { id: 'rule', label: 'A rule: always use its answer', short: 'Rule', payoff: (x) => x },
-  { id: 'gate', label: 'Mandatory (gate): nothing moves until the AI answers', short: 'Mandatory (gate)', payoff: (x) => (x >= 0 ? Math.min(x, GATE_CAP) : GATE_MULTIPLIER * x) },
+  { id: 'gate', label: 'Mandatory step: nothing moves until the AI answers', short: 'Mandatory step', payoff: (x) => (x >= 0 ? Math.min(x, GATE_CAP) : GATE_MULTIPLIER * x) },
 ];
 
+/** With a person in the loop: six minutes looking, a good draft kept, a bad one dropped. */
+export const PERSON = DESIGNS[0];
+/** On autopilot: a good answer saves its full value; a wrong one travels on and costs three times its loss. */
+export const AUTOPILOT = {
+  id: 'autopilot',
+  label: 'On autopilot: the AI’s answer is used as it is, with nobody looking',
+  short: 'On autopilot',
+  payoff: (x) => (x >= 0 ? x : AUTOPILOT_MULTIPLIER * x),
+};
 /** The two designs the chapter compares, in the order it shows them. */
-export const TOOL = DESIGNS[0];
-export const GATE = DESIGNS[2];
-export const SHOWN = [TOOL, GATE];
+export const SHOWN = [PERSON, AUTOPILOT];
 
 const density = (x, sd) => Math.exp(-0.5 * ((x - MEAN_HELP) / sd) ** 2) / (sd * Math.sqrt(2 * Math.PI));
 
@@ -41,6 +50,11 @@ export function averagePayoff(design, spread) {
     sum += design.payoff(x) * density(x, spread) * dx;
   }
   return sum;
+}
+
+/** Chance that the AI's answer on a request is wrong (worth less than nothing). */
+export function wrongChance(spread) {
+  return averagePayoff({ payoff: (x) => (x < 0 ? 1 : 0) }, spread);
 }
 
 export { density };

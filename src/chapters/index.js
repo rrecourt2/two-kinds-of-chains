@@ -31,7 +31,7 @@ export const CHAPTERS = [
   { id: 'contagion', short: 'Contagion', title: '2008: when links became conditions', component: Contagion, part: 3 },
   { id: 'black-swans', short: 'Black swans', title: 'How to find a black swan', component: BlackSwans, part: 3 },
   { id: 'extinction', short: 'Extinction', title: 'Why species go extinct', component: Extinction, part: 3 },
-  { id: 'tools', short: 'Tool or gate', title: 'Tool or gate?', component: Tools, part: 4 },
+  { id: 'tools', short: 'Person in the loop', title: 'A person in the loop', component: Tools, part: 4 },
   { id: 'graph', short: 'Networks', title: 'The shape of the network', component: Graph, part: 4 },
   { id: 'modules', short: 'Modules', title: 'Two watchmakers', component: Modules, part: 4 },
   { id: 'disbursement', short: 'Disbursement', title: 'Time to disbursement', component: Disbursement, part: 4 },

@@ -72,7 +72,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="The pin workshop" sub="What a pin costs in worker-minutes, for each way of splitting the 12 operations into specialist roles. The cheapest design is coloured, and drawn as a chain below.">
+    <Instrument rules={['A pin takes twelve operations.', 'One trained pin-maker working alone makes 10 pins a day.', 'Split the work into n roles, and each specialist works n times faster at their share.', 'Every role needs at least one whole person, busy or not.']} title="The pin workshop" sub="What a pin costs in worker-minutes, for each way of splitting the 12 operations into specialist roles. The cheapest design is coloured, and drawn as a chain below.">
       <Puzzle id="specialization" {...puzzle} onshow={() => (exponent = 2.9)} />
       <div class="tkc-controls tkc-controls--wide">
         <Slider

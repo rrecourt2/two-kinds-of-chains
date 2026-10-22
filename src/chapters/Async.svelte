@@ -78,7 +78,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="One client request, two ways" sub="Each bar is one piece of work, in days. Every handoff waits a day for someone to pick it up.">
+    <Instrument rules={['Five pieces: client data 1 day, credit analysis 4, E&S review 3, legal documents 2, pricing 1.', 'Every handoff waits a day for someone to pick it up.', 'In parallel, the client data comes first; the other four then run side by side.']} title="One client request, two ways" sub="Each bar is one piece of work, in days. Every handoff waits a day for someone to pick it up.">
       <Puzzle id="async" {...puzzle} onshow={showAnswer} />
 
       <div class="speed" role="group" aria-label="Make a piece twice as fast">

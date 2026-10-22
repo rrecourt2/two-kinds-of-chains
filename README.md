@@ -22,7 +22,7 @@ ships as one file, with no external requests, so it can run inside a locked-down
 | 9 | How to find a black swan | Wason's selection task with IFC project categories; the box nobody drew |
 | 10 | Why species go extinct | Where the generalist overtakes the specialist as the years get more volatile |
 | | **Part 4 · Chains that bend** | |
-| 11 | Tool or gate? | One AI, twenty requests, built in as an optional tool or a mandatory gate; a steady or an erratic AI |
+| 11 | A person in the loop | One AI, twenty requests, with a person in the loop or on autopilot; a steady or an erratic AI |
 | 12 | The shape of the network | What sixty fully linked people produce; mesh, hub and modules |
 | 13 | Two watchmakers | Herbert Simon's parable as a live race: one long chain against modules; Gall's law |
 | 14 | Time to disbursement | A Monte Carlo of conditions precedent: when nine loans in ten are ready to disburse |

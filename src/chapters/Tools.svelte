@@ -48,67 +48,84 @@
   const total = (v) => `${hrs(v)} ${v >= 0 ? 'saved' : 'lost'}`;
   const mins = (v) => `${v >= 0 ? '+' : '−'}${Math.round(Math.abs(v) * 60)} min`;
   const NAMES = {
-    tool: { name: 'Optional (tool)', note: 'a person keeps a good draft and drops a bad one' },
-    gate: { name: 'Mandatory (gate)', note: 'every request passes the AI, and its answer is used as it is' },
+    tool: { name: 'With a person in the loop', note: 'the AI drafts; a person keeps a good draft and drops a bad one' },
+    autopilot: { name: 'On autopilot', note: 'the AI’s answer is used as it is, with nobody looking' },
   };
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   const wrongNote = (r) =>
-    r.id === 'tool'
-      ? `${r.wrong} bad draft${r.wrong === 1 ? '' : 's'} dropped`
-      : `${r.wrong} request${r.wrong === 1 ? '' : 's'} stuck`;
+    r.id === 'tool' ? `${plural(r.wrong, 'bad draft', 'bad drafts')} dropped` : `${plural(r.wrong, 'wrong answer', 'wrong answers')} passed on`;
+
+  const rules = [
+    'Each AI draft saves half an hour on average; a wrong draft costs time instead.',
+    'A person in the loop spends six minutes looking and drops every bad draft.',
+    'On autopilot nobody looks; a wrong answer is built on and costs three times as much.',
+    'The steady AI is wrong about one time in twenty; the erratic one, four in ten.',
+  ];
 
   const puzzle = {
-    goal: 'The AI becomes erratic: brilliant on some requests, wrong on others, still worth half an hour on average. What happens to the time it saves?',
+    goal: 'The AI turns erratic: brilliant on some requests, wrong on others, still worth half an hour on average. Which design saves more time now?',
     choices: [
-      { value: 'both-less', label: 'Both save less' },
-      { value: 'both-more', label: 'Both save more' },
-      { value: 'tool-more', label: 'The optional tool saves more; the mandatory gate saves less' },
-      { value: 'tool-less', label: 'The optional tool saves less; the mandatory gate saves more' },
+      { value: 'autopilot', label: 'Autopilot, as before: nobody spends time checking' },
+      { value: 'person', label: 'The person in the loop' },
+      { value: 'same', label: 'About the same' },
     ],
-    answer: 'tool-more',
+    answer: 'person',
     wrong: (v) =>
-      v === 'both-less'
-        ? 'Not for the optional tool. What does a bad draft cost a person who can drop it?'
-        : v === 'both-more'
-          ? 'Not for the mandatory gate. Its best answers cannot save more than its half hour. What do its wrong ones cost?'
-          : 'The other way round. Switch the AI to Erratic and compare the two totals.',
+      v === 'autopilot'
+        ? 'Not any more. Autopilot keeps every brilliant answer, but what happens to each wrong one?'
+        : 'They part ways. What does a wrong answer cost each design, and how often is the erratic AI wrong?',
     hints: [
-      'When the AI is wrong, what does each design lose? A person can drop a bad draft; a gate stops the request.',
-      'When the AI is brilliant, what can each design gain? A tool keeps all of it; a gate saves at most its half hour.',
+      'When the AI is brilliant, both designs keep the gain; the person only spends six minutes looking.',
+      'When the AI is wrong, the person drops the draft. On autopilot, the mistake is built on.',
     ],
-    found: 'The tool saves more; the gate starts to cost. As a tool, about 58 minutes saved per request (24 with the steady AI). As a gate, about 87 minutes lost (22 saved with the steady AI). Variability helps whatever is optional and hurts whatever is mandatory.',
+    found: 'The person in the loop, by a wide margin. With the erratic AI it saves about 58 minutes a request, up from 24; autopilot goes from 29 minutes saved to 39 lost. Variability helps whatever is optional.',
   };
 </script>
 
 {#snippet flow(id)}
-  <svg class="flow" width="244" height="50" viewBox="0 0 244 50" role="img" aria-label={id === 'tool' ? 'Sketch: a request goes to a person, with the AI’s draft or without it.' : 'Sketch: every request must pass the AI before it reaches a person.'}>
-    <rect class="node" x="0.5" y="27.5" width="62" height="20" rx="5" />
-    <text class="node-label" x="31.5" y="41.5" text-anchor="middle">Request</text>
-    <rect class="node" x="181.5" y="27.5" width="62" height="20" rx="5" />
-    <text class="node-label" x="212.5" y="41.5" text-anchor="middle">Person</text>
+  <svg
+    class="flow"
+    width="280"
+    height="50"
+    viewBox="0 0 280 50"
+    role="img"
+    aria-label={id === 'tool'
+      ? 'Sketch: a request goes to the AI for a draft, then to a person, who keeps a good draft or does the work without it, then on to the next step.'
+      : 'Sketch: a request goes to the AI, and its answer goes straight on to the next step, with no one looking.'}
+  >
+    <rect class="node" x="0.5" y="27.5" width="58" height="20" rx="5" />
+    <text class="node-label" x="29.5" y="41.5" text-anchor="middle">Request</text>
+    <line class="edge" x1="59" y1="37.5" x2="71" y2="37.5" />
+    <path class="head" d="M76 37.5 l-6 -3.5 v7 Z" />
+    <rect class="node next" x="218.5" y="27.5" width="61" height="20" rx="5" />
+    <text class="node-label" x="249" y="41.5" text-anchor="middle">Next step</text>
+    <path class="head" d="M218 37.5 l-6 -3.5 v7 Z" />
     {#if id === 'tool'}
-      <line class="edge" x1="63" y1="37.5" x2="176" y2="37.5" />
-      <path class="edge-opt" d="M70 37.5 C 84 37.5 84 10.5 98 10.5" />
-      <path class="edge-opt" d="M146 10.5 C 160 10.5 160 37.5 172 37.5" />
-      <rect class="node ai-opt" x="98.5" y="1.5" width="47" height="18" rx="5" />
-      <text class="node-label" x="122" y="14" text-anchor="middle">AI draft</text>
-      <text class="or-label" x="122" y="33" text-anchor="middle">or</text>
+      <rect class="node ai-draft" x="76.5" y="27.5" width="54" height="20" rx="5" />
+      <text class="node-label" x="103.5" y="41.5" text-anchor="middle">AI draft</text>
+      <line class="edge" x1="131" y1="37.5" x2="143" y2="37.5" />
+      <path class="head" d="M148 37.5 l-6 -3.5 v7 Z" />
+      <rect class="node person" x="148.5" y="27.5" width="52" height="20" rx="5" />
+      <text class="node-label strong" x="174.5" y="41.5" text-anchor="middle">Person</text>
+      <line class="edge" x1="201" y1="37.5" x2="213" y2="37.5" />
+      <!-- The person can go around the draft and do the work as before. -->
+      <path class="edge-or" d="M42 27 C 42 4, 168 4, 168 21" />
+      <path class="head-or" d="M168 27 l-3.5 -6 h7 Z" />
+      <text class="or-label tkc-halo" x="105" y="14" text-anchor="middle">or</text>
     {:else}
-      <line class="edge" x1="63" y1="37.5" x2="93" y2="37.5" />
-      <path class="head" d="M98 37.5 l-6 -3.5 v7 Z" />
-      <line class="edge" x1="146" y1="37.5" x2="176" y2="37.5" />
-      <rect class="node ai-gate" x="99" y="26" width="46" height="23" rx="3" />
-      <text class="node-label strong" x="122" y="41.5" text-anchor="middle">AI</text>
-      <text class="gate-label" x="122" y="17" text-anchor="middle">every request must pass</text>
+      <rect class="node ai-auto" x="76.5" y="27.5" width="54" height="20" rx="5" />
+      <text class="node-label strong" x="103.5" y="41.5" text-anchor="middle">AI</text>
+      <line class="edge" x1="131" y1="37.5" x2="213" y2="37.5" />
+      <text class="nobody" x="172" y="31" text-anchor="middle">no one looking</text>
     {/if}
-    <path class="head" d="M181 37.5 l-6 -3.5 v7 Z" />
   </svg>
 {/snippet}
 
 <Chapter
   n={11}
   kicker="AI and tools"
-  title="Tool or gate?"
-  lede="The same AI can shorten a chain or add a link to it. It depends on whether the work can go around it."
+  title="A person in the loop"
+  lede="The same AI can be put to work with a person checking each draft, or on autopilot. Checking takes time; what it buys depends on the AI."
   puzzle="tools"
 >
   {#snippet setup()}
@@ -121,20 +138,11 @@
     </p>
     <p>
       A modern AI model can read a request written in plain language, draft the answer and fill in the systems behind it.
-      It can be built into a process in two ways.
+      There are two ways to put it to work. With a person in the loop, the AI drafts and someone looks before anything
+      moves on: a good draft is kept, and a bad one is dropped and the work done as before. On autopilot, the answer goes
+      straight to the next step. Nobody spends time checking, so every good answer saves its full value. A wrong one
+      travels on unnoticed, and others build on it before anyone finds it.
     </p>
-    <ul>
-      <li>
-        <strong>Optional, as a tool.</strong> The AI drafts and a person decides. A good draft is kept; a bad one is
-        dropped, at the cost of the six minutes spent looking at it. The work can always go ahead without it.
-      </li>
-      <li>
-        <strong>Mandatory, as a gate.</strong> Here the AI itself is the gate, like the approvals in chapter 3: every
-        request must pass it, and its answer is used as it is, with no person choosing. When the answer is right, the
-        request reaches the next desk half an hour sooner, and no sooner, because the next step is booked for then. When
-        it is wrong, the request stops, with those queued behind it, until someone notices and puts it right.
-      </li>
-    </ul>
     <p>
       Below, the same AI handles the same twenty requests both ways. For now it is steady: it saves about half an hour
       on most requests and is rarely wrong.
@@ -142,7 +150,11 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="One AI, twenty requests, two designs" sub="Each bar is one request: time saved above the line, time lost below.">
+    <Instrument
+      title="One AI, twenty requests, two designs"
+      sub="Each bar is one request: time saved above the line, time lost below."
+      {rules}
+    >
       <Puzzle id="tools" {...puzzle} predict onshow={() => (ai = 'erratic')} />
       <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
         <Segmented
@@ -197,28 +209,34 @@
       </div>
 
       {#snippet model()}
-        <p>On each request the AI’s draft is worth X hours: half an hour on average, give or take {STEADY} hours for the steady AI and {ERRATIC} hours for the erratic one (a normal distribution). Both AIs see the same twenty requests, with the same luck, scaled by their spread.</p>
-        <p>Optional (tool): a person spends six minutes looking at the draft and keeps it only when it helps, so a request saves max(X, 0) − 0.1 hours. Mandatory (gate): every request passes the AI and its answer is used. A good answer saves at most the half hour the next steps are planned around; a wrong one stops the request and the work queued behind it until someone notices and fixes it, which the model counts as three times the loss (3X). The figures “in the long run” are exact averages over all possible requests.</p>
+        <p>On each request the AI’s draft is worth X hours: half an hour on average, give or take {STEADY} hours for the steady AI and {ERRATIC} hours for the erratic one (a normal distribution). Below zero, the draft is wrong and using it costs time. Both AIs see the same twenty requests, with the same luck, scaled by their spread.</p>
+        <p>With a person in the loop, someone spends six minutes looking at each draft and keeps it only when it helps, so a request saves max(X, 0) − 0.1 hours. The model assumes the person can always tell a good draft from a bad one. On autopilot the answer is always used: a good one saves X hours; a wrong one is passed on and built on before anyone notices, which the model counts as three times the loss (3X). The figures “in the long run” are exact averages over all possible requests.</p>
       {/snippet}
     </Instrument>
   {/snippet}
 
   {#snippet after()}
     <p>
-      An option is used only when it pays. When the erratic AI is brilliant, the person keeps the draft and the gain is
-      large; when it is wrong, the draft is dropped and the loss is six minutes. Wilder swings bring more brilliant drafts
-      to keep, while the losses stay small. A gate has no such choice. Its best answers are capped at the half hour the
-      rest of the process expects, and every wrong one holds up the line. Wilder swings bring more stopped lines and no
-      bigger gains.
+      With a steady AI there is little for the person to catch. It is rarely wrong, so the six minutes spent looking buy
+      almost nothing, and autopilot comes out ahead. The erratic AI is wrong on four requests in ten, and brilliant on
+      others. When it is brilliant, the person keeps the draft and the gain is large; when it is wrong, the draft is
+      dropped and the loss is six minutes. Wilder swings bring more brilliant drafts to keep, while the losses stay small.
+      Autopilot keeps the brilliant answers too, but every wrong one goes on down the chain, and the wilder the AI, the
+      more often it is wrong and the bigger its mistakes.
     </p>
     <p>
-      Anyone who has priced an option will recognise the shapes. A tool is a bought option: a small, known downside and a
-      large upside. A gate is a sold option: the reverse. In the language of this story, a tool adds an
-      <span class="tkc-or">OR</span> to the chain, and a gate adds an <span class="tkc-and">AND</span>.
+      A person in the loop is usually counted as a safety measure, a cost paid for caution. Here it is also what turns the
+      AI’s variability into a gain.
     </p>
     <p>
-      A tool works where a person can tell a good draft from a bad one at a glance; where they cannot, the tool quietly
-      becomes a gate.
+      Anyone who has priced an option will recognise the shapes. The person in the loop holds a bought option: a small,
+      known cost and a large upside. Autopilot has the shape of a sold option: its losses grow faster than its gains. In
+      the language of this story, the person adds an <span class="tkc-or">OR</span> to the chain, the draft or the work
+      done as before, and autopilot adds an <span class="tkc-and">AND</span>: the next step needs the AI to be right.
+    </p>
+    <p>
+      The loop works where a person can tell a good draft from a bad one at a glance; where they cannot, it quietly
+      becomes autopilot.
     </p>
     <h3>AI agents have the same problem as approval chains</h3>
     <p>
@@ -228,16 +246,16 @@
     </p>
     <p>
       The fixes from earlier chapters work here too: one record for the AI to read, rather than many systems to fill in,
-      and people reviewing the finished work side by side, rather than a gate at every step. The rest of this part is
+      and people reviewing the finished work side by side, rather than a sign-off at every step. The rest of this part is
       about chains that bend instead of breaking, and ends with a loan that cannot move until a dozen conditions are
       met.
     </p>
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Where would an AI step add a link to the chain, and where would it take one away?">
+    <BankNote ask="Where does an AI’s answer travel on with nobody looking, and what would a wrong one cost by the time it surfaced?">
       <p>
-        An AI project is easiest to judge by what it takes out of the chain: steps, fields and waits. As a gate, it is
+        An AI project is easiest to judge by what it takes out of the chain: steps, fields and waits. On autopilot, it is
         safe only where its mistakes are small, visible and easy to undo.
       </p>
     </BankNote>
@@ -304,14 +322,18 @@
     stroke: var(--tkc-rule);
     stroke-width: 1;
   }
-  .ai-opt {
+  .ai-draft {
     stroke: var(--tkc-options);
     stroke-dasharray: 3 2;
     fill: var(--tkc-options-wash);
   }
-  .ai-gate {
+  .person {
+    stroke: var(--tkc-ink-2);
+    stroke-width: 1.5;
+  }
+  .ai-auto {
     stroke: var(--tkc-conditions);
-    stroke-width: 2.5;
+    stroke-width: 1.5;
     fill: var(--tkc-conditions-wash);
   }
   .node-label {
@@ -326,7 +348,7 @@
     stroke: var(--tkc-ink-2);
     stroke-width: 1.5;
   }
-  .edge-opt {
+  .edge-or {
     fill: none;
     stroke: var(--tkc-options);
     stroke-width: 1.5;
@@ -335,14 +357,17 @@
   .head {
     fill: var(--tkc-ink-2);
   }
+  .head-or {
+    fill: var(--tkc-options);
+  }
   .or-label {
     font-size: 10.5px;
     font-weight: 700;
     fill: var(--tkc-options-ink);
   }
-  .gate-label {
+  .nobody {
     font-size: 10.5px;
-    font-weight: 700;
+    font-style: italic;
     fill: var(--tkc-conditions-ink);
   }
   .zero {
@@ -358,5 +383,10 @@
   .two {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+  }
+  @container fig (max-width: 300px) {
+    .two {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 </style>
