@@ -15,7 +15,7 @@ ships as one file, with no external requests, so it can run inside a locked-down
 | 3 | When systems lean on each other | Faster and safer without dropping a system: copies vs one shared record, gates at every step or once |
 | 4 | Why full calendars make long queues | Get the wait under an hour with reviewers at least 80% busy: named lines vs one shared line |
 | 5 | Don't wait for each other | Which two speed-ups help most when a client request runs in parallel |
-| 6 | The fast track | Forty deals, two committees and a fast track that skips the outside opinion: a prediction of what it does to every deal's time |
+| 6 | The fast track | Forty deals, two committees and a fast track that skips the outside adviser: predict what it does to every deal's time, then move the teams across one by one |
 | | **Part 3 · When the world pulls on the chain** | |
 | 7 | When the average lies | Ole Peters' coin game: the paper value against the typical player; staking less and pooling |
 | 8 | 2008: when links became conditions | A stress test on 48 banks: how much capital holds when five fail at once; hubs inside organizations |
@@ -25,8 +25,8 @@ ships as one file, with no external requests, so it can run inside a locked-down
 | 11 | A person in the loop | One AI, twenty requests, with a person in the loop or on autopilot; a steady or an erratic AI |
 | 12 | The shape of the network | What sixty fully linked people produce; mesh, hub and modules |
 | 13 | Two watchmakers | Herbert Simon's parable as a live race: one long chain against modules; Gall's law |
-| 14 | Time to disbursement | A Monte Carlo of conditions precedent: when nine loans in ten are ready to disburse |
-| 15 | What it means on Monday | Ten patterns and the reader's score |
+| 14 | Time to disbursement | Twelve conditions precedent, 2,000 loans: keeping a three-month promise for nine clients in ten |
+| 15 | What it means on Monday | The patterns, chapter by chapter, and the reader's score |
 
 ### Puzzles and score
 

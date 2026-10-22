@@ -29,7 +29,7 @@
     extinction: 'Two species, forty islands, and the year the weather turns.',
     graph: 'Sixty people who must all work with each other: how much gets done?',
     modules: 'Two watchmakers, the same watch, and a phone that keeps ringing.',
-    disbursement: 'One signed loan, twelve conditions, two thousand tries: when does the money move?',
+    disbursement: 'A three-month promise, twelve conditions: how often is the money on time?',
     monday: 'The patterns behind the puzzles, and your score.',
   };
 

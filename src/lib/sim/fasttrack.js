@@ -1,24 +1,27 @@
 // The fast track (chapter 6): a banking version of Braess's paradox (Braess, 1968).
-// Every deal needs two independent opinions, a committee's and one other, in one of two orders:
-//   Route 1: regional committee, then an outside adviser's second opinion;
-//   Route 2: the adviser's opinion, then the head-office committee.
-// When the fast track is open, a second committee counts as the second opinion: a deal
-// cleared by the regional committee may go straight to the head-office committee.
-// A committee takes a working day for every two deals on its agenda; the outside opinion
-// always takes 20 working days (each deal has its own adviser). Each deal team takes the route that is quickest for its own deal, so
-// the deals settle where no team can gain by switching alone (a Nash, or Wardrop,
-// equilibrium).
+// Every deal needs two independent opinions, a committee's and a second one, in one of
+// two equally good orders (the old routes):
+//   regional committee, then an outside adviser;
+//   the adviser, then the head-office committee.
+// The fast track lets the head-office committee's sign-off count as the second opinion:
+// a deal cleared by the regional committee may go straight to the head-office committee.
+// A committee takes a working day for every two deals on its agenda; the adviser always
+// takes 20 working days (each deal has its own adviser). Each deal team takes the route
+// that is quickest for its own deal, so the deals settle where no team can gain by
+// switching alone (a Nash, or Wardrop, equilibrium).
 
 export const REVIEW_DAYS = 20;
 export const DAYS_PER_DEAL = 0.5;
+/** Deals a quarter in the chapter, one deal team each. */
+export const DEALS = 40;
 
 export const ROUTES = [
-  { id: 'route1', name: 'Route 1', stages: ['regional', 'review'] },
-  { id: 'route2', name: 'Route 2', stages: ['review', 'head'] },
-  { id: 'fast', name: 'Fast track', stages: ['regional', 'head'] },
+  { id: 'route1', name: 'Regional committee, then adviser', short: 'Regional, then adviser', tiny: 'Committee first', stages: ['regional', 'review'] },
+  { id: 'route2', name: 'Adviser, then head-office committee', short: 'Adviser, then head office', tiny: 'Adviser first', stages: ['review', 'head'] },
+  { id: 'fast', name: 'Fast track: both committees', short: 'Fast track', tiny: 'Fast track', stages: ['regional', 'head'] },
 ];
 
-/** The agenda at which a committee takes as long as the outside opinion (40 deals). */
+/** The agenda at which a committee takes as long as the outside adviser (40 deals). */
 export const FULL = REVIEW_DAYS / DAYS_PER_DEAL;
 
 /** Days a committee takes with this many deals a quarter on its agenda. */
@@ -64,8 +67,34 @@ export function equilibrium({ deals, fastTrack }) {
   }
   const r = routeTimes(split);
   const used = ROUTES.filter((route) => split[route.id] > 0).map((route) => r.times[route.id]);
-  const time = used.length ? Math.max(...used) : r.times.route1;
+  // With no deals at all, the time a first deal would take on the quickest open route.
+  const open = ROUTES.filter((route) => fastTrack || route.id !== 'fast').map((route) => r.times[route.id]);
+  const time = used.length ? Math.max(...used) : Math.min(...open);
   return { deals: n, fastTrack: !!fastTrack, split, ...r, time };
+}
+
+/**
+ * The fast track filling up: `onFast` of the deal teams have switched to it and the rest
+ * split evenly between the two old routes, which then take the same time. With k teams on
+ * the fast track (40 deals) each committee has 20 + k/2 deals, the fast track takes
+ * 20 + k/2 days and the old routes 30 + k/4, so the fast track is quicker until k = 40,
+ * where both take 40 days. `saving` is the gap a team sees when it weighs a switch, with
+ * the times as they stand; the switching deal itself adds half a day to the committee it
+ * joins, which `switchGain` counts.
+ */
+export function uptake(onFast, deals = DEALS) {
+  const n = Math.max(0, deals);
+  const k = Math.min(n, Math.max(0, onFast));
+  const split = { route1: (n - k) / 2, route2: (n - k) / 2, fast: k };
+  const r = routeTimes(split);
+  return { deals: n, onFast: k, split, ...r, fastTime: r.times.fast, oldTime: r.times.route1, saving: r.times.route1 - r.times.fast };
+}
+
+/** Days one team saves by moving its deal from route `from` to route `to`, all else as it is. */
+export function switchGain(split, from, to) {
+  if (!(split[from] >= 1)) return null;
+  const moved = { ...split, [from]: split[from] - 1, [to]: (split[to] ?? 0) + 1 };
+  return routeTimes(split).times[from] - routeTimes(moved).times[to];
 }
 
 /** The number of deals a quarter at which opening the fast track neither helps nor hurts. */

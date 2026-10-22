@@ -1,4 +1,4 @@
-// Time to disbursement (chapter 14): one signed loan, simulated many times.
+// Time to disbursement (chapter 14): many loans with the same conditions, each with its own luck.
 //
 // A signed loan cannot disburse until every condition precedent is met: one long AND.
 // Each condition is delivered a log-normal number of working days after signing; some
@@ -17,6 +17,9 @@ import { makeRng, normal } from './rng.js';
 // `median`: typical working day of delivery, counted from signing (professional
 // estimates, not sourced data). `after`: a condition that must be met first; delivery
 // then counts from that day, and `median` includes it.
+// `safeguard`: what stays before the money moves when the condition itself moves after it.
+// Security registered may follow the money only with its filing package in hand first:
+// evidence of filing and a letter from local counsel (or the registration itself, if sooner).
 export const CONDITIONS = [
   { id: 'kyc', name: 'KYC checks', median: 7, fixed: true },
   { id: 'board', name: 'Board approval', median: 5, fixed: true, alt: 'a certified copy, originals to follow' },
@@ -27,7 +30,7 @@ export const CONDITIONS = [
   { id: 'permits', name: 'Permits', median: 30, alt: 'a regulator’s comfort letter, or evidence of a filed renewal' },
   { id: 'equity', name: 'Equity paid in', median: 15, alt: 'the sponsor’s commitment, backed by a bank guarantee or letter of credit' },
   { id: 'insurance', name: 'Insurance', median: 10, alt: 'the broker’s letter of undertaking' },
-  { id: 'registered', name: 'Security registered', median: 35, after: 'signed', alt: 'evidence of filing and a letter from local counsel' },
+  { id: 'registered', name: 'Security registered', median: 35, after: 'signed', alt: 'evidence of filing and a letter from local counsel', safeguard: 'Filing evidence' },
   { id: 'hedging', name: 'Hedging', median: 25 },
   { id: 'agent', name: 'Process agent', median: 5 },
 ];
@@ -53,8 +56,10 @@ export const PARAMS = {
   seed: 14,
 };
 
-/** The puzzle's target: nine loans in ten disbursed within this many working days. */
+/** The client's promise, and the puzzle's target: nine loans in ten disbursed within this many working days (about three months). */
 export const TARGET = 60;
+/** Credit policy's floor (an assumption of the model): at least this many conditions stay before the money moves. */
+export const POLICY_BEFORE = 8;
 /** The loan in the dot timeline: the same loan, with the same luck, under every setting. */
 export const SAMPLE_LOAN = 56;
 
@@ -97,8 +102,12 @@ const draw = (median, sigma, z) => Math.max(1, Math.round(median * Math.exp(sigm
 
 /**
  * One loan's conditions under the given rules. For every condition: the day the original
- * was first delivered, whether it came back, the day it was delivered in good order, the
- * day it was met (`good`, or earlier if an alternative closed it) and whether one did.
+ * was first delivered, whether it came back, the day it was delivered in good order
+ * (`good`), the day its alternative would be ready (`altReady`, where one exists), the day
+ * it was met (`good`, or `altReady` if alternatives are accepted and it is sooner) and
+ * whether the alternative closed it. Registration also carries `filed`, the day evidence of
+ * filing exists (the security signed, then filed), and `altReady` is its filing package:
+ * that evidence plus a letter from local counsel.
  */
 function oneLoan(l, L, sigma, alternatives, p) {
   const out = new Array(TOTAL);
@@ -112,34 +121,42 @@ function oneLoan(l, L, sigma, alternatives, p) {
     const good = back ? first + p.check + draw(p.redo * m, sigma, L.z2[k]) : first;
     let met = good;
     let alt = false;
-    if (alternatives && cond.alt) {
+    let altReady = null;
+    let filed = null;
+    if (cond.alt) {
       // After the wait, the alternative is asked for; it arrives and its waiver is signed off
       // a few days later. Evidence of filing exists only once the signed security is filed.
-      const asked = Math.max(p.wait, cond.after ? start + draw(p.filing, sigma, L.z4[k]) : 0);
-      const ready = asked + draw(p.altDays, sigma, L.z3[k]);
-      if (good > ready) {
-        met = ready;
+      if (cond.after) filed = start + draw(p.filing, sigma, L.z4[k]);
+      altReady = Math.max(p.wait, filed ?? 0) + draw(p.altDays, sigma, L.z3[k]);
+      if (alternatives && good > altReady) {
+        met = altReady;
         alt = true;
       }
     }
-    out[c] = { id: cond.id, first, back, good, met, alt };
+    out[c] = { id: cond.id, first, back, good, met, alt, altReady, filed };
   }
   return out;
 }
 
+/** Index used in `setBy` for a safeguard that set the date. */
+export const SAFEGUARD = TOTAL;
+
 /**
- * Simulate the same signed loan `loans` times.
+ * Simulate `loans` loans with the same conditions, each with its own luck.
  * before: conditions kept before the money moves (4–12); the rest become conditions subsequent.
+ *   A condition with a safeguard that moves leaves the safeguard before the money moves,
+ *   ready at the sooner of the condition itself and its package, whatever `alternatives` says.
  * alternatives: a late condition is met by its alternative where one exists.
  * predictable: the other parties' delivery times vary little (true) or a lot (false).
  * Returns each loan's working days from signing to disbursement, the index of the condition
- * that set each loan's date, and the sample loan's conditions.
+ * that set each loan's date (SAFEGUARD for a safeguard), and the sample loan's conditions.
  */
 export function simulateLoans({ before = TOTAL, alternatives = false, predictable = false, loans = PARAMS.loans, seed = PARAMS.seed, sample = SAMPLE_LOAN, params = {} } = {}) {
   const p = { ...PARAMS, ...params, sigma: { ...PARAMS.sigma, ...(params.sigma ?? {}) } };
   const sigma = predictable ? p.sigma.predictable : p.sigma.unpredictable;
   const L = luck(loans, seed, p.returned);
   const n = clampBefore(before);
+  const guarded = CONDITIONS.map((c, i) => (i >= n && c.safeguard ? i : -1)).filter((i) => i >= 0);
   const days = new Int32Array(loans);
   const setBy = new Uint8Array(loans);
   const met = new Int32Array(loans * TOTAL);
@@ -155,12 +172,23 @@ export function simulateLoans({ before = TOTAL, alternatives = false, predictabl
         by = c;
       }
     }
+    const safe = guarded.map((c) => Math.min(conds[c].good, conds[c].altReady));
+    for (const t of safe) {
+      if (t > last) {
+        last = t;
+        by = SAFEGUARD;
+      }
+    }
     days[l] = last + p.check;
     setBy[l] = by;
     if (l === sample) {
       one = {
         day: days[l],
         conditions: conds.map((x, c) => ({ ...x, name: CONDITIONS[c].name, required: c < n, hasAlt: !!CONDITIONS[c].alt, setsDate: c === by })),
+        safeguards: guarded.map((c, j) => {
+          const x = conds[c];
+          return { id: `${x.id}-safeguard`, of: x.id, name: CONDITIONS[c].safeguard, met: safe[j], byPackage: x.altReady < x.good, filed: x.filed, altReady: x.altReady, good: x.good, setsDate: by === SAFEGUARD };
+        }),
       };
     }
   }
@@ -177,9 +205,9 @@ export function inTime(sim, limit) {
   });
 }
 
-/** For each condition, the share of loans whose date it set (it was met last). */
+/** For each condition, the share of loans whose date it set (it was met last); the extra last slot is the safeguard. */
 export function dateSetters(sim) {
-  const shares = new Array(TOTAL).fill(0);
+  const shares = new Array(TOTAL + 1).fill(0); // the last slot: a safeguard
   for (const c of sim.setBy) shares[c] += 1 / sim.setBy.length;
   return shares;
 }

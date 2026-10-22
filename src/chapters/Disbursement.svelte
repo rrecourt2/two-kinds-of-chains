@@ -8,11 +8,10 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { simulateLoans, typical, nineInTen, shareWithin, histogram, inTime, dateSetters, CONDITIONS, TOTAL, MIN_BEFORE, TARGET, PARAMS } from '../lib/sim/disbursement.js';
+  import { simulateLoans, typical, nineInTen, shareWithin, histogram, inTime, dateSetters, CONDITIONS, TOTAL, MIN_BEFORE, POLICY_BEFORE, TARGET, PARAMS } from '../lib/sim/disbursement.js';
   import { linear, ticks, barUp } from '../lib/scales.js';
 
   const START = { before: TOTAL, late: 'wait', parties: 'unpredictable' };
-  const ANSWER = { before: 8, late: 'alt', parties: 'unpredictable' };
 
   let before = $state(START.before);
   let late = $state(START.late);
@@ -25,7 +24,14 @@
   const mid = $derived(typical(sim.days));
   const p90 = $derived(nineInTen(sim.days));
   const loan = $derived(sim.sample);
-  const setter = $derived(loan.conditions.find((c) => c.setsDate));
+  // The rows of "One of the loans": the conditions still required, any safeguard a moved
+  // condition leaves behind, then the conditions no longer required before the money moves.
+  const rows = $derived([
+    ...loan.conditions.filter((c) => c.required),
+    ...loan.safeguards.map((g) => ({ ...g, required: true, safeguard: true })),
+    ...loan.conditions.filter((c) => !c.required),
+  ]);
+  const setter = $derived(rows.find((r) => r.required && r.setsDate));
   const isStart = $derived(before === START.before && late === START.late && parties === START.parties);
 
   // The numbers the text quotes, computed from the model.
@@ -38,19 +44,51 @@
     start: startRun,
     pred: at({ predictable: true }),
     alt: at({ alternatives: true }),
-    answer: at({ before: ANSWER.before, alternatives: true }),
     predAlt: at({ alternatives: true, predictable: true }),
   };
+  // Every setting the puzzle accepts (within policy, unpredictable parties). In this model:
+  // alternatives, with ten, nine or eight conditions first, all at 55 days.
+  const solving = [];
+  for (let b = POLICY_BEFORE; b <= TOTAL; b++) {
+    for (const a of [false, true]) {
+      const r = at({ before: b, alternatives: a });
+      if (r.p90 <= TARGET) solving.push({ before: b, alternatives: a, p90: r.p90 });
+    }
+  }
+  // "Show me the answer": the fewest conditions moved that meet the goal.
+  const fewest = solving.reduce((best, x) => (x.before > best.before ? x : best));
+  const ANSWER = { before: fewest.before, late: fewest.alternatives ? 'alt' : 'wait', parties: 'unpredictable' };
+  const words = ['none', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+  const list = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`);
+  const movedAtFewest = CONDITIONS.slice(fewest.before)
+    .reverse()
+    .map((c) => `the ${c.name.toLowerCase()}`);
+  const moreChangesNothing = solving.every((x) => x.p90 === fewest.p90);
+  // Average delivery, unpredictable over predictable parties: the same medians, a wider spread.
+  const meanMet = (s) => s.met.reduce((a, v) => a + v, 0) / s.met.length;
+  const meanStretch = Math.round((meanMet(F.start.s) / meanMet(F.pred.s) - 1) * 100);
   const worstEach = Math.floor(Math.min(...inTime(F.start.s, TARGET)) * 100);
   const allTogether = Math.round(shareWithin(F.start.s.days, TARGET) * 100);
   const slowestTypical = Math.max(...CONDITIONS.map((c) => c.median));
   const registeredShare = dateSetters(F.start.s)[CONDITIONS.findIndex((c) => c.id === 'registered')];
+  const altCount = CONDITIONS.filter((c) => c.alt).length;
+  const weeks = (d) => words[Math.round(d / 5)];
+  const fastest = Math.min(...CONDITIONS.map((c) => c.median));
+
+  // What the reader is told before the puzzle: the model in a few plain statements.
+  const rules = [
+    `As signed, all twelve conditions come before the money; each usually takes ${weeks(fastest)} to ${weeks(slowestTypical)} weeks.`,
+    `Any one can be late, and about one document in ${words[Math.round(1 / PARAMS.returned)]} comes back for correction.`,
+    `The money moves ${words[PARAMS.check]} working days after the last condition is met.`,
+    `Some may follow the money as promises; policy keeps at least ${words[POLICY_BEFORE]} first, while the lender can still say no.`,
+  ];
 
   // Shared horizontal range: working days after signing.
   const XMAX = 120;
+  const textWidth = (s) => s.length * 6.9; // 12px SVG text, a little generous
   const compact = $derived(width < 420);
 
-  // ---- One loan, condition by condition ----
+  // ---- One of the loans, condition by condition ----
   const TAG = 22; // the "or" tag column
   const LW = 160; // label column (wide layout)
   const LANE = 24; // the "money moves" label above the rows
@@ -60,16 +98,20 @@
   const plotLeft = $derived(compact ? 6 : LW);
   const tx = $derived(linear(0, XMAX, plotLeft, width - 10));
   const day = (d) => Math.min(XMAX, d);
-  // Row tops: a heading, the conditions still before the money moves, a heading, the rest.
-  const rowTop = (i) => LANE + HEAD + i * RH + (i >= n ? HEAD + 6 : 0);
-  const afterHeadY = $derived(LANE + HEAD + n * RH + 6);
-  // The same height whatever the split: twelve rows and both headings.
-  const rowsBottom = $derived(LANE + HEAD + TOTAL * RH + HEAD + 6);
+  const nBefore = $derived(n + loan.safeguards.length);
+  const SAFE_MAX = CONDITIONS.filter((c) => c.safeguard).length;
+  // Row tops: a heading, the rows required before the money moves, a heading, the rest.
+  const rowTop = (i) => LANE + HEAD + i * RH + (i >= nBefore ? HEAD + 6 : 0);
+  const afterHeadY = $derived(LANE + HEAD + nBefore * RH + 6);
+  // The same height whatever the split: every row, any safeguard and both headings.
+  const rowsBottom = $derived(LANE + HEAD + (TOTAL + SAFE_MAX) * RH + HEAD + 6);
   const TH = $derived(rowsBottom + 34);
   const dotY = (i) => rowTop(i) + (compact ? 21 : RH / 2);
   const nameY = (i) => (compact ? rowTop(i) + 10 : rowTop(i) + RH / 2 + 4);
   const moneyX = $derived(tx(day(loan.day)));
-  const moneyRight = $derived(moneyX + 150 < width);
+  const moneyText = $derived(`Money moves · day ${loan.day}`);
+  // Right of the line where it fits, else left of it, kept inside the chart.
+  const moneyLabelX = $derived(moneyX + 5 + textWidth(moneyText) <= width ? moneyX + 5 : Math.max(0, moneyX - 5 - textWidth(moneyText)));
   // Where the "sets the date" note fits: left of the dot (the money line is just to its right),
   // else beyond the money line, else after the row's name.
   const notePlace = $derived.by(() => {
@@ -80,13 +122,30 @@
     return 'name';
   });
   const anyAlt = $derived(loan.conditions.some((c) => c.required && c.alt));
+  const regByPackage = $derived(loan.conditions.some((c) => c.id === 'registered' && c.required && c.alt));
+  const HEAD_BEFORE = 'Before the money moves';
+  const HEAD_AFTER = $derived(`Not required before the money moves${n === TOTAL ? ': none' : ''}`);
+  const knockouts = $derived([
+    { x: -2, y: LANE + 3, w: textWidth(HEAD_BEFORE) + 4 },
+    { x: -2, y: afterHeadY + 3, w: textWidth(HEAD_AFTER) + 4 },
+    ...rows.map((c, i) => ({
+      x: TAG - 2,
+      y: nameY(i) - 11,
+      w: textWidth(c.name + (c.setsDate && c.required ? ' · sets the date' : '')) + 4,
+    })),
+  ]);
+  const verdict = $derived(
+    loan.day <= TARGET
+      ? `This client is paid on day ${loan.day}, within the promise.`
+      : `This client is paid on day ${loan.day}, ${loan.day - TARGET} working days after the promise.`,
+  );
   const loanLabel = $derived(
-    `One of the ${PARAMS.loans.toLocaleString('en-US')} loans. The money moves on day ${loan.day}, after ${setter.name}${setter.alt ? ', met by its alternative' : ''}. ` +
-      loan.conditions
+    `One of the ${PARAMS.loans.toLocaleString('en-US')} loans. The money moves on day ${loan.day}, after ${setter.name}${setter.alt ? ', met by its alternative' : ''}${setter.safeguard ? (setter.byPackage ? ', the filing package' : ', the registration itself') : ''}. Before the money moves: ` +
+      rows
         .filter((c) => c.required)
-        .map((c) => `${c.name}: day ${c.met}${c.alt ? ` by its alternative, original day ${c.good}` : ''}`)
+        .map((c) => `${c.name}: day ${c.met}${c.alt ? ` by its alternative, original day ${c.good}` : ''}${c.safeguard ? (c.byPackage ? ` by the filing package; registration day ${c.good}` : ' by the registration itself') : ''}`)
         .join('; ') +
-      `. After the money moves: ${loan.conditions.filter((c) => !c.required).map((c) => `${c.name}, day ${c.good}`).join('; ') || 'none'}.`,
+      `. Not required before the money moves: ${loan.conditions.filter((c) => !c.required).map((c) => `${c.name}, day ${c.good}`).join('; ') || 'none'}.`,
   );
 
   // ---- All loans: days to disbursement ----
@@ -100,12 +159,43 @@
   const step = $derived(hx(1) - hx(0));
   const binW = $derived(Math.max(0.8, step - (step > 3 ? 1 : 0)));
   const ghost = $derived(startHist.bins.reduce((d, c, i) => d + `${i ? 'L' : 'M'}${hx(i).toFixed(1)} ${hy(c).toFixed(1)}H${hx(i + 1).toFixed(1)}`, ''));
+
   // Reference lines sit on the boundary after their day: loans on or before it are to the left.
-  const marks = $derived([
-    { key: 'target', x: hx(TARGET + 1), y: 12, text: `Target · ${TARGET} days` },
-    { key: 'p90', x: hx(p90 + 1), y: 27, text: `9 in 10 · ${p90} days` },
-    { key: 'mid', x: hx(mid + 1), y: 42, text: `Typical · ${mid} days` },
-  ]);
+  // Each label takes one of three heights and one side of its line; of all the arrangements,
+  // the one where no label crosses another line or leaves the chart wins.
+  const LEVELS = [12, 27, 42];
+  const PERMS = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
+  const marks = $derived.by(() => {
+    const m = [
+      { key: 'mid', x: hx(mid + 1), text: 'Typical' },
+      { key: 'p90', x: hx(p90 + 1), text: '9 in 10' },
+      { key: 'target', x: hx(TARGET + 1), text: `Promise · ${TARGET} days` },
+    ];
+    // Natural order: the leftmost line has the highest label.
+    const rank = [...m].sort((a, b) => a.x - b.x).map((d) => d.key);
+    let best = null;
+    for (const perm of PERMS) {
+      for (let sides = 0; sides < 8; sides++) {
+        const lay = m.map((d, i) => {
+          const right = !(sides & (1 << i));
+          const w = textWidth(d.text);
+          const y = LEVELS[perm[i]];
+          return { ...d, y, right, l: right ? d.x + 4 : d.x - 4 - w, r: right ? d.x + 4 + w : d.x - 4 };
+        });
+        let cost = 0;
+        for (const a of lay) {
+          if (a.l < 0 || a.r > width) cost += 100;
+          if (a.l < hm.left + 2 && a.y + 3 > hm.top - 14) cost += 100; // the "Loans" axis title
+
+          if (!a.right) cost += 2;
+          for (const b of lay) if (a !== b && b.x >= a.l - 2 && b.x <= a.r + 2 && b.y + 4 < a.y + 3) cost += 100;
+        }
+        lay.forEach((d) => (cost += Math.abs(LEVELS.indexOf(d.y) - rank.indexOf(d.key))));
+        if (!best || cost < best.cost) best = { cost, lay };
+      }
+    }
+    return best.lay;
+  });
   const thisX = $derived(hx(day(loan.day) + 0.5));
 
   // ---- Puzzle ----
@@ -113,20 +203,35 @@
   const game = getContext('tkc-game');
   const revealed = $derived(!game.isOpen('disbursement'));
   const unpredictableOk = $derived(!predictable);
-  const enoughOk = $derived(before >= 8);
+  const enoughOk = $derived(before >= POLICY_BEFORE);
   const fastOk = $derived(p90 <= TARGET);
+  const goalMet = $derived(unpredictableOk && enoughOk && fastOk);
+  // The setting the reader solved with, so that the found text describes it.
+  let solvedWith = $state(null);
+  $effect(() => {
+    if (goalMet && game.isOpen('disbursement')) solvedWith = { before, alternatives, p90 };
+  });
+  const foundText = $derived.by(() => {
+    const w = solvedWith ?? { before: ANSWER.before, alternatives: ANSWER.late === 'alt', p90: fewest.p90 };
+    const how = w.alternatives ? 'Alternatives accepted' : 'Waiting for every original';
+    const tail =
+      w.before === fewest.before
+        ? `Letting ${list(movedAtFewest)} follow the money is enough${moreChangesNothing ? '; moving more changes nothing here' : ''}.`
+        : `Letting ${list(movedAtFewest)} follow the money would have been enough${moreChangesNothing ? ': the same ' + fewest.p90 + ' days' : ''}.`;
+    return `${how}, with ${words[w.before]} conditions before the money moves: nine clients in ten are paid within ${w.p90} working days instead of ${F.start.p90}. ${tail} Neither move was enough alone. Had the borrower, lawyers and registries been predictable, all twelve conditions would have kept the promise as they stood: ${F.pred.p90} days.`;
+  });
   const puzzle = $derived({
-    goal: `The borrower, lawyers and registries are unpredictable. Keep at least eight conditions before the money moves, and get nine loans in ten disbursed within ${TARGET} working days.`,
-    met: unpredictableOk && enoughOk && fastOk,
+    goal: `Keep the three-month promise for nine clients in ten, with at least ${words[POLICY_BEFORE]} conditions still met before the money moves.`,
+    met: goalMet,
     checks: [
-      { label: `At least 8 conditions before the money moves (now ${before})`, ok: enoughOk },
-      { label: `9 in 10 loans disbursed within ${TARGET} working days (now ${p90})`, ok: fastOk },
+      { label: `At least ${POLICY_BEFORE} conditions before the money moves (now ${before})`, ok: enoughOk },
+      { label: `9 clients in 10 paid within ${TARGET} working days (now ${p90})`, ok: fastOk },
     ],
     hints: [
-      'Look at what sets the date for the loan in the timeline, and whether that condition has an “or”.',
+      'In “One of the loans”, look at which condition sets the date, and whether it has an “or”.',
       'Neither change is enough alone: moving conditions and accepting alternatives speed up different conditions.',
     ],
-    found: `Fewer conditions first, and alternatives where they exist: with eight before the money moves, nine loans in ten disburse within ${F.answer.p90} working days instead of ${F.start.p90}. Neither move was enough alone. With predictable parties, all twelve conditions would have met the target as they stood: ${F.pred.p90} days.`,
+    found: foundText,
   });
   const showAnswer = () => ((before = ANSWER.before), (late = ANSWER.late), (parties = ANSWER.parties));
 </script>
@@ -135,20 +240,20 @@
   n={14}
   kicker="Processing time"
   title="Time to disbursement"
-  lede="Twelve conditions stand between a signed loan and its first disbursement. Each is usually in good time. When does the money move?"
+  lede="A client is promised the money within about three months of signing. Twelve conditions stand in between, each usually in good time. How often does the promise hold?"
   puzzle="disbursement"
 >
   {#snippet setup()}
     <p>
-      Signing a loan is not paying it out. Between the two stands a list of conditions precedent: what the lender must
-      have in hand before the first money moves. A board approval, a legal opinion, signed and registered security,
-      insurance, permits, the environmental and social actions due before disbursement. Every item must be met, so the
-      list is the purest chain of <span class="tkc-and">ANDs</span> a bank has.
+      Signing a loan is not paying it out. The client has been told the money will come within about three months of
+      signing: 60 working days. Between the two stands a list of conditions precedent: what the lender must have in
+      hand before the first money moves. A board approval, a legal opinion, signed and registered security, insurance,
+      permits, the environmental and social actions due before disbursement. Every item must be met, so the list is the
+      purest chain of <span class="tkc-and">ANDs</span> a bank has.
     </p>
     <p>
-      Each item comes from someone else: the borrower, its lawyers, a registry, a regulator, the central bank. Each has a
-      typical time and can be late, and some documents come back for correction. The money moves only when the last one
-      is in and checked.
+      Each item comes from someone else: the borrower, its lawyers, a registry, a regulator, the central bank. Each has
+      its own queue and its own bad weeks.
     </p>
     <p>
       A chain like this can bend without dropping a condition. Some conditions can become conditions subsequent:
@@ -160,7 +265,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="One signed loan, 2,000 times" sub="One loan, signed 2,000 times with different luck. Each bar counts loans by the day the money moved.">
+    <Instrument title="Twelve conditions, {PARAMS.loans.toLocaleString('en-US')} loans" sub="Each loan has the same twelve conditions and its own luck." {rules}>
       <Puzzle id="disbursement" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls">
         <Slider
@@ -169,7 +274,7 @@
           bind:value={before}
           min={MIN_BEFORE}
           max={TOTAL}
-          format={(v) => `${v} before · ${TOTAL - v} after`}
+          format={(v) => `${v} of ${TOTAL}`}
         />
         <div class="ctl">
           <Segmented
@@ -181,7 +286,7 @@
               { value: 'alt', label: 'Accept an alternative' },
             ]}
           />
-          <p class="tkc-caption">Where one exists, once approved.</p>
+          <p class="tkc-caption">{words[altCount][0].toUpperCase() + words[altCount].slice(1)} conditions have one, asked for after {weeks(PARAMS.wait)} weeks.</p>
         </div>
         {#if revealed}
           <Segmented
@@ -198,32 +303,38 @@
 
       <div class="tkc-stats two" use:announce>
         <Stat label="Typical loan" value="{mid} days" sub="working days; half are sooner" />
-        <Stat label="9 in 10 disbursed by" value="{p90} days" sub="target: {TARGET} days" swatch="var(--tkc-conditions)" line={true} />
+        <Stat label="9 in 10 paid by" value="{p90} days" sub="promise: {TARGET} days" swatch="var(--tkc-conditions)" line={true} />
       </div>
 
       <div class="part" bind:clientWidth={width}>
-        <div class="tkc-fig-title small">One of the 2,000 loans</div>
+        <div class="head">
+          <div class="tkc-fig-title small">One of the loans</div>
+          <p class="tkc-small verdict">{verdict}</p>
+        </div>
         <svg {width} height={TH} role="img" aria-label={loanLabel}>
-          <!-- Group headings -->
-          <text class="tkc-axis-title tkc-halo" x="0" y={LANE + 15}>Before the money moves · {n}</text>
-          <text class="tkc-axis-title tkc-halo" x="0" y={afterHeadY + 15}>After the money moves · {TOTAL - n}</text>
-
           <!-- The day the money moves, drawn under the rows so that their labels stay legible -->
           <line class="money" x1={moneyX} x2={moneyX} y1={LANE - 6} y2={rowsBottom} />
+          {#if compact}
+            <!-- On a narrow screen the names sit above the dots, across the money line: clear the line behind them. -->
+            {#each knockouts as k, i (i)}
+              <rect class="knock" x={k.x} y={k.y} width={k.w} height="15" />
+            {/each}
+          {/if}
+          <!-- Group headings -->
+          <text class="tkc-axis-title tkc-halo" x="0" y={LANE + 15}>{HEAD_BEFORE}</text>
+          <text class="tkc-axis-title tkc-halo" x="0" y={afterHeadY + 15}>{HEAD_AFTER}</text>
 
-          {#each loan.conditions as c, i (c.id)}
+          {#each rows as c, i (c.id)}
             {@const cy = dotY(i)}
             {@const x = tx(day(c.required ? c.met : c.good))}
-            {@const cond = CONDITIONS[i]}
             <g class="row" class:moved={!c.required}>
               <line class="track" x1={plotLeft} x2={width - 10} y1={cy} y2={cy} />
-              <line class="typical" x1={tx(cond.median)} x2={tx(cond.median)} y1={cy - 5} y2={cy + 5} />
               {#if c.hasAlt}
                 <rect class="or-tag" x="0" y={nameY(i) - 11} width="18" height="14" rx="4" />
                 <text class="or-text" x="9" y={nameY(i) - 1}>or</text>
               {/if}
               <text class="tkc-label-2 tkc-halo name" class:strong={c.setsDate && c.required} x={TAG} y={nameY(i)}
-                >{c.name}{#if c.setsDate && c.required && notePlace === 'name'}<tspan class="sets">{'\u00a0· sets the date'}</tspan>{/if}</text
+                >{c.name}{#if c.setsDate && c.required && notePlace === 'name'}<tspan class="sets">{' · sets the date'}</tspan>{/if}</text
               >
               {#if c.required && c.alt}
                 <line class="saved" x1={x} x2={tx(day(c.good))} y1={cy} y2={cy} />
@@ -240,7 +351,7 @@
             </g>
           {/each}
 
-          <text class="tkc-label tkc-halo" x={moneyRight ? moneyX + 5 : moneyX - 5} y={LANE - 10} text-anchor={moneyRight ? 'start' : 'end'}>Money moves · day {loan.day}</text>
+          <text class="tkc-label tkc-halo" x={moneyLabelX} y={LANE - 10}>{moneyText}</text>
 
           {#each [0, 20, 40, 60, 80, 100, 120] as t}
             <text class="tkc-axis-label" x={tx(t)} y={rowsBottom + 16} text-anchor={t === 0 && compact ? 'start' : t === XMAX ? 'end' : 'middle'}>{t}</text>
@@ -248,16 +359,26 @@
           <text class="tkc-axis-label" x={plotLeft + (width - 10 - plotLeft) / 2} y={rowsBottom + 31} text-anchor="middle">working days after signing</text>
         </svg>
         <div class="tkc-legend">
-          <span><span class="key-typical" aria-hidden="true"></span>Typical day</span>
           <span><span class="tkc-swatch dot-key" aria-hidden="true"></span>Met</span>
           <span><span class="or-key" aria-hidden="true">or</span>Has an alternative</span>
           {#if anyAlt}<span><span class="tkc-swatch dot-key alt" aria-hidden="true"></span>Met by its alternative <span class="orig-key" aria-hidden="true"></span>original’s day</span>{/if}
         </div>
+        {#if loan.safeguards.length}
+          <p class="tkc-caption">
+            Security registered may follow the money only once its filing evidence is in: proof of filing and a letter
+            from local counsel, or the registration itself if that comes first.
+          </p>
+        {:else if regByPackage}
+          <p class="tkc-caption">
+            Security registered’s alternative is its filing package: proof of filing and a letter from local counsel. Its
+            hollow circle is the registration itself.
+          </p>
+        {/if}
       </div>
 
       <div class="part">
-        <div class="tkc-fig-title small">All 2,000 loans</div>
-        <svg {width} height={HH} role="img" aria-label="Days from signing to disbursement for 2,000 simulated loans. Typical loan {mid} working days; nine in ten by {p90}; target {TARGET}; the loan above, {loan.day}.">
+        <div class="tkc-fig-title small">{PARAMS.loans.toLocaleString('en-US')} loans like this one</div>
+        <svg {width} height={HH} role="img" aria-label="Days from signing to disbursement for {PARAMS.loans.toLocaleString('en-US')} loans. Typical loan {mid} working days; nine in ten by {p90}; promise {TARGET}; the loan above, {loan.day}.">
           {#each ticks(0, yMax, 3) as t}
             <line class="tkc-grid" x1={hm.left} x2={width - hm.right} y1={hy(t)} y2={hy(t)} />
             <text class="tkc-axis-label" x={hm.left - 6} y={hy(t) + 4} text-anchor="end">{t}</text>
@@ -274,8 +395,7 @@
             <line class="mark {mk.key}" x1={mk.x} x2={mk.x} y1={mk.y + 4} y2={hy(0)} />
           {/each}
           {#each marks as mk (mk.key)}
-            {@const right = mk.x + 118 < width}
-            <text class="tkc-label tkc-halo mark-label {mk.key}" x={right ? mk.x + 4 : mk.x - 4} y={mk.y} text-anchor={right ? 'start' : 'end'}>{mk.text}</text>
+            <text class="tkc-label tkc-halo mark-label {mk.key}" x={mk.right ? mk.x + 4 : mk.x - 4} y={mk.y} text-anchor={mk.right ? 'start' : 'end'}>{mk.text}</text>
           {/each}
           {#each [0, 20, 40, 60, 80, 100, 120] as t}
             <text class="tkc-axis-label" x={hx(t + 0.5)} y={hy(0) + 15} text-anchor={t === XMAX ? 'end' : 'middle'}>{t}</text>
@@ -285,7 +405,7 @@
           <text class="tkc-axis-label" x={Math.max(hm.left + (width - hm.left - hm.right) / 2, 0) - (compact ? 18 : 0)} y={HH - 4} text-anchor="middle">working days from signing to disbursement</text>
         </svg>
         <div class="tkc-legend">
-          <span><span class="tkc-swatch" style:background="var(--tkc-ink-2)" aria-hidden="true"></span>Loans by day disbursed</span>
+          <span><span class="tkc-swatch" style:background="var(--tkc-ink-2)" aria-hidden="true"></span>Loans by day paid</span>
           <span><span class="tkc-swatch" style:background="var(--tkc-conditions)" aria-hidden="true"></span>Slowest one in ten</span>
           {#if !isStart}<span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-muted)" aria-hidden="true"></span>At the start</span>{/if}
           {#if hist.beyond > 0}<span>{hist.beyond} loans after day {XMAX}, off the chart</span>{/if}
@@ -294,14 +414,15 @@
 
       {#snippet model()}
         <p>
-          A Monte Carlo simulation: the same signed loan, 2,000 times, with the same luck under every setting. Each
-          condition is met after a log-normal number of working days around its typical day: KYC checks 7, Board approval
-          5, Security signed 10, Legal opinion 12 (after the security is signed), Central bank 20 (the loan registered, or
-          exchange-control approval; it moves after disbursement only where local law allows registration after
-          drawdown), ESAP actions due before disbursement 15, Permits 30, Equity paid in 15, Insurance 10
-          (lenders named on the policies), Security registered 35 (after signing), Hedging 25, Process agent 5. These are
-          professional estimates, not data. Eight deliveries in ten arrive within about a fifth of their typical day when
-          the parties are predictable, and between half and twice it when they are unpredictable.
+          A Monte Carlo simulation: {PARAMS.loans.toLocaleString('en-US')} loans with the same twelve conditions, each
+          with its own luck, and the same luck under every setting. Each condition is met after a log-normal number of
+          working days around its typical day: KYC checks 7, Board approval 5, Security signed 10, Legal opinion 12 (after
+          the security is signed), Central bank 20 (the loan registered, or exchange-control approval; it moves after
+          disbursement only where local law allows registration after drawdown), ESAP actions due before disbursement 15,
+          Permits 30, Equity paid in 15, Insurance 10 (lenders named on the policies), Security registered 35 (after
+          signing), Hedging 25, Process agent 5. These are professional estimates, not data. Eight deliveries in ten
+          arrive within about a fifth of their typical day when the parties are predictable, and between half and twice
+          it when they are unpredictable.
         </p>
         <p>
           A document is checked in three working days, and 15% come back for correction; the corrected one arrives after
@@ -318,10 +439,20 @@
           filed, about ten working days after it is signed.
         </p>
         <p>
-          The slider moves conditions to after the money moves, least protective first: Process agent, Hedging, Security
-          registered (then due after disbursement, with evidence of filing), Insurance, Equity paid in, Permits, ESAP
-          actions, Central bank. KYC checks, Board approval, Security signed and Legal opinion never move. The loan in the
-          timeline is one of the 2,000, with the same luck whatever the settings.
+          The slider takes conditions off the list before the money moves in a fixed order: at 11, Process agent; at 10,
+          Hedging; at 9, Security registered; at 8, Insurance; at 7, Equity paid in; at 6, Permits; at 5, ESAP actions; at
+          4, Central bank. KYC checks, Board approval, Security signed and Legal opinion never move. A condition taken off
+          becomes a promise due after the first disbursement; its document may still arrive before.
+        </p>
+        <p>
+          Security registered keeps a safeguard when it moves: the money still waits for its filing evidence (proof of
+          filing and a letter from local counsel, ready about five working days after the later of filing and day 20), or
+          for the registration itself if that comes first. This holds whether or not alternatives are accepted. With
+          alternatives, the same filing package is registration’s alternative, so moving it then gains nothing.
+        </p>
+        <p>
+          The floor of eight before the money moves stands for a credit policy; it is an assumption of this model. “One of
+          the loans” is one of the {PARAMS.loans.toLocaleString('en-US')}, with the same luck whatever the settings.
         </p>
       {/snippet}
     </Instrument>
@@ -329,44 +460,40 @@
 
   {#snippet after()}
     <p>
-      Each condition on its own is usually in good time: every one of the twelve is met soon enough for the money to move
-      within {TARGET} working days in at least {worstEach} loans in 100. All twelve together manage it in only {allTogether}.
-      That is the arithmetic of chapter 1: a chain of <span class="tkc-and">ANDs</span> holds only when every link holds
-      at once.
+      Each condition on its own would keep the promise: every one of the twelve is met in time for at least {worstEach}
+      clients in 100. All twelve together keep it for only {allTogether}. That is the arithmetic of chapter 1: a chain of
+      <span class="tkc-and">ANDs</span> holds only when every link holds at once.
     </p>
     <p>
-      Each condition is one more chance to be late, and, as with the pieces of work in chapter 5, the slowest sets the
-      date. No condition typically takes more than
-      {slowestTypical} working days, yet the typical loan waits {F.start.mid}: it waits for whichever condition is late this
-      time, and with twelve, one usually is. Security registered, the slowest on paper, set the date in only
+      As with the pieces of work in chapter 5, the slowest sets the date, and it is a different one each time. No
+      condition typically takes more than {slowestTypical} working days, yet the typical loan waits {F.start.mid}. Security
+      registered, the slowest on paper, set the date in only
       {registeredShare < 0.425 && registeredShare >= 0.375 ? 'two loans in five' : `${Math.round(registeredShare * 100)}% of loans`}.
     </p>
-    <h3>Spread, not averages</h3>
+    <h3>The spread decides</h3>
     <p>
-      Every condition has the same typical time whether the parties are predictable or not. With predictable parties,
-      the typical loan disburses in {F.pred.mid} working days and nine in ten by {F.pred.p90}. With unpredictable ones,
-      the typical loan takes {F.start.mid} days and nine in ten take up to {F.start.p90}: {F.start.mid - F.pred.mid} days
-      more for the typical loan, {F.start.p90 - F.pred.p90} more for the slow tail. As in the coin game of chapter 7,
-      nothing changes on paper, and what the loans live through changes a great deal.
+      The parties’ deliveries have the same typical (median) time whether they are predictable or not. The wider spread
+      makes them about {meanStretch}% longer on average, and the slowest loans much later: with predictable parties
+      nine loans in ten are paid by day {F.pred.p90}, and all twelve conditions keep the promise; with unpredictable
+      ones, by day {F.start.p90}.
     </p>
     <h3>An OR inside the AND</h3>
     <p>
-      An alternative does not make the original arrive sooner. It limits how late that one document can make the loan.
-      Like the optional tool in chapter 11, it is worth most when the world is erratic: here alternatives brought the
+      An alternative does not make the original arrive sooner; it limits how late one document can make the loan. Like
+      the person in the loop of chapter 11, it is an option, worth most when the world is erratic: it brought the
       nine-in-ten mark forward by {F.start.p90 - F.alt.p90} working days with unpredictable parties, and by
-      {F.pred.p90 - F.predAlt.p90} with predictable ones. Variability helps whatever is optional.
+      {F.pred.p90 - F.predAlt.p90} with predictable ones.
     </p>
     <h3>Which conditions must come first</h3>
     <p>
-      A condition subsequent keeps the promise but changes its force. Before the money moves, a missing document keeps
-      the door shut; afterwards it is a default to manage. Some conditions can wait for a later drawdown instead. Four
-      never move here: the lender knows the client, the borrower’s board has approved the loan, the security is signed
-      and a legal opinion says it holds, all before any money moves.
+      Before the money moves, a missing document keeps the door shut; afterwards it is a default to manage. That is why
+      four never move here: the lender knows the client, the borrower’s board has approved the loan, the security is
+      signed and a legal opinion says it holds. Registration can follow the money only with its filing evidence in hand.
     </p>
     <p>
       The whole story fits in this one loan. Specialists each do their part well; joined by ANDs, their parts make a long
-      chain, and variability finds its weakest link. Alternatives and a shorter list before the money moves keep every
-      condition on the list, and let the chain bend instead of break.
+      chain, and variability finds its weakest link. An OR here and a promise with a deadline there keep every condition
+      on the list, and let the chain bend instead of break.
     </p>
   {/snippet}
 
@@ -402,6 +529,13 @@
     padding-top: 12px;
     border-top: 1px solid var(--tkc-hair);
   }
+  .head {
+    display: grid;
+    gap: 2px;
+  }
+  .verdict {
+    margin: 0;
+  }
   .small {
     font-size: 0.9375rem;
   }
@@ -418,10 +552,6 @@
   .track {
     stroke: var(--tkc-hair);
     stroke-width: 1;
-  }
-  .typical {
-    stroke: var(--tkc-rule);
-    stroke-width: 1.5;
   }
   .name.strong {
     fill: var(--tkc-ink);
@@ -471,6 +601,9 @@
     stroke-width: 1;
     stroke-dasharray: 2 3;
   }
+  .knock {
+    fill: var(--tkc-surface);
+  }
   .money {
     stroke: var(--tkc-ink);
     stroke-width: 1.5;
@@ -507,12 +640,6 @@
   }
   .this {
     fill: var(--tkc-ink);
-  }
-  .key-typical {
-    display: inline-block;
-    width: 2px;
-    height: 10px;
-    background: var(--tkc-rule);
   }
   .dot-key {
     border-radius: 50%;
