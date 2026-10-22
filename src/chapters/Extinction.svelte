@@ -234,7 +234,7 @@
     </p>
     <p>
       The islands in this model never swap animals, so a collapse on one stays there: each is a firebreak, as Hora’s
-      modules are in chapter 13 and the linked banks of chapter 8 were not. Any one island is fragile; what lasts is the
+      modules are in chapter 14 and the linked banks of chapter 8 were not. Any one island is fragile; what lasts is the
       archipelago. One connected system holds more in total, and less variety in each place: the same few products,
       systems and habits wherever you look.
     </p>

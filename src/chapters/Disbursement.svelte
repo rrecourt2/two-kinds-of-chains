@@ -237,7 +237,7 @@
 </script>
 
 <Chapter
-  n={14}
+  n={15}
   kicker="Processing time"
   title="Time to disbursement"
   lede="A client is promised the money within about three months of signing. Twelve conditions stand in between, each usually in good time. How often does the promise hold?"

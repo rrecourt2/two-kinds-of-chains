@@ -1,4 +1,4 @@
-// Time to disbursement (chapter 14): many loans with the same conditions, each with its own luck.
+// Time to disbursement (chapter 15): many loans with the same conditions, each with its own luck.
 //
 // A signed loan cannot disburse until every condition precedent is met: one long AND.
 // Each condition is delivered a log-normal number of working days after signing; some

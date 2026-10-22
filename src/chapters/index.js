@@ -10,6 +10,7 @@ import Ergodicity from './Ergodicity.svelte';
 import Contagion from './Contagion.svelte';
 import BlackSwans from './BlackSwans.svelte';
 import Extinction from './Extinction.svelte';
+import Gate from './Gate.svelte';
 import Graph from './Graph.svelte';
 import Modules from './Modules.svelte';
 import Disbursement from './Disbursement.svelte';
@@ -32,6 +33,7 @@ export const CHAPTERS = [
   { id: 'black-swans', short: 'Black swans', title: 'How to find a black swan', component: BlackSwans, part: 3 },
   { id: 'extinction', short: 'Extinction', title: 'Why species go extinct', component: Extinction, part: 3 },
   { id: 'tools', short: 'Person in the loop', title: 'A person in the loop', component: Tools, part: 4 },
+  { id: 'gate', short: 'A gate worth keeping', title: 'The gate worth keeping', component: Gate, part: 4 },
   { id: 'graph', short: 'Networks', title: 'The shape of the network', component: Graph, part: 4 },
   { id: 'modules', short: 'Modules', title: 'Two watchmakers', component: Modules, part: 4 },
   { id: 'disbursement', short: 'Disbursement', title: 'Time to disbursement', component: Disbursement, part: 4 },

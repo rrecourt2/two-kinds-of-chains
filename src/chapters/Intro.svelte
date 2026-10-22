@@ -27,6 +27,7 @@
     contagion: 'Forty-eight banks, five failures at once: how much capital holds the line?',
     'black-swans': 'Four project files and one claim about Category A projects: which do you open?',
     extinction: 'Two species, forty islands, and the year the weather turns.',
+    gate: 'Three requests to change where the money goes, one of them fraudulent: what speeds up the check without letting the fraud through?',
     graph: 'Sixty people who must all work with each other: how much gets done?',
     modules: 'Two watchmakers, the same watch, and a phone that keeps ringing.',
     disbursement: 'A three-month promise, twelve conditions: how often is the money on time?',

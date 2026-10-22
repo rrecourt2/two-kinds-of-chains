@@ -98,7 +98,7 @@
 </script>
 
 <Chapter
-  n={12}
+  n={13}
   kicker="Networks"
   title="The shape of the network"
   lede="Every chapter so far has been about a network. Its shape, more than its size, decides whether growth makes an organization smarter or slower."

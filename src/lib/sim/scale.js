@@ -1,4 +1,4 @@
-// How three team structures scale (chapter 12). Every mandatory working
+// How three team structures scale (chapter 13). Every mandatory working
 // relationship costs each side 2% of their time. Output is counted in
 // "people's worth" of useful work. `overhead` is the share of everyone's time
 // spent keeping up relationships (not approving, not waiting).

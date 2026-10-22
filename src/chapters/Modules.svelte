@@ -145,7 +145,7 @@
 </script>
 
 <Chapter
-  n={13}
+  n={14}
   kicker="Modules"
   title="Two watchmakers"
   lede="Two watchmakers, equally skilled, make the same watch. One prospers, and the other loses his shop. The difference is the shape of the work."

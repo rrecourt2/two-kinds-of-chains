@@ -1,7 +1,7 @@
 # Two Kinds of Chains
 
 An interactive learning story about good complexity (specialization), bad complexity (dependence) and how scale
-amplifies both, and about how a long, rigid chain of conditions tips into failure. Fourteen short chapters in four
+amplifies both, and about how a long, rigid chain of conditions tips into failure. Fifteen short chapters in four
 parts, each built around a puzzle with a live model the reader can change, and a closing playbook. Built with Svelte 5 and Vite. Everything
 ships as one file, with no external requests, so it can run inside a locked-down bank intranet.
 
@@ -23,10 +23,11 @@ ships as one file, with no external requests, so it can run inside a locked-down
 | 10 | Why species go extinct | Where the generalist overtakes the specialist as the years get more volatile |
 | | **Part 4 · Chains that bend** | |
 | 11 | A person in the loop | One AI, twenty requests, with a person in the loop or on autopilot; a steady or an erratic AI |
-| 12 | The shape of the network | What sixty fully linked people produce; mesh, hub and modules |
-| 13 | Two watchmakers | Herbert Simon's parable as a live race: one long chain against modules; Gall's law |
-| 14 | Time to disbursement | Twelve conditions precedent, 2,000 loans: keeping a three-month promise for nine clients in ten |
-| 15 | What it means on Monday | The patterns, chapter by chapter, and the reader's score |
+| 12 | The gate worth keeping | Three payment instructions, one fraudulent: check first with the named reviewer, with any qualified reviewer, or pay first and check after |
+| 13 | The shape of the network | What sixty fully linked people produce; mesh, hub and modules |
+| 14 | Two watchmakers | Herbert Simon's parable as a live race: one long chain against modules; Gall's law |
+| 15 | Time to disbursement | Twelve conditions precedent, 2,000 loans: keeping a three-month promise for nine clients in ten |
+| 16 | What it means on Monday | The patterns, chapter by chapter, and the reader's score |
 
 ### Puzzles and score
 
