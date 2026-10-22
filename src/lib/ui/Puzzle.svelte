@@ -61,6 +61,8 @@
     const ok = multi ? same(picked, answer) : picked === answer;
     if (ok) {
       game.solve(id);
+      // The answer text describes one experiment; put the figure on it, as "Show me the answer" does.
+      onshow?.();
       reveal();
     } else {
       game.help(id);

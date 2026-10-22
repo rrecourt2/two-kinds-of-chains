@@ -63,7 +63,7 @@
   n={1}
   kicker="The riddle"
   title="A riddle about chains"
-  lede="When work needs everyone at once, it waits for whoever is missing. What is the cheapest way to stop waiting?"
+  lede="When work needs everyone at once, it waits for whoever is missing. What stops the waiting soonest?"
   puzzle="riddle"
 >
   {#snippet setup()}

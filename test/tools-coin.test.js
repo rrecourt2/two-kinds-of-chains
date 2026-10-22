@@ -11,56 +11,58 @@ test('person in the loop: the chapter shows two designs, a person in the loop an
   assert.equal(DESIGNS.length, 3);
   assert.deepEqual(SHOWN.map((d) => d.id), ['tool', 'autopilot']);
   assert.equal(PERSON, DESIGNS[0]);
-  assert.equal(AUTOPILOT.id, 'autopilot');
-  // The person drops a bad draft for six minutes; autopilot keeps a good answer in full and pays three times for a wrong one.
+  assert.equal(AUTOPILOT, DESIGNS[1]);
+  // The person drops a bad draft for six minutes; autopilot uses every draft as it is, wrong ones at their full cost.
   near(PERSON.payoff(-1), -0.1, 1e-12);
   near(PERSON.payoff(3), 2.9, 1e-12);
   assert.equal(AUTOPILOT.payoff(3), 3);
-  near(AUTOPILOT.payoff(-1), -3, 1e-12);
+  assert.equal(AUTOPILOT.payoff(-1), -1);
   // Rules box: the steady AI is wrong about one time in twenty, the erratic one four in ten.
   console.log('wrong chance', wrongChance(STEADY).toFixed(4), wrongChance(ERRATIC).toFixed(4));
   near(wrongChance(STEADY), 0.05, 0.005);
   near(wrongChance(ERRATIC), 0.4, 0.01);
 });
 
-test('person in the loop: long-run minutes in the text and the found line', () => {
+test('person in the loop: long-run minutes in the stats and the found line', () => {
   const [steadyPerson, steadyAuto] = SHOWN.map((d) => averagePayoff(d, STEADY) * 60);
   const [erraticPerson, erraticAuto] = SHOWN.map((d) => averagePayoff(d, ERRATIC) * 60);
   console.log('person/autopilot long run (min)', steadyPerson.toFixed(2), steadyAuto.toFixed(2), erraticPerson.toFixed(2), erraticAuto.toFixed(2));
-  // Spec: steady 24.4 vs 29.3; erratic 58.4 vs −38.7.
+  // Steady 24.4 vs 30.0; erratic 58.4 vs 30.0.
   assert.equal(steadyPerson.toFixed(1), '24.4');
-  assert.equal(steadyAuto.toFixed(1), '29.3');
+  assert.equal(steadyAuto.toFixed(1), '30.0');
   assert.equal(erraticPerson.toFixed(1), '58.4');
-  assert.equal(erraticAuto.toFixed(1), '-38.7');
-  // Found: “about 58 minutes a request, up from 24; autopilot goes from 29 minutes saved to 39 lost.”
+  assert.equal(erraticAuto.toFixed(1), '30.0');
+  // Found: “about 58 minutes a request on average, up from 24 … Autopilot stays at 30 minutes, steady or erratic.”
   assert.equal(Math.round(erraticPerson), 58);
   assert.equal(Math.round(steadyPerson), 24);
-  assert.equal(Math.round(steadyAuto), 29);
-  assert.equal(Math.round(erraticAuto), -39);
-  // The story: steady, autopilot wins; erratic, the person in the loop wins and autopilot loses.
+  assert.equal(Math.round(steadyAuto), 30);
+  assert.equal(Math.round(erraticAuto), 30);
+  // The story: steady, autopilot comes out ahead; erratic, the person in the loop does, and autopilot is unchanged.
   assert.ok(steadyAuto > steadyPerson);
-  assert.ok(erraticPerson > steadyPerson && erraticPerson > erraticAuto && erraticAuto < 0);
-  // Both AIs are worth half an hour on average (the rule design earns the plain average).
-  near(averagePayoff(DESIGNS[1], STEADY), 0.5, 0.01);
-  near(averagePayoff(DESIGNS[1], ERRATIC), 0.5, 0.01);
+  assert.ok(erraticPerson > erraticAuto && erraticPerson > steadyPerson);
+  // Autopilot earns the AI's own half hour whatever the spread.
+  for (const spread of [0, 0.5, 1, 1.5, 3]) near(averagePayoff(AUTOPILOT, spread), 0.5, 0.005);
 });
 
-test('person in the loop: the twenty requests shown follow the long run', () => {
+test('person in the loop: the sample of twenty requests', () => {
   const steady = sampleRequests(20, STEADY, 1);
   const erratic = sampleRequests(20, ERRATIC, 1);
   const [sp, sa] = SHOWN.map((d) => runDesign(d, steady));
   const [ep, ea] = SHOWN.map((d) => runDesign(d, erratic));
-  console.log('twenty requests (h): steady', sp.total.toFixed(2), sa.total.toFixed(2), sp.wrong, '| erratic', ep.total.toFixed(2), ea.total.toFixed(2), ep.wrong);
-  // Steady: “8.2 h saved” with the person, “9.7 h saved” on autopilot; one wrong draft.
+  console.log('sample of twenty (h): steady', sp.total.toFixed(2), sa.total.toFixed(2), sp.wrong, '| erratic', ep.total.toFixed(2), ea.total.toFixed(2), ep.wrong);
+  // Steady: “8.2 h saved” with the person, “10.0 h saved” on autopilot; one wrong draft.
   assert.equal(sp.total.toFixed(1), '8.2');
-  assert.equal(sa.total.toFixed(1), '9.7');
+  assert.equal(sa.total.toFixed(1), '10.0');
   assert.equal(sp.wrong, 1);
-  assert.ok(sa.total > sp.total);
-  // Erratic: “20.4 h saved” with the person, “14.5 h lost” on autopilot; six wrong answers.
+  // Erratic: “20.4 h saved” with the person, “10.1 h saved” on autopilot; six wrong drafts.
   assert.equal(ep.total.toFixed(1), '20.4');
-  assert.equal(ea.total.toFixed(1), '-14.5');
+  assert.equal(ea.total.toFixed(1), '10.1');
   assert.equal(ep.wrong, 6);
   assert.equal(ea.wrong, ep.wrong);
+  // After-text: the six wrong drafts each take more than an hour to redo, the worst about four.
+  const wrong = erratic.filter((x) => x < 0);
+  assert.ok(wrong.every((x) => x < -1));
+  assert.equal(Math.round(-Math.min(...wrong)), 4);
 });
 
 test('person in the loop: a 20-step chain at 95% a step works about one time in three', () => {

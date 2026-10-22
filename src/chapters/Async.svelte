@@ -48,7 +48,7 @@
           ? `With these two: ${amount(par.total)}. Another pair does better.`
           : `In parallel: ${amount(par.total)}.`,
     hints: ['In parallel, one piece sets the total. Which one?', 'Once the slowest piece is faster, another piece becomes the slowest.'],
-    found: 'Credit analysis and the E&S review: five days instead of seven. Speed up credit alone and the E&S review takes over as the slowest piece. Faster legal documents or pricing change nothing at all.',
+    found: 'Credit analysis and the E&S review: five days instead of seven. Speed up credit alone and the E&S review takes over as the slowest piece; with both, credit and legal documents tie at two days. Faster legal documents or pricing change nothing at all.',
   });
   // Which piece is slowest stays unlabelled until the puzzle is done: finding it is the puzzle.
   const game = getContext('tkc-game');
@@ -89,7 +89,7 @@
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
-        <svg {width} height={H} role="img" aria-label="One after another: {amount(seq.total)}. In parallel: {amount(par.total)}.">
+        <svg {width} height={H} role="img" aria-label="One after another: {amount(seq.total)}. In parallel: {amount(par.total)}. Pieces: {pieces.map((p) => `${p.label}, ${amount(faster.includes(p.id) ? p.time / 2 : p.time)}`).join('; ')}.">
           {#each panels as panel (panel.id)}
             {@const top = panel.y0 + 22}
             <text class="tkc-label" x="0" y={panel.y0 + 14}>{panel.title}</text>
@@ -103,9 +103,11 @@
             {/each}
             <line class="end" x1={x(panel.run.total)} x2={x(panel.run.total)} y1={top - 2} y2={top + pieces.length * rowH} />
             {#if panel.id === 'parallel' && !narrow && revealed}
-              {@const sp = pieces.findIndex((p) => p.id === panel.run.slowest)}
-              {@const sb = panel.run.bars.filter((b) => b.row === sp).reduce((a, b) => (b.end > a.end ? b : a), { end: 0 })}
-              {#if sb.end > 0 && x(sb.end) + 150 < width}<text class="tkc-axis-label tkc-halo" x={x(sb.end) + 6} y={top + sp * rowH + 15}>slowest: sets the pace</text>{/if}
+              {#each panel.run.slowestAll as id (id)}
+                {@const sp = pieces.findIndex((p) => p.id === id)}
+                {@const sb = panel.run.bars.filter((b) => b.row === sp).reduce((a, b) => (b.end > a.end ? b : a), { end: 0 })}
+                {#if sb.end > 0 && x(sb.end) + 150 < width}<text class="tkc-axis-label tkc-halo" x={x(sb.end) + 6} y={top + sp * rowH + 15}>{panel.run.slowestAll.length > 1 ? 'tied slowest' : 'slowest: sets the pace'}</text>{/if}
+              {/each}
             {/if}
           {/each}
           {#each tickVals as t}
@@ -121,7 +123,7 @@
 
       <div class="tkc-stats" use:announce>
         <Stat label="One after another" value={amount(seq.total)} sub={detail(seq)} />
-        <Stat label="In parallel" value={amount(par.total)} sub={revealed ? `${detail(par)}; slowest piece: ${pieces.find((p) => p.id === par.slowest)?.label.toLowerCase()}` : detail(par)} />
+        <Stat label="In parallel" value={amount(par.total)} sub={revealed ? `${detail(par)}; ${par.slowestAll.length > 1 ? 'tied slowest' : 'slowest piece'}: ${par.slowestAll.map((id) => pieces.find((p) => p.id === id)?.label.toLowerCase()).join(' and ')}` : detail(par)} />
       </div>
 
       {#snippet model()}

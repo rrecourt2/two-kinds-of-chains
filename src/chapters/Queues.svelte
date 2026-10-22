@@ -22,7 +22,7 @@
   const SERVERS = 4;
   const SPEED = 1.6; // simulated hours per second of animation
 
-  let busy = $state(85);
+  let busy = $state(80);
   let mode = $state('named');
   let width = $state(560);
   let liveW = $state(560);
@@ -35,7 +35,7 @@
   const named = $derived(meanWait(1, rho));
   const pooled = $derived(meanWait(SERVERS, rho));
 
-  const queue = new LiveQueue({ servers: SERVERS, rho: 0.85, mode: 'named', rng: makeRng(12) });
+  const queue = new LiveQueue({ servers: SERVERS, rho: 0.8, mode: 'named', rng: makeRng(12) });
   queue.advance(40);
 
   // Settings changes redraw the live panel; `untrack` keeps these effects from depending on `frame`.

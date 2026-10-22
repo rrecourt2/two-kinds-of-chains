@@ -66,16 +66,20 @@
   // On the standalone page, chapters slide in with a view transition; a host page is left alone.
   const useTransitions = syncHash && typeof document !== 'undefined' && 'startViewTransition' in document;
 
-  async function go(target) {
+  // A chapter chosen in the story gets its own history entry, so the browser's Back button returns to the
+  // previous chapter; a move that comes from the history itself (Back, Forward, a typed hash) adds none.
+  let going = -1;
+  async function go(target, fromHistory = false) {
     const i = typeof target === 'string' ? CHAPTERS.findIndex((c) => c.id === target) : target;
-    if (i < 0 || i >= CHAPTERS.length || i === index) return;
+    if (i < 0 || i >= CHAPTERS.length || i === index || i === going) return;
+    going = i;
     const animate = useTransitions && !prefersReducedMotion();
     const swap = async () => {
       index = i;
       visited[i] = true;
-      if (syncHash) {
+      if (syncHash && !fromHistory) {
         try {
-          history.replaceState(null, '', `#${CHAPTERS[i].id}`);
+          history.pushState(null, '', `#${CHAPTERS[i].id}`);
         } catch {
           /* the host may not allow URL changes */
         }
@@ -91,6 +95,7 @@
     } else {
       await swap();
     }
+    going = -1;
     // Move keyboard and screen-reader users to the new chapter, not the button they left behind.
     focusHeading();
   }
@@ -167,15 +172,18 @@
     if (event.key === 'ArrowLeft' && prev) go(index - 1);
   }
 
-  function onHashChange() {
-    const i = indexFromHash();
-    if (i >= 0 && i !== index) go(i);
+  // Back and Forward land on a chapter's hash, or on the page without one, which is the opening.
+  function onHistory() {
+    if (!syncHash) return;
+    const i = window.location.hash.length > 1 ? indexFromHash() : 0;
+    if (i >= 0 && i !== index) go(i, true);
   }
 </script>
 
 <svelte:window
   onkeydown={onKey}
-  onhashchange={onHashChange}
+  onhashchange={onHistory}
+  onpopstate={onHistory}
   onclick={(e) => {
     // The path is fixed when the click happens, so it still holds a button the click itself removed.
     const path = e.composedPath();

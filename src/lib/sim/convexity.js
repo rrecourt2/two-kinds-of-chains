@@ -3,9 +3,9 @@
 // X is normally distributed around MEAN_HELP with the given spread.
 //
 // The chapter compares two designs: a person in the loop (the AI drafts, a person keeps a good
-// draft and drops a bad one) and autopilot (the answer is used as it is, with nobody looking).
-// DESIGNS keeps the older reference designs for the tests: the person in the loop (`tool`), a
-// plain rule that earns exactly the average whatever the spread, and a capped mandatory step.
+// draft and drops a bad one) and autopilot (every draft is used as it is, with nobody looking;
+// a wrong one costs its full value because the work has to be redone). DESIGNS also keeps a
+// capped mandatory step as a reference design for the tests.
 
 import { makeRng, normal } from './rng.js';
 
@@ -15,23 +15,17 @@ export const ERRATIC = 2; // and of the erratic one
 export const CHECK_COST = 0.1; // six minutes spent looking at a draft before keeping or dropping it
 export const GATE_CAP = 0.5; // reference design only: a mandatory step saves at most its planned half hour
 export const GATE_MULTIPLIER = 3; // reference design only: a wrong answer stops the work queued behind it
-export const AUTOPILOT_MULTIPLIER = 3; // a wrong answer used as is gets built on before anyone notices
 
 export const DESIGNS = [
   { id: 'tool', label: 'With a person in the loop: a person keeps a good draft and drops a bad one', short: 'Person in the loop', payoff: (x) => Math.max(x, 0) - CHECK_COST },
-  { id: 'rule', label: 'A rule: always use its answer', short: 'Rule', payoff: (x) => x },
+  { id: 'autopilot', label: 'On autopilot: every draft is used as it is, with nobody looking', short: 'On autopilot', payoff: (x) => x },
   { id: 'gate', label: 'Mandatory step: nothing moves until the AI answers', short: 'Mandatory step', payoff: (x) => (x >= 0 ? Math.min(x, GATE_CAP) : GATE_MULTIPLIER * x) },
 ];
 
 /** With a person in the loop: six minutes looking, a good draft kept, a bad one dropped. */
 export const PERSON = DESIGNS[0];
-/** On autopilot: a good answer saves its full value; a wrong one travels on and costs three times its loss. */
-export const AUTOPILOT = {
-  id: 'autopilot',
-  label: 'On autopilot: the AI’s answer is used as it is, with nobody looking',
-  short: 'On autopilot',
-  payoff: (x) => (x >= 0 ? x : AUTOPILOT_MULTIPLIER * x),
-};
+/** On autopilot: every draft is used as it is; it earns exactly the AI's average, whatever the spread. */
+export const AUTOPILOT = DESIGNS[1];
 /** The two designs the chapter compares, in the order it shows them. */
 export const SHOWN = [PERSON, AUTOPILOT];
 

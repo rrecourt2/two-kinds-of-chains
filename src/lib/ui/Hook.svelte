@@ -226,7 +226,7 @@
     <p class="q" id="{prefix}-hook-q">
       A loan has to pass <strong>six checks</strong> before the money can be paid out. Each check clears it without a hitch
       <strong>95% of the time</strong>: no missing document, no approver away. Out of 100 loans, how many get through all
-      six?
+      six the first time?
     </p>
 
     {#if phase === 'ask'}
@@ -303,7 +303,7 @@
           </p>
         {:else if latest.backups}
           <p class="lead">
-            Same six checks, same 95%. The only change: each has a backup, a second person or a second system, so a loan
+            Same {latest.gates === 6 ? 'six' : 'twelve'} checks, same 95%. The only change: each has a backup, a second person or a second system, so a loan
             is stuck only when both fail. Conditions multiply the risk; alternatives divide it.
           </p>
         {:else}
@@ -314,7 +314,7 @@
             <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: 12, backups: false })}>Now try twelve checks</button>
           {/if}
           {#if !latest.backups}
-            <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: 6, backups: true })}>Give every check a backup</button>
+            <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: latest.gates, backups: true })}>Give every check a backup</button>
           {/if}
           <button type="button" class="tkc-btn tkc-btn--small" onclick={again}>Start over</button>
         </div>

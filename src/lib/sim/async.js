@@ -25,7 +25,8 @@ export const CHECK_TIME = 0.5; // catching a bad input at the start: a quick che
  * Bars for a Gantt chart of one way of working.
  * mode: 'sequence' | 'parallel'; handoff: wait before each piece is picked up;
  * faster: ids of pieces done twice as fast; mistake: 'none' | 'end' | 'start'.
- * Returns { bars: [{ row, start, end, kind }], total, waiting, rework, slowest }.
+ * Returns { bars: [{ row, start, end, kind }], total, waiting, rework, slowest, slowestAll }.
+ * `slowestAll` lists every piece tied for slowest; `slowest` is the first of them.
  * kind: 'work' | 'wait' | 'redo' | 'check'.
  */
 export function schedule(example = REQUEST, { mode, handoff = example.handoff, faster = [], mistake = 'none' } = {}) {
@@ -87,6 +88,7 @@ export function schedule(example = REQUEST, { mode, handoff = example.handoff, f
     rework = total - before;
   }
   const group = base ? rest : pieces;
-  const slowest = group.reduce((a, b) => (b.time > a.time ? b : a)).id;
-  return { bars, total, waiting, rework, slowest };
+  const longest = Math.max(...group.map((p) => p.time));
+  const slowestAll = group.filter((p) => p.time === longest).map((p) => p.id);
+  return { bars, total, waiting, rework, slowest: slowestAll[0], slowestAll };
 }

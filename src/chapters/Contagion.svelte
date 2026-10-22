@@ -13,7 +13,7 @@
   import { pct } from '../lib/format.js';
   import { prefersReducedMotion, watchVisibility } from '../lib/motion.js';
 
-  const SCENE_LABEL = { similar: 'Many similar banks, five fail at once', giants: 'A few giants, the biggest fails' };
+  const SCENE_LABEL = { similar: 'Many similar banks, five fail at once', giants: 'A few hubs, the most connected fails' };
   const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
   const ORDINAL = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth', 'eleventh', 'twelfth', 'thirteenth'];
 
@@ -67,7 +67,7 @@
     scene === 'similar' ? '48 banks; each lends 20% of its assets to about ten others, in equal parts.' : '48 banks; each lends 20% of its assets in equal parts, most to two or three others.',
     'A bank that fails repays nothing: its lenders lose those loans in full.',
     'A bank fails when its losses exceed its capital.',
-    scene === 'similar' ? 'Five banks fail at once; the rest follow, or not.' : 'The biggest bank fails; the rest follow, or not.',
+    scene === 'similar' ? 'Five banks fail at once; the rest follow, or not.' : 'The most connected bank fails; the rest follow, or not.',
   ]);
 
   // The example network: the outcome for the current settings, revealed one round of failures at a time.
@@ -282,7 +282,7 @@
 
       {#snippet model()}
         <p>Each bank lends 20% of its assets to the banks it is linked to, split evenly, and holds capital of {capital}% of assets; every link runs both ways. A failed borrower’s loan is lost in full, so a bank with k borrowers fails once more than {capital} ÷ 20 × k of them have failed. With exactly that many, its losses equal its capital and it stands.</p>
-        <p>“Many similar banks” is a random network: every pair of banks is linked with the same chance, giving about ten borrowers each. “A few giants” grows by preferential attachment: each newcomer links to two banks, more often to those that already have many links. “Five fail at once” picks five banks at random; the biggest bank is the one with the most links.</p>
+        <p>“Many similar banks” is a random network: every pair of banks is linked with the same chance, giving about ten borrowers each. “A few hubs” grows by preferential attachment: each newcomer links to two banks, more often to those that already have many links. “Five fail at once” picks five banks at random; the most connected bank is the one with the most links; the model has links, not sizes.</p>
         <p>The chart averages {TRIALS} networks of each kind, the same {TRIALS} for every reader. The diagram shows the one whose results come closest to that average. The model follows Watts (2002) and Gai and Kapadia (2010).</p>
       {/snippet}
     </Instrument>
@@ -308,18 +308,18 @@
       sets up the next. Every link had become a condition, and the chain of conditions ran through the whole system.
     </p>
     <p>
-      The second scene, now open in the figure, links the same {N} banks as <em>a few giants</em>. Most banks in it have
+      The second scene, now open in the figure, links the same {N} banks as <em>a few hubs</em>. Most banks in it have
       only two or three borrowers, so each loan is a large share of their assets: with 6% capital, such a bank falls at the
       first failure. A failure picked at random brings down {pct(giants.mean.one[at(6)])} of the banks on average,
-      because most banks are minor. When the biggest bank fails, {pct(giants.mean.biggest[at(6)])} go down. Even the 7%
+      because most banks have few links. When the most connected bank fails, {pct(giants.mean.biggest[at(6)])} go down. Even the 7%
       that contained the stress test leaves {pct(giants.mean.biggest[at(7)])}; it takes {giantsLowest}% to keep the
-      giant’s fall under a quarter. That is the shape of September 2008: Lehman Brothers filed for bankruptcy on the 15th,
+      fall of the most connected bank under a quarter. That is the shape of September 2008: Lehman Brothers filed for bankruptcy on the 15th,
       the largest bankruptcy in US history, and the next day the Federal Reserve agreed to lend AIG up to $85 billion.
       AIG had sold credit protection to banks around the world.
     </p>
     <h3>Hubs inside organizations</h3>
     <p>
-      Organizations grow hubs the same way the giants grew in the figure. Work flows to whoever already handles the
+      Organizations grow hubs the same way the hubs grew in the figure. Work flows to whoever already handles the
       most: the expert everyone asks, the committee that sees every deal, the central system every other system reads
       from. Each new link makes the hub a little more useful, so the next link goes there too.
     </p>

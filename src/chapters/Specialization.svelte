@@ -35,7 +35,7 @@
   // Twelve roles are the cheapest design from 721 pins a day; the first slider step past that is 794 (exponent 2.9).
   const FIRST_TWELVE = 794;
   const puzzle = $derived({
-    goal: 'Twelve specialist roles make the cheapest pins of all, once the market is big enough. Find the smallest market at which they are the cheapest design.',
+    goal: 'Twelve specialist roles make the cheapest pins of all, once the market is big enough. Find the smallest market at which they are cheaper than every shorter chain.',
     met: best.roles === 12 && demand <= FIRST_TWELVE,
     progress: best.roles === 12 ? `Twelve roles win at ${int(demand)} pins a day. Do they still win in a smaller market?` : '',
     hints: ['Start from a town and drag the market up slowly. The coloured bar marks the cheapest design.', 'It lies between a town and a city, nearer the city.'],
@@ -72,7 +72,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['A pin takes twelve operations.', 'One trained pin-maker working alone makes 10 pins a day.', 'Split the work into n roles, and each specialist works n times faster at their share.', 'Every role needs at least one whole person, busy or not.']} title="The pin workshop" sub="What a pin costs in worker-minutes, for each way of splitting the 12 operations into specialist roles. The cheapest design is coloured, and drawn as a chain below.">
+    <Instrument rules={['A pin takes twelve operations.', 'One trained pin-maker working alone makes 10 pins a day.', 'Split the work into n roles, and each specialist works n times faster at their share.', 'Every role needs at least one whole person, busy or not.']} title="The pin workshop" sub="What a pin costs in worker-minutes, for each way of splitting the 12 operations into specialist roles. The cheapest design is coloured, and drawn as a chain below; in a tie, the shorter chain.">
       <Puzzle id="specialization" {...puzzle} onshow={() => (exponent = 2.9)} />
       <div class="tkc-controls tkc-controls--wide">
         <Slider
@@ -149,7 +149,7 @@
 
       {#snippet model()}
         <p>A trained pin-maker working alone makes 10 pins a day. Split the 12 operations among n specialist roles and each specialist works n times faster at their share.</p>
-        <p>Every role needs at least one whole person, so a small market leaves specialists idle. Worker-minutes per pin = everyone’s working time ÷ pins made. Roughly, the best number of roles grows with the square root of demand, in jumps and not always upwards: because every role needs a whole person, a design with fewer roles sometimes wins for a while. The chain under the chart shows the cheapest design; hovering over a bar shows how that design is staffed.</p>
+        <p>Every role needs at least one whole person, so a small market leaves specialists idle. Worker-minutes per pin = everyone’s working time ÷ pins made. Roughly, the best number of roles grows with the square root of demand, in jumps and not always upwards: because every role needs a whole person, a design with fewer roles sometimes wins for a while. The chain under the chart shows the cheapest design; when designs cost the same, the one with fewer roles is shown. Hovering over a bar shows how that design is staffed.</p>
       {/snippet}
     </Instrument>
   {/snippet}

@@ -30,10 +30,11 @@
   const moves = [
     { title: 'Alternatives everywhere', text: 'Every approval can be given by more than one qualified person, and every critical system has a tested fallback. No link depends on one name.', ch: 'riddle' },
     { title: 'Data entered once, at its source', text: 'Each piece of data has one home, close to the people who create it. Every system reads it from there, and checks run as it is typed, so a problem is caught before anything is built on it.', ch: 'systems' },
+    { title: 'Slack and one shared line', text: 'The people that everything waits for run below about 80% of their time, and work waits in one line that any qualified colleague can take from.', ch: 'queues' },
     { title: 'Parallel work', text: 'Every piece that can start, starts. Reviews run side by side on the same record, not one after another.', ch: 'async' },
     { title: 'One measure of the whole', text: 'Every team shares one measure of the whole journey, from request to answer, so no shortcut can look good at the others’ expense.', ch: 'emergence' },
-    { title: 'Care in proportion to the risk', text: 'Small, reversible decisions get light checks, or a sample checked while the work flows on. Decisions that cannot be undone get several reviewers working at the same time.', ch: 'ergodicity' },
-    { title: 'Hubs with slack and a second route', text: 'The people, committees and systems that everything passes through run below about 80% of capacity, share one queue, and each have a deputy or a fallback.', ch: 'contagion' },
+    { title: 'Bets sized to survive a bad run', text: 'Each risk is sized so that a bad run cannot end the game, and risks are pooled across units whose luck is independent of each other.', ch: 'ergodicity' },
+    { title: 'Hubs with a second route', text: 'The people, committees and systems that everything passes through each have a deputy or a fallback, so one failure does not become everyone’s.', ch: 'contagion' },
     { title: 'Claims that have met a test', text: 'Fire drills, reverse stress tests and near misses test the safest-looking assumptions, and categories leave room for the case nobody foresaw.', ch: 'black-swans' },
     { title: 'A person where the AI swings', text: 'Where AI or automation is erratic, a person keeps the good results and drops the bad ones before they move on; autopilot is kept for work that is steady, or whose mistakes are small, visible and easy to undo.', ch: 'tools' },
     { title: 'Modular work', text: 'Work is saved in finished pieces, each with a clear owner and a clear interface, so an interruption costs only the piece in hand and trouble in one part stays there.', ch: 'modules' },
@@ -118,7 +119,7 @@
 
   <div class="grid">
     <section class="moves" aria-labelledby="{prefix}-moves">
-      <h3 class="tkc-display moves-title" id="{prefix}-moves">Ten patterns</h3>
+      <h3 class="tkc-display moves-title" id="{prefix}-moves">The patterns, chapter by chapter</h3>
       <ol>
         {#each moves as move (move.title)}
           <li>

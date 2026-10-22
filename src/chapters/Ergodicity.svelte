@@ -218,10 +218,11 @@
     <ul>
       <li>
         <strong>Stake less.</strong> At a quarter of their wealth, the typical player grows, slowly. Smaller swings give
-        up some of the paper return and remove the path to ruin.
+        up some of the paper return and stop the steady slide.
       </li>
       <li>
-        <strong>Pool.</strong> Players share everything each round. A pair is not enough: two players who stake
+        <strong>Pool.</strong> Players share everything each round, and it works because their coins are independent;
+        a shock that hits everyone at once cannot be pooled away. A pair is not enough: two players who stake
         everything still shrink slightly. Staking everything, a pool of five grows the typical player about 3% a round,
         and a pool of twenty 4.5%, almost as fast as the paper value. This is the logic of insurance, of a portfolio spread over many
         countries and sectors, and of banks themselves.

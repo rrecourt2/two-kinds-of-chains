@@ -49,21 +49,21 @@
   const mins = (v) => `${v >= 0 ? '+' : '−'}${Math.round(Math.abs(v) * 60)} min`;
   const NAMES = {
     tool: { name: 'With a person in the loop', note: 'the AI drafts; a person keeps a good draft and drops a bad one' },
-    autopilot: { name: 'On autopilot', note: 'the AI’s answer is used as it is, with nobody looking' },
+    autopilot: { name: 'On autopilot', note: 'every draft is used as it is, with nobody looking' },
   };
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   const wrongNote = (r) =>
-    r.id === 'tool' ? `${plural(r.wrong, 'bad draft', 'bad drafts')} dropped` : `${plural(r.wrong, 'wrong answer', 'wrong answers')} passed on`;
+    r.id === 'tool' ? `${plural(r.wrong, 'bad draft', 'bad drafts')} dropped` : `${plural(r.wrong, 'wrong draft', 'wrong drafts')} redone`;
 
   const rules = [
-    'Each AI draft saves half an hour on average; a wrong draft costs time instead.',
-    'A person in the loop spends six minutes looking and drops every bad draft.',
-    'On autopilot nobody looks; a wrong answer is built on and costs three times as much.',
+    'Each AI draft saves half an hour on average; a wrong draft costs time to redo.',
+    'In six minutes, a person in the loop can tell a helpful draft from a harmful one.',
+    'The person keeps a helpful draft and drops a harmful one; autopilot uses every draft.',
     'The steady AI is wrong about one time in twenty; the erratic one, four in ten.',
   ];
 
   const puzzle = {
-    goal: 'The AI turns erratic: brilliant on some requests, wrong on others, still worth half an hour on average. Which design saves more time now?',
+    goal: 'The AI turns erratic: brilliant on some requests, wrong on others, still worth half an hour a request on average. Over many requests, which design saves more time now?',
     choices: [
       { value: 'autopilot', label: 'Autopilot, as before: nobody spends time checking' },
       { value: 'person', label: 'The person in the loop' },
@@ -72,13 +72,13 @@
     answer: 'person',
     wrong: (v) =>
       v === 'autopilot'
-        ? 'Not any more. Autopilot keeps every brilliant answer, but what happens to each wrong one?'
-        : 'They part ways. What does a wrong answer cost each design, and how often is the erratic AI wrong?',
+        ? 'Not any more. Autopilot still saves its half hour on average. What do the wider swings give a person who can choose?'
+        : 'They part ways. Autopilot stays at its half hour on average; what happens to the person’s six-minute losses and brilliant gains?',
     hints: [
-      'When the AI is brilliant, both designs keep the gain; the person only spends six minutes looking.',
-      'When the AI is wrong, the person drops the draft. On autopilot, the mistake is built on.',
+      'Autopilot uses every draft, so on average it saves what the AI is worth: half an hour, steady or erratic.',
+      'The person keeps the brilliant drafts and drops the wrong ones at six minutes each. What do wider swings do to that?',
     ],
-    found: 'The person in the loop, by a wide margin. With the erratic AI it saves about 58 minutes a request, up from 24; autopilot goes from 29 minutes saved to 39 lost. Variability helps whatever is optional.',
+    found: 'The person in the loop: about 58 minutes a request on average, up from 24 with the steady AI. Autopilot stays at 30 minutes, steady or erratic. Here the swings help the design that can choose, and leave the one that takes everything where it was on average.',
   };
 </script>
 
@@ -91,7 +91,7 @@
     role="img"
     aria-label={id === 'tool'
       ? 'Sketch: a request goes to the AI for a draft, then to a person, who keeps a good draft or does the work without it, then on to the next step.'
-      : 'Sketch: a request goes to the AI, and its answer goes straight on to the next step, with no one looking.'}
+      : 'Sketch: a request goes to the AI for a draft, and the draft goes straight on to the next step, used as it is.'}
   >
     <rect class="node" x="0.5" y="27.5" width="58" height="20" rx="5" />
     <text class="node-label" x="29.5" y="41.5" text-anchor="middle">Request</text>
@@ -114,9 +114,9 @@
       <text class="or-label tkc-halo" x="105" y="14" text-anchor="middle">or</text>
     {:else}
       <rect class="node ai-auto" x="76.5" y="27.5" width="54" height="20" rx="5" />
-      <text class="node-label strong" x="103.5" y="41.5" text-anchor="middle">AI</text>
+      <text class="node-label" x="103.5" y="41.5" text-anchor="middle">AI draft</text>
       <line class="edge" x1="131" y1="37.5" x2="213" y2="37.5" />
-      <text class="nobody" x="172" y="31" text-anchor="middle">no one looking</text>
+      <text class="nobody" x="172" y="31" text-anchor="middle">used as it is</text>
     {/if}
   </svg>
 {/snippet}
@@ -139,9 +139,9 @@
     <p>
       A modern AI model can read a request written in plain language, draft the answer and fill in the systems behind it.
       There are two ways to put it to work. With a person in the loop, the AI drafts and someone looks before anything
-      moves on: a good draft is kept, and a bad one is dropped and the work done as before. On autopilot, the answer goes
-      straight to the next step. Nobody spends time checking, so every good answer saves its full value. A wrong one
-      travels on unnoticed, and others build on it before anyone finds it.
+      moves on: a good draft is kept, and a bad one is dropped and the work done as before. On autopilot, every draft
+      goes straight to the next step. Nobody spends time checking, so every good draft saves its full value; a wrong one
+      is used too, and someone further down the chain has to redo the work.
     </p>
     <p>
       Below, the same AI handles the same twenty requests both ways. For now it is steady: it saves about half an hour
@@ -152,7 +152,7 @@
   {#snippet figure()}
     <Instrument
       title="One AI, twenty requests, two designs"
-      sub="Each bar is one request: time saved above the line, time lost below."
+      sub="One sample of twenty requests. Each bar is one request: time saved above the line, time lost below."
       {rules}
     >
       <Puzzle id="tools" {...puzzle} predict onshow={() => (ai = 'erratic')} />
@@ -175,11 +175,11 @@
               <p class="d-name"><strong>{NAMES[r.id].name}:</strong> {NAMES[r.id].note}</p>
               <p class="d-total">
                 <strong class:neg={r.total < 0}>{total(r.total)}</strong>
-                <span>in all · {wrongNote(r)}</span>
+                <span>in this sample · {wrongNote(r)}</span>
               </p>
             </div>
             {@render flow(r.id)}
-            <svg {width} height={H} role="img" aria-label="{NAMES[r.id].name}, {ai} AI: {total(r.total)} over twenty requests; {wrongNote(r)}.">
+            <svg {width} height={H} role="img" aria-label="{NAMES[r.id].name}, {ai} AI: {total(r.total)} over this sample of twenty requests; {wrongNote(r)}.">
               <line class="zero" x1="0" x2={width} y1={ZERO} y2={ZERO} />
               {#each Array(N) as _, i (i)}
                 {@const v = bars.current[k * N + i]}
@@ -201,16 +201,16 @@
       <div class="tkc-stats two" use:announce>
         {#each rows as r (r.id)}
           <Stat
-            label="{NAMES[r.id].name}, in the long run"
+            label="{NAMES[r.id].name}, over many requests"
             value={mins(r.avg)}
-            sub={ai === 'steady' ? `per request, ${r.avg >= 0 ? 'saved' : 'lost'}` : `per request; with the steady AI, ${mins(r.steadyAvg)}`}
+            sub={ai === 'steady' ? `a request on average, ${r.avg >= 0 ? 'saved' : 'lost'}` : `a request on average; with the steady AI, ${mins(r.steadyAvg)}`}
           />
         {/each}
       </div>
 
       {#snippet model()}
         <p>On each request the AI’s draft is worth X hours: half an hour on average, give or take {STEADY} hours for the steady AI and {ERRATIC} hours for the erratic one (a normal distribution). Below zero, the draft is wrong and using it costs time. Both AIs see the same twenty requests, with the same luck, scaled by their spread.</p>
-        <p>With a person in the loop, someone spends six minutes looking at each draft and keeps it only when it helps, so a request saves max(X, 0) − 0.1 hours. The model assumes the person can always tell a good draft from a bad one. On autopilot the answer is always used: a good one saves X hours; a wrong one is passed on and built on before anyone notices, which the model counts as three times the loss (3X). The figures “in the long run” are exact averages over all possible requests.</p>
+        <p>With a person in the loop, someone spends six minutes looking at each draft and keeps it only when it helps, so a request saves max(X, 0) − 0.1 hours. The model assumes the person can always tell a helpful draft from a harmful one in those six minutes. On autopilot every draft is used and nobody spends time looking, so a request saves X hours: a wrong draft costs its full value, because the work has to be redone. Its average is the AI’s own half hour, whatever the spread. The figures “over many requests” are exact averages over all possible requests; the twenty bars are one sample of them.</p>
       {/snippet}
     </Instrument>
   {/snippet}
@@ -221,8 +221,11 @@
       almost nothing, and autopilot comes out ahead. The erratic AI is wrong on four requests in ten, and brilliant on
       others. When it is brilliant, the person keeps the draft and the gain is large; when it is wrong, the draft is
       dropped and the loss is six minutes. Wilder swings bring more brilliant drafts to keep, while the losses stay small.
-      Autopilot keeps the brilliant answers too, but every wrong one goes on down the chain, and the wilder the AI, the
-      more often it is wrong and the bigger its mistakes.
+    </p>
+    <p>
+      Autopilot uses every draft, gains and losses alike, so its average is simply the AI’s own: wider swings add as
+      much above the line as below it. The average hides who pays. In the sample above, the erratic AI’s six wrong drafts each take more than an hour to
+      redo, the worst about four, and each of those hours lands on someone further down the chain.
     </p>
     <p>
       A person in the loop is usually counted as a safety measure, a cost paid for caution. Here it is also what turns the
@@ -230,13 +233,14 @@
     </p>
     <p>
       Anyone who has priced an option will recognise the shapes. The person in the loop holds a bought option: a small,
-      known cost and a large upside. Autopilot has the shape of a sold option: its losses grow faster than its gains. In
-      the language of this story, the person adds an <span class="tkc-or">OR</span> to the chain, the draft or the work
-      done as before, and autopilot adds an <span class="tkc-and">AND</span>: the next step needs the AI to be right.
+      known cost and an upside that grows with the swings. Autopilot holds the AI itself, gains and losses alike, and is
+      worth the same however wide the swings. In the language of this story, the person adds an
+      <span class="tkc-or">OR</span> to the chain, the draft or the work done as before, and autopilot adds an
+      <span class="tkc-and">AND</span>: the next step needs the AI to be right.
     </p>
     <p>
-      The loop works where a person can tell a good draft from a bad one at a glance; where they cannot, it quietly
-      becomes autopilot.
+      The loop works only while the person can tell a good draft from a bad one in the time they have; where they
+      cannot, it quietly becomes autopilot.
     </p>
     <h3>AI agents have the same problem as approval chains</h3>
     <p>
