@@ -169,7 +169,8 @@
     </p>
     <p>
       Forced labour falls under Performance Standard 2, and the standards do reach into supply chains, but only to
-      suppliers who deliver “on an ongoing basis” and where the client “can reasonably exercise control”. A plant that
+      primary suppliers, those that “on an ongoing basis” provide goods or materials essential to the project, and
+      only “where the client can reasonably exercise control”, in the words of Performance Standard 1. A plant that
       buys its panels once, through a contractor, sat at the edge of those words.
     </p>
     <p>

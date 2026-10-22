@@ -297,15 +297,17 @@
           A Monte Carlo simulation: the same signed loan, 2,000 times, with the same luck under every setting. Each
           condition is met after a log-normal number of working days around its typical day: KYC checks 7, Board approval
           5, Security signed 10, Legal opinion 12 (after the security is signed), Central bank 20 (the loan registered, or
-          exchange-control approval), ESAP actions due before disbursement 15, Permits 30, Equity paid in 15, Insurance 10
+          exchange-control approval; it moves after disbursement only where local law allows registration after
+          drawdown), ESAP actions due before disbursement 15, Permits 30, Equity paid in 15, Insurance 10
           (lenders named on the policies), Security registered 35 (after signing), Hedging 25, Process agent 5. These are
           professional estimates, not data. Eight deliveries in ten arrive within about a fifth of their typical day when
           the parties are predictable, and between half and twice it when they are unpredictable.
         </p>
         <p>
           A document is checked in three working days, and 15% come back for correction; the corrected one arrives after
-          about half the original’s typical time. The money moves three working days after the last condition is met. One reviewer checking
-          documents one at a time, in order of arrival, would change these results by a day at most.
+          about half the original’s typical time. The money moves three working days after the last condition is met. Checks run side by
+          side; one reviewer checking documents one at a time, in order of arrival, would add a day or two at the start,
+          and up to about two weeks when predictable parties or alternatives bunch the documents together.
         </p>
         <p>
           Alternatives: a condition still open after 20 working days is met by its alternative once that arrives and a

@@ -1,8 +1,8 @@
 # Two Kinds of Chains
 
 An interactive learning story about good complexity (specialization), bad complexity (dependence) and how scale
-amplifies both, and about how a long, rigid chain of conditions tips into failure. Fifteen short chapters in four
-parts, each built around a puzzle with a live model the reader can change. Built with Svelte 5 and Vite. Everything
+amplifies both, and about how a long, rigid chain of conditions tips into failure. Fourteen short chapters in four
+parts, each built around a puzzle with a live model the reader can change, and a closing playbook. Built with Svelte 5 and Vite. Everything
 ships as one file, with no external requests, so it can run inside a locked-down bank intranet.
 
 | # | Chapter | Puzzle and live model |
@@ -30,7 +30,7 @@ ships as one file, with no external requests, so it can run inside a locked-down
 
 ### Puzzles and score
 
-Every chapter opens with one puzzle. Solving it unaided earns two points, solving it after a hint or a wrong try
+Every chapter except the closing playbook opens with one puzzle. Solving it unaided earns two points, solving it after a hint or a wrong try
 earns one, and "Show me the answer" sets the figure and earns none. The explanation below each figure opens once
 its puzzle is solved or shown.
 

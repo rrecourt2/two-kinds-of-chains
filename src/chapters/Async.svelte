@@ -125,7 +125,7 @@
       </div>
 
       {#snippet model()}
-        <p>Each piece takes a fixed time. One after another, every piece waits a day for a handoff before someone picks it up, and the last one waits a day to be delivered. In parallel, the client data comes first, because every other piece is built on it; the other four start together after one handoff and wait once more to be brought together.</p>
+        <p>Each piece takes a fixed time. One after another, every piece after the first waits a day for a handoff before someone picks it up, and the last one waits a day to be delivered. In parallel, the client data comes first, because every other piece is built on it; the other four start together after one handoff and wait once more to be brought together.</p>
         <p>A mistake in the client data found only at the end means the data is fixed and everything built on it is done again. Caught at the start, it costs a check of half a day before any other work begins.</p>
       {/snippet}
     </Instrument>

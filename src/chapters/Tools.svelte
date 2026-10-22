@@ -115,8 +115,9 @@
     <p>
       Since the coin game in chapter 7, variability has mostly done harm in this story. Swings that look generous on
       paper left the typical player poorer, and more variable years drove the specialist off island after island. The species
-      that survived was the generalist, which had four plants to choose from. This chapter is about that difference, and
-      its example is the newest link in many chains: AI.
+      that survived was the generalist, which spread its bets over four plants; variability still cost it, only less.
+      This chapter is about something stronger, a design that gains from variability, and its example is the newest
+      link in many chains: AI.
     </p>
     <p>
       A modern AI model can read a request written in plain language, draft the answer and fill in the systems behind it.
