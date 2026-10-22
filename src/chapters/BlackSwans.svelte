@@ -168,9 +168,10 @@
     <h3>The box nobody drew</h3>
     <p>
       The puzzle’s logic was sound, and it would never have opened the solar plant’s file: its category described the
-      site, and the risk arrived through a purchase order. Forced labour falls under Performance Standard 2, but the
-      standards reach into supply chains only as far as primary suppliers; panels bought once, through a contractor, sat
-      at the edge of those words.
+      site, and the risk arrived through a purchase order. Forced labour falls under Performance Standard 2, whose
+      supply-chain duties are written for primary suppliers, those that provide essential goods “on an ongoing basis”:
+      find the risk, remedy it, and change suppliers where it cannot be remedied. Panels bought once, through a
+      contractor, sat at the edge of those words.
     </p>
     <p>
       The boxes have moved before: lending through banks and funds fitted none of A, B or C, so by the late 1990s a

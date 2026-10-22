@@ -61,10 +61,17 @@
   // The first step of the slider at which the generalist is ahead.
   const firstAhead = Math.ceil(crossing / 5) * 5;
 
+  // Details only for the part of the chart already drawn: before the puzzle is solved, a reading past the
+  // reader's own swing would give the answer away. A selection the slider leaves behind is cleared.
   function onMove(e) {
     const box = e.currentTarget.getBoundingClientRect();
-    hover = Math.max(0, Math.min(70, Math.round(cx.invert(e.clientX - box.left + cm.left))));
+    const at = Math.max(0, Math.min(70, Math.round(cx.invert(e.clientX - box.left + cm.left))));
+    hover = at <= reach ? at : null;
   }
+  $effect(() => {
+    if (hover !== null && hover > reach) hover = null;
+  });
+  const tip = $derived(hover !== null && hover <= reach ? hover : null);
 
   const puzzle = $derived({
     goal: 'The specialist grows faster in a calm world. Make the years more variable: at what swing does the generalist start to grow faster?',
@@ -104,9 +111,9 @@
       title="Specialist or generalist?"
       sub="Each line is one island’s population over a century. Both species live through the same good and bad years."
       rules={[
-        `${ISLANDS} islands, each starting with ${START} animals of each species.`,
-        `The specialist eats one plant and grows ${Math.round((SPECIALIST_RATE - 1) * 100)}% in an average year.`,
-        `The generalist eats four plants and grows ${Math.round((GENERALIST_RATE - 1) * 100)}% in an average year.`,
+        `${ISLANDS} islands; each species starts at ${START} animals per island, with its own ceiling of ${CAPACITY.toLocaleString('en-US')}.`,
+        `The specialist eats one plant; uncrowded, it grows ${Math.round((SPECIALIST_RATE - 1) * 100)}% in an average year.`,
+        `The generalist eats four plants; uncrowded, it grows ${Math.round((GENERALIST_RATE - 1) * 100)}% in an average year.`,
         'Each year each plant, independently, has a good or bad year: food up or down by the swing.',
       ]}
     >
@@ -116,8 +123,8 @@
       </div>
 
       <div class="tkc-stats" use:announce>
-        <Stat label="Specialist survives on" value="{sim.survivors.specialist} of {ISLANDS}" sub="islands · {signedPct(gs)} a year in the long run" swatch="var(--tkc-conditions)" line={true} />
-        <Stat label="Generalist survives on" value="{sim.survivors.generalist} of {ISLANDS}" sub="islands · {signedPct(gg)} a year in the long run" swatch="var(--tkc-options)" line={true} />
+        <Stat label="Specialist survives on" value="{sim.survivors.specialist} of {ISLANDS}" sub="islands · {signedPct(gs)} a year before crowding" swatch="var(--tkc-conditions)" line={true} />
+        <Stat label="Generalist survives on" value="{sim.survivors.generalist} of {ISLANDS}" sub="islands · {signedPct(gg)} a year before crowding" swatch="var(--tkc-options)" line={true} />
       </div>
 
       <div class="panels" class:side={sideBySide} bind:clientWidth={width}>
@@ -143,8 +150,8 @@
       </div>
 
       <div class="tkc-chart curve" bind:clientWidth={curveW}>
-        <div class="tkc-fig-title small">Who grows faster in the long run?</div>
-        <svg width={curveW} height={CH} role="img" aria-label="Long-run growth of each species against how variable the years are{done ? `. The generalist overtakes the specialist at about ±${crossing}% food` : `, drawn up to ±${swing}% food`}.">
+        <div class="tkc-fig-title small">Who grows faster before crowding?</div>
+        <svg width={curveW} height={CH} role="img" aria-label="Growth of each species before crowding, year after year, against how variable the years are{done ? `. The generalist overtakes the specialist at about ±${crossing}% food` : `, drawn up to ±${swing}% food`}.">
           {#each [-0.2, -0.1, 0, 0.1] as t}
             <line class={t === 0 ? 'tkc-base' : 'tkc-grid'} x1={cm.left} x2={curveW - cm.right} y1={cy(t)} y2={cy(t)} />
             <text class="tkc-axis-label" x={cm.left - 6} y={cy(t) + 4} text-anchor="end">{t > 0 ? '+' : t < 0 ? '−' : ''}{Math.abs(Math.round(t * 100))}%</text>
@@ -162,20 +169,20 @@
           <line class="now" x1={cx(swing)} x2={cx(swing)} y1={cm.top} y2={CH - cm.bottom} />
           <circle cx={cx(swing)} cy={cy(gs - 1)} r="5" class="pt" style:fill="var(--tkc-conditions)" />
           <circle cx={cx(swing)} cy={cy(gg - 1)} r="5" class="pt" style:fill="var(--tkc-options)" />
-          {#if hover !== null}
-            <line class="cross" x1={cx(hover)} x2={cx(hover)} y1={cm.top} y2={CH - cm.bottom} />
+          {#if tip !== null}
+            <line class="cross" x1={cx(tip)} x2={cx(tip)} y1={cm.top} y2={CH - cm.bottom} />
           {/if}
           {#each [0, 20, 40, 60] as t}
             <text class="tkc-axis-label" x={cx(t)} y={CH - cm.bottom + 16} text-anchor="middle">±{t}%</text>
           {/each}
           <text class="tkc-axis-title" x={cm.left + (curveW - cm.left - cm.right) / 2} y={CH - 4} text-anchor="middle">{curveW < 380 ? 'Swing in food from year to year' : 'Swing in food between good and bad years'}</text>
-          <rect x={cm.left} y={cm.top} width={Math.max(0, curveW - cm.left - cm.right)} height={CH - cm.top - cm.bottom} fill="transparent" role="presentation" onpointermove={onMove} onpointerleave={() => (hover = null)} />
+          <rect x={cm.left} y={cm.top} width={Math.max(0, curveW - cm.left - cm.right)} height={CH - cm.top - cm.bottom} fill="transparent" role="presentation" onpointerdown={onMove} onpointermove={onMove} onpointerleave={() => (hover = null)} />
         </svg>
-        {#if hover !== null}
-          <div class="tkc-tip" style:left="{Math.min(curveW - 190, Math.max(0, cx(hover) + 10))}px" style:top="40px">
-            <div>Swing of ±{hover}%</div>
-            <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span><strong>{signedPct(longRunGrowth('specialist', hover / 100))}</strong> a year, specialist</div>
-            <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-options)"></span><strong>{signedPct(longRunGrowth('generalist', hover / 100))}</strong> a year, generalist</div>
+        {#if tip !== null}
+          <div class="tkc-tip" style:left="{Math.min(curveW - 190, Math.max(0, cx(tip) + 10))}px" style:top="40px">
+            <div>Swing of ±{tip}%</div>
+            <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span><strong>{signedPct(longRunGrowth('specialist', tip / 100))}</strong> a year, specialist</div>
+            <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-options)"></span><strong>{signedPct(longRunGrowth('generalist', tip / 100))}</strong> a year, generalist</div>
           </div>
         {/if}
         <div class="tkc-legend">
@@ -186,7 +193,8 @@
 
       {#snippet model()}
         <p>Each year, each of four plants independently has a good year (food × (1 + swing)) or a bad one (food × (1 − swing)). The specialist eats only the first plant and grows 10% in an average year; the generalist eats all four and grows 6%.</p>
-        <p>Each island starts with {START} animals of each species. Births and deaths are random (Poisson), so small populations can die out by chance. Each island holds at most {CAPACITY.toLocaleString('en-US')} animals. Long-run growth is the geometric mean, the growth rate that a single population actually experiences over time.</p>
+        <p>Each island starts with {START} animals of each species. The two never compete: each species has its own ceiling of {CAPACITY.toLocaleString('en-US')} animals per island, and they share only the weather. Births and deaths are random (Poisson), so small populations can die out by chance.</p>
+        <p>The growth rates in the figures are before crowding: the geometric mean, the rate at which a single population compounds year after year until it nears its ceiling, leaving chance births and deaths aside.</p>
       {/snippet}
     </Instrument>
   {/snippet}
