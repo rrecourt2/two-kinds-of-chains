@@ -6,7 +6,7 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { simulateIslands, longRunGrowth, CAPACITY } from '../lib/sim/species.js';
+  import { simulateIslands, longRunGrowth, CAPACITY, SPECIALIST_RATE, GENERALIST_RATE } from '../lib/sim/species.js';
   import { linear, log10, line } from '../lib/scales.js';
   import { signedPct } from '../lib/format.js';
   import { getContext } from 'svelte';
@@ -94,13 +94,22 @@
       co-extinction, and estimate that thousands of species are endangered simply because something they depend on is.
     </p>
     <p>
-      Below, two species live on 40 islands. The specialist eats one plant and is very efficient at it. The generalist
-      eats four plants and is less efficient at each. Every year, each plant has a good year or a bad one.
+      Below, two species share the same islands and the same weather: a specialist, very good at living on one food
+      plant, and a generalist, less efficient but able to live on several. Some years are kind to a plant, some are not.
     </p>
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="Specialist or generalist?" sub="Each line is one island’s population over a century, from 100 animals at the start. Both species live through the same good and bad years.">
+    <Instrument
+      title="Specialist or generalist?"
+      sub="Each line is one island’s population over a century. Both species live through the same good and bad years."
+      rules={[
+        `${ISLANDS} islands, each starting with ${START} animals of each species.`,
+        `The specialist eats one plant and grows ${Math.round((SPECIALIST_RATE - 1) * 100)}% in an average year.`,
+        `The generalist eats four plants and grows ${Math.round((GENERALIST_RATE - 1) * 100)}% in an average year.`,
+        'Each year each plant, independently, has a good or bad year: food up or down by the swing.',
+      ]}
+    >
       <Puzzle id="extinction" {...puzzle} onshow={() => (swing = firstAhead)} />
       <div class="tkc-controls">
         <Slider id="x-swing" label="Swing in food between good and bad years" bind:value={swing} min={0} max={70} step={5} format={(s) => `±${s}%`} ends={['Calm', 'Volatile']} />
@@ -207,6 +216,19 @@
       Scale protects, but only when it is diverse. The Gros Michel banana was grown by the billion, but every plant was
       a clone. When Panama disease spread through the plantations, the export trade had to switch to another variety
       altogether. A billion identical plants are one dependency, copied a billion times.
+    </p>
+    <h3>Why islands</h3>
+    <p>
+      Ecologists have measured one rule for a century: a larger area holds more species in total, but fewer in each
+      square metre. Nassim Taleb reads globalisation into it: the more open the space, the more a few winners spread at
+      the expense of the rest. Where trade joins up separate places, ecologists see just that: a few widespread species
+      replacing many local ones.
+    </p>
+    <p>
+      The islands in this model never swap animals, so a collapse on one stays there: each is a firebreak, as Hora’s
+      modules are in chapter 13 and the linked banks of chapter 8 were not. Any one island is fragile; what lasts is the
+      archipelago. One connected system holds more in total, and less variety in each place: the same few products,
+      systems and habits wherever you look.
     </p>
   {/snippet}
 

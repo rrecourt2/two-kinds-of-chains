@@ -53,10 +53,24 @@ export function buildNetwork(shape, n, meanLinks, seed) {
 }
 
 /**
- * Failure waves after the seed banks fail. Integer arithmetic keeps the
- * threshold exact: a bank with k counterparties fails once
- * failed × 20 > capitalPct × k.
+ * The failure condition. A bank with `borrowers` borrowers lends each of them
+ * 20% ÷ borrowers of its assets; with `lost` of them failed, its losses are
+ * lost × 20 ÷ borrowers percent, and it fails when they exceed its capital.
+ * Integer arithmetic keeps the threshold exact: losses equal to capital leave
+ * the bank standing.
  */
+export function fails(lost, borrowers, capitalPct) {
+  return lost * INTERBANK_PCT > capitalPct * borrowers;
+}
+
+/** How many failed borrowers a bank with `borrowers` borrowers survives at this capital. */
+export function absorbs(capitalPct, borrowers) {
+  let lost = 0;
+  while (lost < borrowers && !fails(lost + 1, borrowers, capitalPct)) lost++;
+  return lost;
+}
+
+/** Failure waves after the seed banks fail (see `fails` for the threshold). */
 export function cascade(adj, capitalPct, seeds) {
   const failed = new Uint8Array(adj.length);
   for (const s of seeds) failed[s] = 1;
@@ -67,7 +81,7 @@ export function cascade(adj, capitalPct, seeds) {
       if (failed[i] || adj[i].length === 0) continue;
       let lost = 0;
       for (const j of adj[i]) lost += failed[j];
-      if (lost * INTERBANK_PCT > capitalPct * adj[i].length) next.push(i);
+      if (fails(lost, adj[i].length, capitalPct)) next.push(i);
     }
     if (!next.length) break;
     for (const i of next) failed[i] = 1;
@@ -95,6 +109,8 @@ export function mostConnected(adj) {
 
 // ---------------------------------------------------------------------------
 // The chapter's stress test: two kinds of network, three shocks, capital 2–10%.
+// The figure shows two scenes; the third shock (one bank at random) is quoted
+// in the explanation.
 
 export const BANKS = 48;
 export const TRIALS = 40;
@@ -111,6 +127,12 @@ export const SHOCKS = ['one', 'five', 'biggest'];
 export const NETWORKS = {
   similar: { shape: 'random', links: 10, seed: 2100 },
   giants: { shape: 'hubs', links: 4, seed: 15200 },
+};
+
+/** The two scenes in the figure: a kind of network and the shock that hits it. */
+export const SCENES = {
+  similar: { network: 'similar', shock: 'five' },
+  giants: { network: 'giants', shock: 'biggest' },
 };
 
 /** Network number `t` of one kind, and the banks each shock brings down first. */

@@ -8,16 +8,20 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { BANKS as N, TRIALS, CAPITALS, SHOCKS, NETWORKS, stressTest, stressNetwork, lowestCapital, layout, cascade } from '../lib/sim/network.js';
+  import { BANKS as N, TRIALS, CAPITALS, NETWORKS, SCENES, INTERBANK_PCT, stressTest, stressNetwork, lowestCapital, layout, cascade, absorbs } from '../lib/sim/network.js';
   import { linear, line } from '../lib/scales.js';
   import { pct } from '../lib/format.js';
   import { prefersReducedMotion, watchVisibility } from '../lib/motion.js';
 
-  const NETWORK_LABEL = { similar: 'Many similar banks', giants: 'A few giants' };
-  const SHOCK_LABEL = { one: 'One bank fails', five: 'Five fail at once', biggest: 'The biggest bank fails' };
+  const SCENE_LABEL = { similar: 'Many similar banks, five fail at once', giants: 'A few giants, the biggest fails' };
+  const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+  const ORDINAL = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth', 'eleventh', 'twelfth', 'thirteenth'];
 
-  let network = $state('similar');
-  let shock = $state('one');
+  // Until the puzzle is done, the figure shows only the stress test; then a second scene opens.
+  const game = getContext('tkc-game');
+  const revealed = $derived(!game.isOpen('contagion'));
+
+  let scene = $state('similar');
   let capital = $state(4);
   let width = $state(560);
   let chartW = $state(560);
@@ -36,16 +40,40 @@
     }
     return examples[kind];
   }
-  const test = $derived(testFor(network));
-  const example = $derived(exampleFor(network));
+  const kind = $derived(SCENES[scene].network);
+  const shock = $derived(SCENES[scene].shock);
+  const test = $derived(testFor(kind));
+  const example = $derived(exampleFor(kind));
   const at = (c) => CAPITALS.indexOf(c);
   const mean = $derived(test.mean[shock][at(capital)]);
   const collapses = $derived(test.collapses[shock][at(capital)]);
 
+  // The one rule: how many failed borrowers a bank survives at this capital, from the model's own failure condition.
+  // A typical bank in each scene, and two neighbours for comparison.
+  const TYPICAL = { similar: [10, 8, 12], giants: [2, 3, 4] };
+  const survives = (k) => {
+    const s = absorbs(capital, k);
+    return s === 0 ? 'falls at the first failure' : `survives ${WORDS[s]} failure${s === 1 ? '' : 's'} and falls at the ${ORDINAL[s + 1]}`;
+  };
+  const fallsAt = (k) => `at the ${ORDINAL[absorbs(capital, k) + 1]}`;
+  const rule = $derived.by(() => {
+    const [k, k1, k2] = TYPICAL[scene];
+    return {
+      main: `With ${capital}% capital, a bank with ${WORDS[k]} borrowers ${survives(k)}.`,
+      more: `Each loan is ${INTERBANK_PCT / k}% of its assets. A bank with ${WORDS[k1]} borrowers falls ${fallsAt(k1)}; one with ${WORDS[k2]}, ${fallsAt(k2)}.`,
+    };
+  });
+  const rules = $derived([
+    scene === 'similar' ? '48 banks; each lends 20% of its assets to about ten others, in equal parts.' : '48 banks; each lends 20% of its assets in equal parts, most to two or three others.',
+    'A bank that fails repays nothing: its lenders lose those loans in full.',
+    'A bank fails when its losses exceed its capital.',
+    scene === 'similar' ? 'Five banks fail at once; the rest follow, or not.' : 'The biggest bank fails; the rest follow, or not.',
+  ]);
+
   // The example network: the outcome for the current settings, revealed one round of failures at a time.
   const outcome = $derived(cascade(example.adj, capital, example.first[shock]));
   let shown = $state({ key: '', waves: [] });
-  let revealed = $state(0);
+  let wave = $state(0);
   let seen = false;
   let timer = 0;
   let diagram;
@@ -54,28 +82,28 @@
   function play() {
     clearInterval(timer);
     if (prefersReducedMotion()) {
-      revealed = shown.waves.length;
+      wave = shown.waves.length;
       return;
     }
     if (!seen) {
-      revealed = 1;
+      wave = 1;
       return;
     }
-    revealed = 1;
+    wave = 1;
     timer = setInterval(() => {
-      if (revealed >= shown.waves.length) clearInterval(timer);
-      else revealed += 1;
+      if (wave >= shown.waves.length) clearInterval(timer);
+      else wave += 1;
     }, WAVE_MS);
   }
   $effect(() => {
     const { waves, failed } = outcome;
-    const key = `${network}:${failed.join('')}`;
+    const key = `${scene}:${failed.join('')}`;
     untrack(() => {
       if (key === shown.key) {
         // The same banks fail as before: keep what is on screen.
-        const complete = revealed >= shown.waves.length;
+        const complete = wave >= shown.waves.length;
         shown = { key, waves };
-        revealed = complete ? waves.length : Math.min(revealed, waves.length);
+        wave = complete ? waves.length : Math.min(wave, waves.length);
         return;
       }
       shown = { key, waves };
@@ -94,12 +122,12 @@
 
   const failedNow = $derived.by(() => {
     const f = new Uint8Array(N);
-    shown.waves.slice(0, revealed).forEach((w) => w.forEach((i) => (f[i] = 1)));
+    shown.waves.slice(0, wave).forEach((w) => w.forEach((i) => (f[i] = 1)));
     return f;
   });
   const hitFirst = $derived(new Set(shown.waves[0] ?? []));
   const count = $derived(failedNow.reduce((a, b) => a + b, 0));
-  const spreading = $derived(revealed < shown.waves.length);
+  const spreading = $derived(wave < shown.waves.length);
   const rounds = $derived(Math.max(0, shown.waves.length - 1));
 
   // Network drawing.
@@ -108,13 +136,12 @@
   const py = (p) => p.y * netH;
   const radius = (i) => 3.5 + 1.6 * Math.sqrt(example.adj[i].length);
 
-  // Line chart: share of banks that fail, on average, against capital.
+  // Line chart: share of banks that fail, on average, against capital, for the current scene.
   const CH = 230;
   const cm = { top: 30, right: 18, bottom: 40, left: 44 };
   const cx = $derived(linear(2, 10, cm.left, chartW - cm.right));
   const cy = linear(0, 1, CH - cm.bottom, cm.top);
-  const curve = (s) => line(CAPITALS.map((c, i) => [cx(c), cy(test.mean[s][i])]));
-  const others = $derived(SHOCKS.filter((s) => s !== shock));
+  const curve = $derived(line(CAPITALS.map((c, i) => [cx(c), cy(test.mean[shock][i])])));
   const xTicks = $derived((chartW - cm.left - cm.right) / 8 >= 30 ? CAPITALS : CAPITALS.filter((c) => c % 2 === 0));
   const tagBelow = $derived(mean > 0.8);
   const tagLeft = $derived(capital >= 9);
@@ -125,28 +152,24 @@
   }
 
   // The stress test: many similar banks, five failing at once.
-  const game = getContext('tkc-game');
-  const stressNow = $derived(network === 'similar' && shock === 'five');
   const similar = testFor('similar');
   const lowest = lowestCapital(similar, 'five', 0.25);
   const stressMean = (c) => similar.mean.five[at(c)];
+  const stressNow = $derived(scene === 'similar');
   const stressed = $derived(stressMean(capital));
   // Across the 40 networks, the most banks that fail beyond the first five at the answer.
   const worstExtra = Math.round(Math.max(...similar.shares.five[at(lowest)]) * N) - 5;
-  const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
   const puzzle = $derived({
-    goal: 'A stress test: in the network of many similar banks, five banks fail at once. Find the lowest capital at which, on average, fewer than a quarter of all banks fail.',
+    goal: 'A stress test: five of these banks fail at once. Find the lowest capital at which, on average, fewer than a quarter of all 48 banks fail.',
     met: stressNow && capital === lowest,
-    checks: [
-      { label: 'Many similar banks, five failing at once', ok: stressNow },
-      { label: `On average, fewer than a quarter of the banks fail${stressNow ? ` (now ${pct(stressed)})` : ''}`, ok: stressNow && stressed < 0.25 },
-    ],
-    progress: stressNow && stressed < 0.25 && capital > lowest ? `Under a quarter at ${capital}%. Does a lower capital still hold?` : '',
-    hints: ['With “Many similar banks” and “Five fail at once” set, the bold line in the chart is the stress test at every level of capital.', 'Raise capital one point at a time from 4%. When the drop comes, it is sudden.'],
+    checks: [{ label: `On average, fewer than a quarter of the banks fail (now ${pct(stressed)})`, ok: stressed < 0.25 }],
+    progress: stressed < 0.25 && capital > lowest ? `Under a quarter at ${capital}%. Does a lower capital still hold?` : '',
+    hints: ['The chart under the network shows the average at every level of capital.', 'Raise capital one point at a time from 4%. When the drop comes, it is sudden.'],
     found: `${lowest}%. With ${lowest - 2}% capital, five failures at once bring down ${pct(stressMean(lowest - 2))} of the banks on average; with ${lowest - 1}%, ${pct(stressMean(lowest - 1))}; with ${lowest}%, ${pct(stressMean(lowest))}, never more than ${WORDS[worstExtra] ?? worstExtra} banks beyond the first five. Two points of capital separate a collapse from a contained crisis.`,
   });
   // Numbers quoted in the explanation, read from the same stress test.
   const giants = testFor('giants');
+  const giantsLowest = lowestCapital(giants, 'biggest', 0.25);
 </script>
 
 <Chapter
@@ -163,27 +186,27 @@
       system as a whole was safer. That was half right.
     </p>
     <p>
-      Below are 48 banks. Each lends 20% of its balance sheet to other banks, its counterparties, split evenly. If a
-      counterparty fails, that loan is lost, and a bank fails when its losses exceed its capital. So every loan is also
-      a condition: a bank stays standing only while enough of its counterparties do.
-    </p>
-    <p>
-      The banks can be linked in two ways: as many similar banks with about ten counterparties each, or as a few giants
-      that most of the others are linked to.
+      Every loan to another bank is also a condition: the lender stays standing only while enough of its borrowers do.
+      So one question decides everything below: how many of its borrowers can fail before a bank falls? The answer
+      depends on its capital, the buffer that absorbs its losses, and on how many borrowers share its lending.
     </p>
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="An interbank network" sub="48 banks that lend to each other, and what a shock does to them. Failures spread in rounds.">
-      <Puzzle id="contagion" {...puzzle} onshow={() => ((network = 'similar'), (shock = 'five'), (capital = lowest))} />
+    <Instrument title="An interbank network" sub="48 banks that lend to each other, and what a shock does to them. Failures spread in rounds." {rules}>
+      <Puzzle id="contagion" {...puzzle} onshow={() => ((scene = 'similar'), (capital = lowest))} />
       <div class="tkc-controls tkc-controls--wide">
-        <Segmented name="c-network" label="The network" bind:value={network} options={Object.entries(NETWORK_LABEL).map(([value, label]) => ({ value, label }))} />
-        <Segmented name="c-shock" label="The shock" bind:value={shock} options={Object.entries(SHOCK_LABEL).map(([value, label]) => ({ value, label }))} />
-        <Slider id="c-capital" label="Capital" bind:value={capital} min={2} max={10} format={(v) => `${v}% of assets`} />
+        <div class="ctl">
+          <Slider id="c-capital" label="Capital" bind:value={capital} min={2} max={10} format={(v) => `${v}% of assets`} />
+          <p class="rule"><strong>{rule.main}</strong> {rule.more}</p>
+        </div>
+        {#if revealed}
+          <Segmented name="c-scene" label="The scene" bind:value={scene} options={Object.entries(SCENE_LABEL).map(([value, label]) => ({ value, label }))} />
+        {/if}
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width} bind:this={diagram}>
-        <svg {width} height={netH} role="img" aria-label="{NETWORK_LABEL[network]}, one network of {N} banks. {SHOCK_LABEL[shock]}, with {capital}% capital: {count} of {N} banks have failed{spreading ? ' so far' : ''}.">
+        <svg {width} height={netH} role="img" aria-label="{SCENE_LABEL[scene]}: one network of {N} banks, with {capital}% capital. {count} of {N} banks have failed{spreading ? ' so far' : ''}.">
           {#each example.adj as nbrs, i}
             {#each nbrs as j}
               {#if j > i}
@@ -199,7 +222,7 @@
           {/each}
         </svg>
         <div class="tkc-legend">
-          <span><span class="tkc-swatch sw-bank"></span>Healthy bank (size = number of counterparties)</span>
+          <span><span class="tkc-swatch sw-bank"></span>Healthy bank (size = number of borrowers)</span>
           <span><span class="tkc-swatch sw-ring"></span>Hit by the shock</span>
           <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>Failed</span>
         </div>
@@ -221,21 +244,18 @@
       </div>
 
       <div class="tkc-chart curve" bind:clientWidth={chartW}>
-        <div class="tkc-fig-title small">What usually happens, in {TRIALS} networks of this kind</div>
+        <div class="tkc-fig-title small">Across {TRIALS} networks like this one</div>
         <svg
           width={chartW}
           height={CH}
           role="img"
-          aria-label="Share of banks that fail, on average over {TRIALS} networks ({NETWORK_LABEL[network].toLowerCase()}), against capital. {SHOCK_LABEL[shock]}: {CAPITALS.map((c, i) => `${c}% capital, ${pct(test.mean[shock][i])}`).join('; ')}. Grey lines: the other two shocks."
+          aria-label="Banks that fail, on average over {TRIALS} networks like this one ({SCENE_LABEL[scene].toLowerCase()}), against capital: {CAPITALS.map((c, i) => `${c}% capital, ${pct(test.mean[shock][i])}`).join('; ')}."
         >
           {#each [0, 0.25, 0.5, 0.75, 1] as t}
             <line class={t === 0 ? 'tkc-base' : 'tkc-grid'} x1={cm.left} x2={chartW - cm.right} y1={cy(t)} y2={cy(t)} />
             <text class="tkc-axis-label" x={cm.left - 6} y={cy(t) + 4} text-anchor="end">{t * 100}%</text>
           {/each}
-          {#each others as s (s)}
-            <path d={curve(s)} class="faint" />
-          {/each}
-          <path d={curve(shock)} class="bold" />
+          <path d={curve} class="bold" />
           {#each CAPITALS as c, i (c)}
             <circle cx={cx(c)} cy={cy(test.mean[shock][i])} r="3" class="pt-small" />
           {/each}
@@ -253,25 +273,16 @@
           <rect x={cm.left} y={cm.top} width={Math.max(0, chartW - cm.left - cm.right)} height={CH - cm.top - cm.bottom} fill="transparent" role="presentation" onpointermove={onMove} onpointerleave={() => (hover = null)} />
         </svg>
         {#if hover !== null}
-          <div class="tkc-tip" style:left="{Math.min(chartW - 210, Math.max(0, cx(hover) + 10))}px" style:top="44px">
+          <div class="tkc-tip" style:left="{Math.min(chartW - 170, Math.max(0, cx(hover) + 10))}px" style:top="44px">
             <div>With {hover}% capital</div>
-            {#each [shock, ...others] as s (s)}
-              <div class="tkc-tip-row">
-                <span class="tkc-swatch tkc-swatch--line" style:background={s === shock ? 'var(--tkc-conditions)' : 'var(--tkc-rule)'}></span><strong>{pct(test.mean[s][at(hover)])}</strong>
-                {SHOCK_LABEL[s].toLowerCase()}
-              </div>
-            {/each}
+            <div class="tkc-tip-row"><strong>{pct(test.mean[shock][at(hover)])}</strong> fail on average</div>
           </div>
         {/if}
-        <div class="tkc-legend">
-          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span>{SHOCK_LABEL[shock]}</span>
-          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-rule)"></span>The other two shocks</span>
-        </div>
       </div>
 
       {#snippet model()}
-        <p>Each bank lends 20% of its assets to other banks, split evenly across its counterparties, and holds capital of {capital}% of assets. A failed counterparty’s loan is lost in full, so a bank with k counterparties fails once more than {capital} ÷ 20 × k of them have failed.</p>
-        <p>“Many similar banks” is a random network: every pair of banks is linked with the same chance, giving about ten counterparties each. “A few giants” grows by preferential attachment: each newcomer links to two banks, more often to those that already have many links. “Five fail at once” picks five banks at random; the biggest bank is the one with the most counterparties.</p>
+        <p>Each bank lends 20% of its assets to the banks it is linked to, split evenly, and holds capital of {capital}% of assets; every link runs both ways. A failed borrower’s loan is lost in full, so a bank with k borrowers fails once more than {capital} ÷ 20 × k of them have failed. With exactly that many, its losses equal its capital and it stands.</p>
+        <p>“Many similar banks” is a random network: every pair of banks is linked with the same chance, giving about ten borrowers each. “A few giants” grows by preferential attachment: each newcomer links to two banks, more often to those that already have many links. “Five fail at once” picks five banks at random; the biggest bank is the one with the most links.</p>
         <p>The chart averages {TRIALS} networks of each kind, the same {TRIALS} for every reader. The diagram shows the one whose results come closest to that average. The model follows Watts (2002) and Gai and Kapadia (2010).</p>
       {/snippet}
     </Instrument>
@@ -279,12 +290,12 @@
 
   {#snippet after()}
     <p>
-      With 4% capital, the network of similar banks absorbs a single failure: on average {(similar.mean.one[at(4)] * N).toFixed(1)}
-      of the {N} banks fail, the one that was hit and seldom another. A dense network absorbs small shocks so well that it
-      looks safe. That is the trap. Five failures at once bring down all {N}, in every one of the {TRIALS} networks. A fall
-      in house prices was that kind of shock: it hit everyone holding the same mortgage securities together. The same
-      links that absorbed one failure carry five to every bank. Andrew Haldane of the Bank of England called the system
-      “robust yet fragile”.
+      With 4% capital, a bank with ten borrowers survives two failures. So a single failure seldom spreads: across the
+      {TRIALS} networks of similar banks, on average {(similar.mean.one[at(4)] * N).toFixed(1)} of the {N} banks fail,
+      the one that was hit and seldom another. A dense network absorbs small shocks so well that it looks safe. That is
+      the trap. Five failures at once bring down all {N}, in every one of the {TRIALS} networks. A fall in house prices
+      was that kind of shock: it hit everyone holding the same mortgage securities together. The same links that absorbed
+      one failure carry five to every bank. Andrew Haldane of the Bank of England called the system “robust yet fragile”.
     </p>
     <p>
       Climbers roped together know the pattern. On easy ground, the rope lets the others hold one who slips. On a
@@ -292,17 +303,19 @@
       level of capital, the system does not bend a little more. It breaks.
     </p>
     <p>
-      It breaks because contagion feeds on itself: with enough capital the losses die out within a round or two; with
-      too little, each round of failures sets up the next. Every link had become a condition, and the chain of
-      conditions ran through the whole system.
+      It breaks because contagion feeds on itself: every bank that falls is one more failed borrower for the banks that
+      lent to it. With enough capital the losses die out within a round or two; with too little, each round of failures
+      sets up the next. Every link had become a condition, and the chain of conditions ran through the whole system.
     </p>
     <p>
-      A network of <em>a few giants</em> behaves differently. Most banks in it have only two or three counterparties.
-      With 6% capital, a failure picked at random brings down {pct(giants.mean.one[at(6)])} of the banks on average,
-      because most banks are minor. When the biggest bank fails, {pct(giants.mean.biggest[at(6)])} go down. That is the
-      shape of September 2008: Lehman Brothers filed for bankruptcy on the 15th, the largest bankruptcy in US history,
-      and the next day the Federal Reserve agreed to lend AIG up to $85 billion. AIG had sold credit protection to banks
-      around the world.
+      The second scene, now open in the figure, links the same {N} banks as <em>a few giants</em>. Most banks in it have
+      only two or three borrowers, so each loan is a large share of their assets: with 6% capital, such a bank falls at the
+      first failure. A failure picked at random brings down {pct(giants.mean.one[at(6)])} of the banks on average,
+      because most banks are minor. When the biggest bank fails, {pct(giants.mean.biggest[at(6)])} go down. Even the 7%
+      that contained the stress test leaves {pct(giants.mean.biggest[at(7)])}; it takes {giantsLowest}% to keep the
+      giant’s fall under a quarter. That is the shape of September 2008: Lehman Brothers filed for bankruptcy on the 15th,
+      the largest bankruptcy in US history, and the next day the Federal Reserve agreed to lend AIG up to $85 billion.
+      AIG had sold credit protection to banks around the world.
     </p>
     <h3>Hubs inside organizations</h3>
     <p>
@@ -381,11 +394,20 @@
   .small {
     font-size: 0.9375rem;
   }
-  .faint {
-    fill: none;
-    stroke: var(--tkc-rule);
-    stroke-width: 1.75;
-    stroke-linejoin: round;
+  .ctl {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+  }
+  .rule {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--tkc-ink-2);
+    text-wrap: pretty;
+  }
+  .rule strong {
+    color: var(--tkc-ink);
+    font-weight: 600;
   }
   .bold {
     fill: none;

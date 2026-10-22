@@ -30,7 +30,7 @@
   };
 
   const puzzle = {
-    goal: 'The claim: every Category A project has an ESAP on file. Each file shows its category or its ESAP status on the cover, and the other inside. Which files must be opened to test the claim, and no more?',
+    goal: 'Which files must be opened to test the claim, and no more?',
     choices: FILES.map((f) => ({ value: f.value, label: f.cover })),
     answer: ['a', 'none'],
     multi: true,
@@ -106,31 +106,15 @@
       that are hard to test, because the cases that could break them are rare.
     </p>
     <p>
-      Many development lenders assess projects against IFC’s Performance Standards (2012): eight
-      standards on environmental and social risk. The Equator Principles, which many commercial banks apply
-      to project finance, build on them. Projects are sorted into categories, which come from IFC’s Sustainability
-      Policy:
+      Many development lenders assess projects against IFC’s Performance Standards and sort them by environmental and
+      social risk into IFC’s categories: A for significant impacts that may be irreversible, such as a large dam that
+      resettles whole villages; B for limited, site-specific ones; C for minimal ones.
     </p>
-    <ul>
-      <li>
-        <strong>Category A:</strong> “potential significant adverse environmental or social risks and/or impacts that are
-        diverse, irreversible, or unprecedented”. A large dam that resettles whole villages, under Performance Standard 5,
-        is the classic case.
-      </li>
-      <li>
-        <strong>Category B:</strong> potential limited adverse risks and/or impacts, “few in number, generally
-        site-specific, largely reversible, and readily addressed through mitigation measures”.
-      </li>
-      <li><strong>Category C:</strong> “minimal or no adverse environmental or social risks and/or impacts”.</li>
-    </ul>
     <p>
       Take a claim a portfolio report might make: every Category A project has an agreed Environmental and Social Action
       Plan (ESAP) on file, the list of fixes and deadlines a client signs up to when appraisal finds gaps. It has held
-      for years, and every audit sample so far has agreed with it.
-    </p>
-    <p>
-      Each file shows the category on one side and the ESAP status on the other. Four files lie on the desk, one side
-      up. Opening one takes time, so the question is which ones matter.
+      for years, and every audit sample so far has agreed with it. Four files lie on the desk. Opening one takes time,
+      so the question is which ones matter.
     </p>
   {/snippet}
 
@@ -138,8 +122,28 @@
     <Instrument
       title={done ? 'Four project files, and a fifth' : 'Four project files'}
       sub={done ? 'The four files opened, and one that no test of the claim would open.' : 'Tick the files you would open, then check.'}
+      rules={[
+        'The claim: every Category A project has an ESAP on file.',
+        'Each file shows its category on one side and its ESAP status on the other.',
+        'Four files lie one side up; opening one shows the other side.',
+      ]}
     >
       <Puzzle id="black-swans" {...puzzle} bind:picked picker={files} onshow={() => (picked = ['a', 'none'])} />
+
+      {#snippet model()}
+        <p>
+          The categories come from IFC’s Sustainability Policy (2012). Category A: “potential significant adverse
+          environmental or social risks and/or impacts that are diverse, irreversible, or unprecedented”. Category B:
+          potential limited adverse risks and/or impacts, “few in number, generally site-specific, largely reversible,
+          and readily addressed through mitigation measures”. Category C: “minimal or no adverse environmental or social
+          risks and/or impacts”.
+        </p>
+        <p>
+          The eight Performance Standards (2012) cover environmental and social risk, from labour (Performance Standard
+          2) to resettlement (5) and cultural heritage (8). The Equator Principles, which many commercial banks apply to
+          project finance, build on them. The files, the claim and the fifth file are invented for this puzzle.
+        </p>
+      {/snippet}
     </Instrument>
   {/snippet}
 
@@ -163,33 +167,21 @@
     </p>
     <h3>The box nobody drew</h3>
     <p>
-      The puzzle’s logic was sound, and it would never have opened the solar plant’s file: no Category B project can
-      break a claim about Category A. Its category described what it was drawn to describe, the site and the project as
-      planned. The risk arrived through a purchase order.
+      The puzzle’s logic was sound, and it would never have opened the solar plant’s file: its category described the
+      site, and the risk arrived through a purchase order. Forced labour falls under Performance Standard 2, but the
+      standards reach into supply chains only as far as primary suppliers; panels bought once, through a contractor, sat
+      at the edge of those words.
     </p>
     <p>
-      Forced labour falls under Performance Standard 2, and the standards do reach into supply chains, but only to
-      primary suppliers, those that “on an ongoing basis” provide goods or materials essential to the project, and
-      only “where the client can reasonably exercise control”, in the words of Performance Standard 1. A plant that
-      buys its panels once, through a contractor, sat at the edge of those words.
-    </p>
-    <p>
-      The boxes themselves have moved. Lending through banks and funds fitted none of A, B or C, because the risk sat in
-      loans the intermediary had not yet made. By the late 1990s a fourth box, FI, had been added, and in 2012 IFC split
-      it into three. Today IFC is revising the 2012 standards themselves, its first full update in more than a decade,
-      partly for risks that grew after they were written.
-    </p>
-    <p>
-      The Performance Standards are outcome-based: each opens with its objectives and leaves the client to meet them in
-      a way that fits the project, with judgment rather than a checklist. One even plans for the unplanned: Performance
-      Standard 8 asks for a “chance find procedure”, for heritage that nobody expected to dig up.
+      The boxes have moved before: lending through banks and funds fitted none of A, B or C, so by the late 1990s a
+      fourth box, FI, had been added. The standards are outcome-based, leaving room for judgment rather than a checklist;
+      one even plans for the unplanned, with a “chance find procedure” for heritage nobody expected to dig up.
     </p>
     <p>
       A rulebook that must foresee every case answers each surprise with a new box, one more condition that every later
-      case is checked against. Each box has a visible reason to exist, the incident that prompted it; its cost stays out
-      of sight. However long the list grows, it still needs an “other”. People with the expertise and the room to judge
-      are that “other”: they can see that a case fits nowhere, and say so. That is good complexity; a chain of
-      conditions that works only if every case was foreseen is the bad kind.
+      case is checked against. However long the list grows, it still needs an “other”: people with the expertise and the
+      room to judge, who can see that a case fits nowhere and say so. That is good complexity; a chain of conditions that
+      works only if every case was foreseen is the bad kind.
     </p>
   {/snippet}
 
