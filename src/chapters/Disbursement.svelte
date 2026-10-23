@@ -209,7 +209,7 @@
   // The setting the reader solved with, so that the found text describes it.
   let solvedWith = $state(null);
   $effect(() => {
-    if (goalMet && game.isOpen('disbursement')) solvedWith = { before, alternatives, p90 };
+    if (game.isOpen('disbursement')) solvedWith = goalMet ? { before, alternatives, p90 } : null;
   });
   const foundText = $derived.by(() => {
     const w = solvedWith ?? { before: ANSWER.before, alternatives: ANSWER.late === 'alt', p90: fewest.p90 };

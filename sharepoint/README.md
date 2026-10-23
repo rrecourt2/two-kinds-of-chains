@@ -60,7 +60,7 @@ anything taller scrolls inside the frame. Deep links work: add `#systems`, `#con
 
 If Learning & Development wants completion tracking, `dist/index.html` can be wrapped as a SCORM 1.2 package (an
 `imsmanifest.xml` plus the file, zipped). Most learning platforms and authoring tools can do this for a single
-HTML file. Completion can be reported when a reader reaches the last chapter, What to do on Monday.
+HTML file. Completion can be reported when a reader reaches the last chapter, What it means on Monday.
 
 ## 4. File in a document library (zero-approval fallback)
 

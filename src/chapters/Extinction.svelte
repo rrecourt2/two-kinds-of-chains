@@ -228,14 +228,15 @@
     <h3>Why islands</h3>
     <p>
       Ecologists have measured one rule for a century: a larger area holds more species in total, but fewer in each
-      square metre. Nassim Taleb reads globalisation into it: the more open the space, the more a few winners spread at
+      square metre. Nassim Taleb reads globalization into it: the more open the space, the more a few winners spread at
       the expense of the rest. Where trade joins up separate places, ecologists see just that: a few widespread species
       replacing many local ones.
     </p>
     <p>
       The islands in this model never swap animals, so a collapse on one stays there: each is a firebreak, as Hora’s
       modules are in chapter 14 and the linked banks of chapter 8 were not. Any one island is fragile; what lasts is the
-      archipelago. One connected system holds more in total, and less variety in each place: the same few products,
+      archipelago. Joined into one connected system, the same islands would hold fewer kinds in all, and the same few in every
+      place: the same few products,
       systems and habits wherever you look.
     </p>
   {/snippet}

@@ -1,4 +1,4 @@
-// Chapter 14, Time to disbursement: the model, the puzzle's constraints and every number the text prints.
+// Chapter 15, Time to disbursement: the model, the puzzle's constraints and every number the text prints.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -242,7 +242,7 @@ test('disbursement: an alternative waits 20 working days, and registration’s w
   }
 });
 
-test('disbursement: one reviewer checking in order of arrival changes nine-in-ten by a day at most', () => {
+test('disbursement: one reviewer checking in order of arrival changes nine-in-ten by a day at most in these settings', () => {
   const loans = 400;
   for (const o of [{}, { before: 10, alternatives: true }, { before: 8, alternatives: true }]) {
     const side = simulateLoans({ ...o, loans }).days;

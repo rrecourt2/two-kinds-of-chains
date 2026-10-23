@@ -116,7 +116,7 @@
 
       <div class="tkc-stats tkc-stats--4" use:announce>
         <Stat label="Typical request" value="{shortDays(result.median, HORIZON)} days" sub="median, working days" />
-        <Stat label="1 in 10 takes more than" value="{shortDays(result.p90, HORIZON)} days" swatch="var(--tkc-conditions)" line={true} />
+        <Stat label="9 in 10 done within" value="{shortDays(result.p90, HORIZON)} days" swatch="var(--tkc-conditions)" line={true} />
         <Stat label="Problems that slip through" value={pct(result.slipped, result.slipped < 0.1 ? 1 : 0)} sub="of requests, after every check" />
         <Stat label="Time actually worked" value={pct(result.workShare)} sub="of the elapsed working hours" />
       </div>
@@ -215,7 +215,7 @@
 
       {#snippet model()}
         <p>Filling in a system takes two hours of work, and each step takes a day because the next person picks it up the next day. The request passes through six systems. Each form has a 10% chance of a hidden problem, such as a wrong date or a missing identifier.</p>
-        <p>An approver at a system sees only that system’s data and spots each hidden problem in it half the time. With copies, that data includes every problem copied in from earlier systems. With one shared record, every approver sees the whole record and spots each problem half the time, independently of the others, so six together miss a problem about 1 time in 64. If approvers tend to miss the same problems, parallel reviews catch far fewer. One approver at the end sees the whole request and spots 90%. A spotted problem stops the request. With copies, it is corrected in the system where it started and in every later system it reached, and each of those is approved again; none is filled in again. With one shared record, it is corrected once. Approvers are in 85% of days, absences last four days on average, and nobody stands in for them.</p>
+        <p>An approver at a system sees only that system’s data and spots each hidden problem in it half the time. With copies, that data includes every problem copied in from earlier systems. With one shared record, every approver sees the whole record and spots each problem half the time, independently of the others, so six together miss a problem about 1 time in 64. If approvers tend to miss the same problems, parallel reviews catch far fewer. One approver at the end sees the whole request and spots 90%. A spotted problem stops the request. With copies, it is corrected in the system where it started and in every later system it reached, and approved again, at each of those systems or once at the end; none is filled in again. With one shared record, it is corrected once. Approvers are in 85% of days, absences last four days on average, and nobody stands in for them.</p>
       {/snippet}
     </Instrument>
   {/snippet}

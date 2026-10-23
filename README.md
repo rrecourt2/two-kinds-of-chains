@@ -15,7 +15,7 @@ ships as one file, with no external requests, so it can run inside a locked-down
 | 3 | When systems lean on each other | Faster and safer without dropping a system: copies vs one shared record, gates at every step or once |
 | 4 | Why full calendars make long queues | Get the wait under an hour with reviewers at least 80% busy: named lines vs one shared line |
 | 5 | Don't wait for each other | Which two speed-ups help most when a client request runs in parallel |
-| 6 | The fast track | Forty deals, two committees and a fast track that skips the outside adviser: predict what it does to every deal's time, then move the teams across one by one |
+| 6 | The fast track | Forty deals, two committees and a fast track that skips the outside adviser: predict what it does to every deal's time, then move the teams across two at a time |
 | | **Part 3 · When the world pulls on the chain** | |
 | 7 | When the average lies | Ole Peters' coin game: the paper value against the typical player; staking less and pooling |
 | 8 | 2008: when links became conditions | A stress test on 48 banks: how much capital holds when five fail at once; hubs inside organizations |
@@ -61,7 +61,7 @@ Node 20.19+ or 22.12+ is required (Vite 8).
 
 | File | Use it for |
 |------|------------|
-| `dist/index.html` | The whole story in one self-contained file (about 350 KB, 140 KB compressed, fonts included). Open it from disk, host it on any static web server, embed it in an iframe, or wrap it as a SCORM package. |
+| `dist/index.html` | The whole story in one self-contained file (about 450 KB, 170 KB compressed, fonts included). Open it from disk, host it on any static web server, embed it in an iframe, or wrap it as a SCORM package. |
 | `dist-lib/two-chains.js` | An ES module exporting `mountStory(element, options)`. Used by the SharePoint Framework web part in `sharepoint/spfx/`. Styles travel inside the bundle. |
 
 `mountStory(el, { theme, syncHash, startAt })`

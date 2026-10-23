@@ -6,7 +6,7 @@ import { simulateSystems, ENTER, OK, STOP, FIX } from '../src/lib/sim/systems.js
 
 const near = (a, b, tol = 1e-9) => assert.ok(Math.abs(a - b) <= tol, `${a} not within ${tol} of ${b}`);
 
-// ---------------------------------------------------------------- the shape of the network (chapter 12)
+// ---------------------------------------------------------------- the shape of the network (chapter 13)
 
 test('hub: the approver’s links come out of their approving time', () => {
   near(structure('hub', 11).output, 9.6);

@@ -247,7 +247,7 @@
     <p>
       In the language of this story, the gate is still an <span class="tkc-and">AND</span>: no change of account is paid
       unchecked. Inside it there is now an <span class="tkc-or">OR</span>: any qualified reviewer may open it. These are
-      the stand-ins of chapter 1, now in front of a step that cannot be undone. A gate like this is good complexity. It
+      the stand-ins of chapter 1, now in front of a step that cannot be undone. A gate like this earns its place. It
       does work that nothing else in the chain can do, and its cost was never the check, only the queue for one name.
     </p>
     <p>
@@ -257,7 +257,7 @@
     <h3>Where a gate earns its wait</h3>
     <p>
       The line runs between what can be undone and what cannot. Where a mistake is small, visible and easy to put right, the
-      work can move on and be checked afterwards, as autopilot can in chapter 11. Where it cannot, the check has to come first, and the
+      work can move on unchecked and be put right later, as autopilot can in chapter 11. Where it cannot, the check has to come first, and the
       wait is worth paying, as long as it is the check’s own wait and not one person’s diary. Chapter 15 asks the
       same question of a whole loan: which conditions must be met before the money moves, and which can follow it.
     </p>

@@ -231,7 +231,7 @@
       AI’s variability into a gain.
     </p>
     <p>
-      Anyone who has priced an option will recognise the shapes. The person in the loop holds a bought option: a small,
+      Anyone who has priced an option will recognize the shapes. The person in the loop holds a bought option: a small,
       known cost and an upside that grows with the swings. Autopilot holds the AI itself, gains and losses alike, and is
       worth the same however wide the swings. In the language of this story, the person adds an
       <span class="tkc-or">OR</span> to the chain, the draft or the work done as before, and autopilot adds an
