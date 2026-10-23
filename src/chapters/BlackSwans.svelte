@@ -2,146 +2,229 @@
   import { getContext } from 'svelte';
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
+  import Slider from '../lib/ui/Slider.svelte';
+  import Stat from '../lib/ui/Stat.svelte';
+  import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
+  import { MONTHS, WORST, ALONE, cover, coverLabel, misses, withinRecord, breaksClaim, breakingCurrency, record } from '../lib/sim/tollroad.js';
+  import { linear, line } from '../lib/scales.js';
 
+  // The break region is drawn only once the puzzle is solved or shown.
   const game = getContext('tkc-game');
   const done = $derived(!game.isOpen('black-swans'));
 
-  // Four project files. The cover shows one side; the other is inside the file.
-  const FILES = [
-    { value: 'a', cover: 'Category A', note: 'Significant, possibly irreversible impacts', hidden: 'the ESAP status', inside: 'ESAP on file', verdict: 'Agrees with the claim', kind: 'test' },
-    { value: 'c', cover: 'Category C', note: 'Minimal or no adverse impacts', hidden: 'the ESAP status', inside: 'No ESAP', verdict: 'Says nothing about the claim', kind: 'idle' },
-    { value: 'plan', cover: 'ESAP on file', hidden: 'the category', inside: 'Category B', verdict: 'Could only ever agree', kind: 'idle' },
-    { value: 'none', cover: 'No ESAP', hidden: 'the category', inside: 'Category A · Hydropower dam', verdict: 'Breaks the claim', kind: 'swan' },
-  ];
+  const RECORD = record();
+  const lowest = Math.min(...RECORD.map((p) => p.cover));
+  // The most both falls ever reached in the same month, rounded up to a whole percent (6%).
+  const maxBoth = Math.ceil(Math.max(...RECORD.map((p) => Math.min(p.traffic, p.currency))) * 100);
+  const WT = Math.round(WORST.traffic * 100);
+  const WC = Math.round(WORST.currency * 100);
 
-  // The file that turns up once the puzzle is done: no test of the claim would have opened it.
-  const FIFTH = {
-    cover: 'Category B · Solar plant',
-    note: 'Limited, site-specific impacts',
-    inside: 'Polysilicon in the panels traced to suppliers linked to forced labour, thousands of kilometres from the site.',
-    verdict: 'Right about the site, blind to the risk.',
-  };
+  // The reader's test year, in whole percents.
+  let traffic = $state(0);
+  let currency = $state(0);
+  let width = $state(560);
+  const t = $derived(traffic / 100);
+  const c = $derived(currency / 100);
+  const now = $derived(cover(t, c));
+  const short = $derived(misses(t, c));
+  const inside = $derived(withinRecord(t, c));
 
-  let picked = $state([]);
-  const toggle = (v, on) => {
-    if (!done) picked = on ? [...picked, v] : picked.filter((p) => p !== v);
-  };
+  const fmt = coverLabel;
 
-  const puzzle = {
-    goal: 'Which files must be opened to test the claim, and no more?',
-    choices: FILES.map((f) => ({ value: f.value, label: f.cover })),
-    answer: ['a', 'none'],
-    multi: true,
-    wrong: (v) =>
-      v.includes('plan')
-        ? 'A file with an ESAP cannot break the claim, whatever its category. Which files could?'
-        : v.includes('c')
-          ? 'The claim says nothing about Category C projects.'
-          : 'Half right. One more file could hide a problem.',
-    hints: ['Look for the files that could prove the claim wrong, not the ones that could agree with it.', 'The claim is false only if some Category A project has no ESAP. Which covers could hide one?'],
-    found: 'Category A and No ESAP. And the claim is wrong: the file without an ESAP belongs to a Category A project.',
-  };
+  // Each test year the reader settles on stays on the chart. A normal year (no falls) is not a test.
+  let tests = $state([]);
+  $effect(() => {
+    const tt = traffic;
+    const cc = currency;
+    if (tt === 0 && cc === 0) return;
+    const timer = setTimeout(() => {
+      if (!tests.some((p) => p.t === tt && p.c === cc)) tests = [...tests.slice(-59), { t: tt, c: cc }];
+    }, 600);
+    return () => clearTimeout(timer);
+  });
+  const passed = $derived(tests.filter((p) => !misses(p.t / 100, p.c / 100)).length);
+  const broke = $derived(tests.filter((p) => breaksClaim(p.t / 100, p.c / 100)).length);
+
+  function showAnswer() {
+    const add = [
+      { t: WT, c: 0 },
+      { t: 0, c: WC },
+      { t: WT, c: WC },
+    ];
+    tests = [...tests.filter((p) => !add.some((a) => a.t === p.t && a.c === p.c)), ...add];
+    traffic = WT;
+    currency = WC;
+  }
+
+  const puzzle = $derived({
+    goal: 'Find a year in which the road misses its payment, with neither fall worse than the worst the record has seen.',
+    met: short && inside,
+    checks: [
+      { label: `The road misses its payment (cover now ${fmt(t, c)})`, ok: short },
+      { label: `Neither fall beyond the record’s worst (${WT}% and ${WC}%)`, ok: inside },
+    ],
+    progress: short && !inside ? 'The road misses, but in a year worse than any on record; the claim covers only what it has seen.' : '',
+    hints: ['On record, the worst month for traffic and the worst month for the currency came years apart.', `Each fall alone, at its worst, still pays. What about a year in which both fall?`],
+    found: 'Both at once: each fall alone was survived, but together they leave the road short, which 96 good months could never show.',
+  });
+
+  // ---- The plane: traffic fall across, currency fall up. Negative falls (growth) sit in grey bands. ----
+  const T0 = -0.12;
+  const T1 = 0.3;
+  const C0 = -0.05;
+  const C1 = 0.4;
+  const H = 300;
+  const m = { top: 26, right: 12, bottom: 44, left: 42 };
+  const span = $derived(Math.max(width, 200));
+  const x = $derived(linear(T0, T1, m.left, span - m.right));
+  const y = $derived(linear(C0, C1, H - m.bottom, m.top));
+  const clampC = (v) => Math.min(C1, Math.max(C0, v));
+  const pc = (v) => `${Math.round(v * 100)}%`;
+
+  // Where the cover falls below 1.0: above the curve.
+  const SAMPLES = Array.from({ length: 169 }, (_, i) => T0 + (i * (T1 - T0)) / 168);
+  const region = $derived(
+    line([...SAMPLES.map((s) => [x(s), y(clampC(breakingCurrency(s)))]), [x(T1), y(C1)], [x(T0), y(C1)]]) + 'Z',
+  );
+  const edge = $derived(
+    line(SAMPLES.filter((s) => breakingCurrency(s) <= C1 && breakingCurrency(s) >= C0).map((s) => [x(s), y(breakingCurrency(s))])),
+  );
+
+  const summary = $derived(
+    `Traffic fall across, currency fall up. ${MONTHS} months on record, all paid, lowest cover ${lowest.toFixed(2)}; the record’s worst: traffic down ${WT}%, currency down ${WC}%, in different years. ` +
+      `This test: traffic down ${traffic}%, currency down ${currency}%, cover ${fmt(t, c)}, the road ${short ? 'misses its payment' : 'pays'}. ` +
+      `${tests.length} test${tests.length === 1 ? '' : 's'} so far, ${broke} breaking the claim.` +
+      (done ? ` Shaded: the years in which the road misses its payment, including a corner of the record’s box where both fall at least 9%.` : ''),
+  );
+
+  const testsSub = $derived(
+    broke ? `and ${broke === 1 ? 'one year' : `${broke} years`} that broke the claim` : passed ? `${MONTHS} months on record, ${passed} of your tests` : `the ${MONTHS} months on record`,
+  );
 </script>
 
-<!-- The four files are the puzzle's choices: real checkboxes while it is open, opened files once it is done,
-     with a fifth file that no test of the claim would have opened. -->
-{#snippet files()}
-  {#if done}
-    <div class="files">
-      {#each FILES as f (f.value)}
-        <div class="file {f.kind}">
-          <span class="cover">{f.cover}</span>
-          {#if f.note}<span class="note">{f.note}</span>{/if}
-          <span class="inside">
-            <span class="inside-label">Inside</span>
-            <strong>{f.inside}</strong>
-            <span class="verdict">{f.verdict}</span>
-          </span>
-        </div>
-      {/each}
-    </div>
-    <div class="extra">
-      <p class="extra-head">A fifth file, the one nobody planned to open</p>
-      <div class="file other">
-        <span class="cover">{FIFTH.cover}</span>
-        <span class="note">{FIFTH.note}</span>
-        <span class="inside">
-          <span class="inside-label">Inside</span>
-          <strong>{FIFTH.inside}</strong>
-          <span class="verdict">{FIFTH.verdict}</span>
-        </span>
-      </div>
-    </div>
-  {:else}
-    <fieldset class="files">
-      <legend class="tkc-sr">Choose the files to open</legend>
-      {#each FILES as f (f.value)}
-        {@const on = picked.includes(f.value)}
-        <label class="file pickable" class:on>
-          <input type="checkbox" class="box" checked={on} onchange={(ev) => toggle(f.value, ev.currentTarget.checked)} />
-          <span class="cover">{f.cover}</span>
-          {#if f.note}<span class="note">{f.note}</span>{/if}
-          <span class="inside closed">
-            <span class="inside-label">Inside: {f.hidden}</span>
-            <span class="pick">{on ? 'Open this one' : ''}</span>
-          </span>
-        </label>
-      {/each}
-    </fieldset>
-  {/if}
-{/snippet}
-
 <Chapter
-  n={9}
+  n={10}
   kicker="Black swans"
   title="How to find a black swan"
-  lede="A claim with years of evidence behind it can still be false. Four project files and one claim: which would you open?"
+  lede="Ninety-six good months can agree with a claim without once testing it. The test is the year that would break it."
   puzzle="black-swans"
 >
   {#snippet setup()}
     <p>
-      Before 2008, the claim that links between banks spread risk thinly had years of evidence behind it. Claims like
-      that are hard to test, because the cases that could break them are rare.
+      A claim can rest on years of evidence and still be false. Bertrand Russell wrote of a chicken that was fed every
+      day of its life, until the day the man who fed it wrung its neck instead.
     </p>
     <p>
-      Many development lenders assess projects against IFC’s Performance Standards and sort them by environmental and
-      social risk into IFC’s categories: A for significant impacts that may be irreversible, such as a large dam that
-      resettles whole villages; B for limited, site-specific ones; C for minimal ones.
+      A development bank lent dollars to a toll road. The tolls come in local currency, so the loan rests on two links:
+      cars keep coming, and the currency holds. For eight years both held well enough. Traffic once fell 15% in a
+      recession; the currency once fell 20% in a year. All 96 monthly payments were made.
     </p>
-    <p>
-      Take a claim a portfolio report might make: every Category A project has an agreed Environmental and Social Action
-      Plan (ESAP) on file. It has held
-      for years, and every audit sample so far has agreed with it. Four files lie on the desk. Opening one takes time,
-      so the question is which ones matter.
-    </p>
+    <p>The portfolio review concludes: this road can pay through anything it has seen.</p>
   {/snippet}
 
   {#snippet figure()}
     <Instrument
-      title={done ? 'Four project files, and a fifth' : 'Four project files'}
-      sub={done ? 'The four files opened, and one that no test of the claim would open.' : 'Tick the files you would open, then check.'}
+      title="Eight years on record, and your test years"
+      sub="Each grey dot is a month on record: how far traffic and the currency had fallen on a year earlier."
       rules={[
-        'The claim: every Category A project has an ESAP on file.',
-        'Each file shows its category on one side and its ESAP status on the other.',
-        'Four files lie one side up; opening one shows the other side.',
+        'Tolls are paid in local currency; the loan is repaid in dollars.',
+        'A normal year earns 1.45 times the debt payment; running costs stay fixed.',
+        'A test year sets how far traffic and the currency fall.',
       ]}
     >
-      <Puzzle id="black-swans" {...puzzle} bind:picked picker={files} onshow={() => (picked = ['a', 'none'])} />
+      <Puzzle id="black-swans" {...puzzle} onshow={showAnswer} />
+      <div class="tkc-controls">
+        <Slider id="bs-traffic" label="Traffic falls by" bind:value={traffic} min={0} max={30} format={(v) => `${v}%`} />
+        <Slider id="bs-currency" label="Currency falls by" bind:value={currency} min={0} max={40} format={(v) => `${v}%`} />
+      </div>
+
+      <div class="tkc-chart" bind:clientWidth={width}>
+        <svg width={span} height={H} role="img" aria-label={summary}>
+          <!-- Growth, not a fall: traffic up (left band), currency up (bottom band). -->
+          <rect class="band" x={x(T0)} y={y(C1)} width={x(0) - x(T0)} height={y(C0) - y(C1)} />
+          <rect class="band" x={x(0)} y={y(0)} width={x(T1) - x(0)} height={y(C0) - y(0)} />
+          {#each [0.1, 0.2, 0.3] as v (v)}
+            <line class="tkc-grid" x1={x(v)} x2={x(v)} y1={y(C1)} y2={y(C0)} />
+          {/each}
+          {#each [0.1, 0.2, 0.3, 0.4] as v (v)}
+            <line class="tkc-grid" x1={x(T0)} x2={x(T1)} y1={y(v)} y2={y(v)} />
+          {/each}
+          <line class="tkc-base" x1={x(0)} x2={x(0)} y1={y(C1)} y2={y(C0)} />
+          <line class="tkc-base" x1={x(T0)} x2={x(T1)} y1={y(0)} y2={y(0)} />
+
+          {#if done}
+            <path class="region" d={region} />
+            <path class="edge" d={edge} />
+          {/if}
+
+          <!-- Above the record's dots (which reach 20%) and clear of the break region. -->
+          <text class="band-label" x={(x(T0) + x(0)) / 2} y={y(0.29)} text-anchor="middle"><tspan x={(x(T0) + x(0)) / 2}>traffic</tspan><tspan x={(x(T0) + x(0)) / 2} dy="13">grew</tspan></text>
+          <text class="band-label tkc-halo" x={x(T1) - 4} y={y(C0) - 4} text-anchor="end">currency rose</text>
+
+          {#each RECORD as p (p.month)}
+            <circle class="month" cx={x(p.traffic)} cy={y(p.currency)} r="2.6" />
+          {/each}
+
+          <rect class="box" x={x(0)} y={y(WORST.currency)} width={x(WORST.traffic) - x(0)} height={y(0) - y(WORST.currency)} />
+          <text class="tkc-label-2 tkc-halo" x={(x(0) + x(WORST.traffic)) / 2} y={y(WORST.currency) - 11} text-anchor="middle">the record’s worst</text>
+
+          {#if done}
+            <text class="miss-label tkc-halo" x={span - m.right - 6} y={y(C1) + 16} text-anchor="end">The road misses its payment</text>
+          {/if}
+
+          {#each tests as p (`${p.t}-${p.c}`)}
+            <circle class="test" class:miss={misses(p.t / 100, p.c / 100)} cx={x(p.t / 100)} cy={y(p.c / 100)} r="5" />
+          {/each}
+
+          {#if traffic || currency}
+            <line class="guide" x1={x(t)} x2={x(t)} y1={y(c) + 9} y2={y(C0)} />
+            <line class="guide" x1={x(T0)} x2={x(t) - 9} y1={y(c)} y2={y(c)} />
+          {/if}
+          <circle class="now" class:miss={short} cx={x(t)} cy={y(c)} r="8" />
+
+          {#each [0, 0.1, 0.2, 0.3] as v (v)}
+            <text class="tkc-axis-label" x={x(v)} y={H - m.bottom + 16} text-anchor={v === 0.3 ? 'end' : 'middle'} dx={v === 0.3 ? 8 : 0}>{pc(v)}</text>
+          {/each}
+          {#each [0, 0.1, 0.2, 0.3, 0.4] as v (v)}
+            <text class="tkc-axis-label" x={m.left - 6} y={y(v) + 4} text-anchor="end">{pc(v)}</text>
+          {/each}
+          <text class="tkc-axis-title" x={x(0.09)} y={H - 6} text-anchor="middle">Traffic falls by →</text>
+          <text class="tkc-axis-title" x={4} y={13}>↑ Currency falls by</text>
+        </svg>
+        <div class="tkc-legend">
+          <span><span class="tkc-swatch sw-month"></span>A month on record</span>
+          <span><span class="tkc-swatch sw-test"></span>Your test: the road pays</span>
+          <span><span class="tkc-swatch sw-miss"></span>The road misses its payment</span>
+        </div>
+      </div>
+
+      <div class="tkc-stats" use:announce>
+        <div class="tile" class:miss={short}>
+          <Stat
+            label="Cover in this test"
+            value={fmt(t, c)}
+            sub={short ? `${Math.max(1, Math.round((1 - now) * 100))}% short of the payment` : 'cash for the loan, per dollar due'}
+            swatch={short ? 'var(--tkc-conditions)' : ''}
+          />
+        </div>
+        <Stat label="Tests passed" value={String(MONTHS + passed)} sub={testsSub} />
+      </div>
 
       {#snippet model()}
         <p>
-          The categories come from IFC’s Sustainability Policy (2012). Category A: “potential significant adverse
-          environmental or social risks and/or impacts that are diverse, irreversible, or unprecedented”. Category B:
-          potential limited adverse risks and/or impacts, “few in number, generally site-specific, largely reversible,
-          and readily addressed through mitigation measures”. Category C: “minimal or no adverse environmental or social
-          risks and/or impacts”.
+          In a normal year the road collects 100 in tolls and spends 40 on running costs, both in local currency at the
+          starting exchange rate. The year’s debt payment is 41.4 in dollars, so the cover is 60 ÷ 41.4 = 1.45. A test
+          year cuts the tolls by the traffic fall, keeps the running costs, and turns what is left into dollars at the
+          fallen currency: cover = (100 × (1 − traffic fall) − 40) × (1 − currency fall) ÷ 41.4. Below 1.0 the road misses
+          its payment. On its own, traffic would have to fall {(ALONE.traffic * 100).toFixed(1)}%, or the currency
+          {Math.round(ALONE.currency * 100)}%.
         </p>
         <p>
-          The eight Performance Standards (2012) cover environmental and social risk, from labour (Performance Standard
-          2) to resettlement (5) and cultural heritage (8). The Equator Principles, which many commercial banks apply to
-          project finance, build on them. The files, the claim and the fifth file are invented for this puzzle.
+          The record is invented. Traffic usually grows about 5% a year and the currency slips about 2%; a recession in
+          year three and a devaluation in year six bring the worst months. Reserves, hedges and interest rates are left
+          out.
         </p>
       {/snippet}
     </Instrument>
@@ -149,245 +232,119 @@
 
   {#snippet after()}
     <p>
-      Only the files that could prove the claim wrong are worth opening. The file with an ESAP can only agree, and
-      Category C says nothing either way. The psychologist Peter Wason set this puzzle with cards in 1966; fewer than one
-      person in ten chose the right two, and most chose the one that could only agree.
+      Every month on record tested the road, but one link at a time: in the recession the currency held, and in the
+      devaluation traffic held up. In no month did both fall by more than {maxBoth}%. That is 96 confirmations of one
+      kind, and none speaks to a year in which both links pull at once. One such year outweighs them all: at the
+      record’s own worst pair, {WT}% and {WC}%, the cover is {fmt(WORST.traffic, WORST.currency)}.
     </p>
     <p>
-      For centuries Europeans took it as settled that all swans are white, until Dutch explorers found black ones in
-      Western Australia in 1697. Karl Popper built his view of science on that asymmetry: no number of white swans
-      proves that all swans are white, and one black swan proves that they are not.
-    </p>
-    <h3>Long chains rest on untested claims</h3>
-    <p>
-      A long, rigid chain rests on many claims like the one in the files: the backup works, the stand-in knows the case,
-      the model holds in a crisis. Each has years of agreeing evidence, which is to say a count of white swans. A system
-      with alternatives survives one of them being wrong; a rigid chain stops at the first. A reverse stress test, a
-      fire drill that switches a system off, a near miss looked at closely: each is a way of opening the other file.
-    </p>
-    <h3>The box nobody drew</h3>
-    <p>
-      The puzzle’s logic was sound, and it would never have opened the solar plant’s file: its category described the
-      site, and the risk arrived through a purchase order. The standards’ supply-chain duties are written for suppliers
-      who deliver “on an ongoing basis”; panels bought once, through a contractor, sat at the edge of those words.
+      The falls do not add; they multiply. The payment hangs on a chain of two links, cars
+      <span class="tkc-and">AND</span> the currency, and each link scales whatever the other leaves. Fixed running costs
+      sharpen it: a {WT}% fall in traffic takes a quarter off the cash for the loan, and a {WC}% fall in the currency
+      then takes a fifth of what is left. Like the rounds of the coin game, the links compound.
     </p>
     <p>
-      The boxes have moved before: lending through banks and funds fitted none of A, B or C, so by the late 1990s a
-      fourth box, FI, had been added. The standards themselves set outcomes and leave room for judgment, rather than a
-      checklist.
+      In many countries a recession and a devaluation arrive together, often from the same crisis, so the year the
+      record never showed is not the least likely. A chain like this can bend. A reserve of six months’ payments is an
+      <span class="tkc-or">OR</span>: the payment comes from the tolls or the reserve, and the bad year passes. A loan
+      in local currency, or a hedge, takes the currency link out.
     </p>
+    <h3>One black swan</h3>
     <p>
-      A rulebook that must foresee every case answers each surprise with a new box, one more condition that every later
-      case is checked against. However long the list grows, it still needs an “other”: people with the expertise and the
-      room to judge, who can see that a case fits nowhere and say so. That is good complexity; a chain of conditions that
-      works only if every case was foreseen is the bad kind.
+      Europeans long took it as settled that all swans are white, until Dutch explorers found black ones in Western
+      Australia in 1697. Karl Popper built his view of science on that asymmetry: no number of white swans proves that
+      all swans are white; one black swan proves they are not. A reverse stress test applies it to a loan: it starts
+      from the missed payment and looks for the years that would cause it.
     </p>
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Where would a risk that fits none of our categories first be noticed, and by whom?">
+    <BankNote ask="Which of our claims has been tested with the case that would break it, rather than counted in good months?">
       <p>
-        A clean track record and a tested one look the same in a report. So do a portfolio whose risks all fit its
-        categories and one whose largest risk fits none of them.
+        Bank supervisors ask for reverse stress tests across a whole portfolio: from the loss that would break the bank
+        back to the events that could cause it. The answer is often several shocks at once, each survivable alone, which
+        is why a clean record and a tested one can look the same in a report.
       </p>
     </BankNote>
   {/snippet}
 </Chapter>
 
 <style>
-  .files {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 18px 12px;
-    margin: 0;
-    padding: 10px 0 0;
-    border: 0;
-    min-width: 0;
+  .band {
+    fill: var(--tkc-sunken);
+    opacity: 0.6;
   }
-  @container fig (max-width: 560px) {
-    .files {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+  .band-label {
+    font-size: 11px;
+    fill: var(--tkc-muted);
   }
-  .file {
-    position: relative;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    align-content: start;
-    gap: 6px;
-    min-height: 140px;
-    min-width: 0;
-    padding: 14px 10px 12px;
-    border-radius: 2px 10px 10px 10px;
-    border: 1.5px solid var(--tkc-rule);
-    background: var(--tkc-surface);
-    color: var(--tkc-ink);
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    transition:
-      border-color 200ms ease,
-      background 200ms ease;
+  .region {
+    fill: var(--tkc-conditions-wash);
   }
-  .file::before {
-    content: '';
-    position: absolute;
-    top: -9px;
-    left: -1.5px;
-    width: 42%;
-    height: 9px;
-    border: 1.5px solid var(--tkc-rule);
-    border-bottom: 0;
-    border-radius: 6px 6px 0 0;
-    background: var(--tkc-surface);
+  .edge {
+    fill: none;
+    stroke: var(--tkc-conditions);
+    stroke-width: 1.5;
   }
-  .file.on,
-  .file.on::before {
-    border-color: var(--tkc-options);
-    background: var(--tkc-options-wash);
+  .miss-label {
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--tkc-conditions-ink);
   }
-  div.file {
-    cursor: default;
+  .month {
+    fill: var(--tkc-muted);
+    opacity: 0.5;
   }
   .box {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    margin: 0;
-    accent-color: var(--tkc-options);
+    fill: none;
+    stroke: var(--tkc-ink-2);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
   }
-  .box:focus-visible {
-    outline: none;
+  .test {
+    fill: var(--tkc-ink-2);
+    stroke: var(--tkc-surface);
+    stroke-width: 1.5;
   }
-  .file.pickable:has(.box:focus-visible) {
-    outline: 2px solid var(--tkc-focus);
-    outline-offset: 2px;
+  .test.miss {
+    fill: var(--tkc-conditions);
   }
-  .pickable .cover {
-    padding-right: 20px;
+  .guide {
+    stroke: var(--tkc-rule);
+    stroke-width: 1;
   }
-  .cover {
-    font-weight: 700;
-    font-size: 0.9375rem;
-    line-height: 1.25;
+  .now {
+    fill: var(--tkc-surface);
+    fill-opacity: 0.6;
+    stroke: var(--tkc-ink);
+    stroke-width: 2;
   }
-  @container fig (max-width: 300px) {
-    .file {
-      padding: 12px 8px 10px;
-    }
-    .pickable .cover {
-      padding-right: 14px;
-      font-size: 0.875rem;
-    }
-    .box {
-      top: 8px;
-      right: 6px;
-    }
+  .now.miss {
+    fill: var(--tkc-conditions);
+    fill-opacity: 1;
   }
-  .note,
-  .pick,
-  .inside-label,
-  .verdict {
-    font-size: 0.8125rem;
-    color: var(--tkc-muted);
-    line-height: 1.35;
+  .sw-month {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--tkc-muted);
+    opacity: 0.6;
   }
-  .pick {
-    color: var(--tkc-options-ink);
-    font-weight: 600;
+  .sw-test,
+  .sw-miss {
+    border-radius: 50%;
   }
-  .inside {
+  .sw-test {
+    background: var(--tkc-ink-2);
+  }
+  .sw-miss {
+    background: var(--tkc-conditions);
+  }
+  .tile {
     display: grid;
-    gap: 2px;
-    margin-top: 4px;
-    padding-top: 8px;
-    border-top: 1px dashed var(--tkc-rule);
-    animation: open 360ms ease both;
+    min-width: 0;
   }
-  .inside.closed {
-    animation: none;
-  }
-  .file.test,
-  .file.test::before {
-    border-color: var(--tkc-options);
-  }
-  .file.swan,
-  .file.swan::before {
-    border-color: var(--tkc-conditions);
-    background: var(--tkc-conditions-wash, var(--tkc-surface));
-  }
-  .file.swan .verdict {
+  .tile.miss :global(.tkc-stat-value) {
     color: var(--tkc-conditions-ink);
-    font-weight: 700;
-  }
-  .file.idle,
-  .file.idle::before {
-    border-style: dashed;
-    background: var(--tkc-sunken);
-  }
-  .file.idle::before {
-    border-bottom: 0;
-  }
-
-  /* The fifth file: set apart from the four, in the ink colour, arriving after they open. */
-  .extra {
-    display: grid;
-    gap: 16px;
-    margin-top: 6px;
-    padding-top: 12px;
-    border-top: 1px solid var(--tkc-hair);
-    animation: arrive 420ms ease 600ms both;
-  }
-  .extra-head {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--tkc-ink-2);
-  }
-  .file.other {
-    min-height: 0;
-    border: 2px solid var(--tkc-ink);
-    box-shadow: var(--tkc-shadow);
-  }
-  .file.other::before {
-    top: -10px;
-    left: -2px;
-    width: min(42%, 180px);
-    height: 10px;
-    border: 2px solid var(--tkc-ink);
-    border-bottom: 0;
-  }
-  .file.other strong {
-    font-size: 0.9375rem;
-    line-height: 1.4;
-  }
-  .file.other .verdict {
-    color: var(--tkc-ink);
-    font-weight: 700;
-  }
-  .file.other .inside {
-    animation: none;
-  }
-  @keyframes open {
-    from {
-      opacity: 0;
-      transform: translateY(-4px);
-    }
-  }
-  @keyframes arrive {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .inside,
-    .extra {
-      animation: none;
-    }
-    .file {
-      transition: none;
-    }
   }
 </style>
