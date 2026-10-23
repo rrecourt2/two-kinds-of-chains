@@ -1,6 +1,6 @@
-// Interbank contagion (chapter 8), after Watts (2002) and Gai & Kapadia (2010).
-// Each bank lends 20% of its balance sheet to its counterparties, split
-// evenly. A failed counterparty's loan is lost in full. A bank fails when its
+// Interbank contagion: the stress test, after Watts (2002) and Gai & Kapadia (2010).
+// Each bank lends 20% of its balance sheet to the banks it is linked to, split
+// evenly. A failed borrower's loan is lost in full. A bank fails when its
 // losses exceed its capital.
 
 import { makeRng } from './rng.js';
@@ -70,8 +70,12 @@ export function absorbs(capitalPct, borrowers) {
   return lost;
 }
 
-/** Failure waves after the seed banks fail (see `fails` for the threshold). */
-export function cascade(adj, capitalPct, seeds) {
+/**
+ * Failure waves after the seed banks fail (see `fails` for the threshold).
+ * `capital` is one percentage for every bank, or an array with one per bank.
+ */
+export function cascade(adj, capital, seeds) {
+  const capOf = typeof capital === 'number' ? () => capital : (i) => capital[i];
   const failed = new Uint8Array(adj.length);
   for (const s of seeds) failed[s] = 1;
   const waves = [[...seeds]];
@@ -81,7 +85,7 @@ export function cascade(adj, capitalPct, seeds) {
       if (failed[i] || adj[i].length === 0) continue;
       let lost = 0;
       for (const j of adj[i]) lost += failed[j];
-      if (fails(lost, adj[i].length, capitalPct)) next.push(i);
+      if (fails(lost, adj[i].length, capOf(i))) next.push(i);
     }
     if (!next.length) break;
     for (const i of next) failed[i] = 1;
@@ -107,70 +111,81 @@ export function mostConnected(adj) {
   return best;
 }
 
+/** Every bank, most connected first (ties in the order the banks joined). */
+export function byLinks(adj) {
+  return adj
+    .map((links, i) => [links.length, i])
+    .sort((a, b) => b[0] - a[0] || a[1] - b[1])
+    .map(([, i]) => i);
+}
+
 // ---------------------------------------------------------------------------
-// The chapter's stress test: two kinds of network, three shocks, capital 2–10%.
-// The figure shows two scenes; the third shock (one bank at random) is quoted
-// in the explanation.
+// The chapter's stress test. 48 banks grown around a few hubs; each holds 5%
+// capital. One bank loses 8% of its assets on its own loans: it fails only if
+// that is more than its capital, and then its lenders take the loss. The reader
+// chooses where the loss lands, and how to share 48 extra points of capital.
 
 export const BANKS = 48;
-export const TRIALS = 40;
-export const CAPITALS = [2, 3, 4, 5, 6, 7, 8, 9, 10];
-export const SHOCKS = ['one', 'five', 'biggest'];
+export const HUB_LINKS = 4; // about four links per bank on average; each newcomer links to two
+export const CAPITAL = 5; // % of assets, every bank
+export const LOSS = 8; // % of assets the bank where the loss lands loses on its own loans
+export const EXTRA = 48; // points of extra capital to share out, across all banks
 
 /**
- * Many similar banks: a random network, about ten counterparties each.
- * A few giants: preferential attachment, about four counterparties on average.
- * The seeds are fixed, so every reader sees the same 40 networks of each kind;
- * they were picked so that the averages over 40 networks sit within a few
- * points of a run over 4,000 networks (see test/contagion.test.js).
+ * The hub networks of earlier versions of the chapter used seeds 15200–15239;
+ * network 7 is the one whose results came closest to the average of the 40.
+ * The figure draws it; the others check that the answer is not a fluke of one
+ * network (test/contagion.test.js).
  */
-export const NETWORKS = {
-  similar: { shape: 'random', links: 10, seed: 2100 },
-  giants: { shape: 'hubs', links: 4, seed: 15200 },
-};
+export const HUB_SEED = 15200;
+export const EXAMPLE = 7;
+export const ALTERNATIVES = 40;
 
-/** The two scenes in the figure: a kind of network and the shock that hits it. */
-export const SCENES = {
-  similar: { network: 'similar', shock: 'five' },
-  giants: { network: 'giants', shock: 'biggest' },
-};
-
-/** Network number `t` of one kind, and the banks each shock brings down first. */
-export function stressNetwork(kind, t, n = BANKS, seed = NETWORKS[kind].seed) {
-  const { shape, links } = NETWORKS[kind];
-  const adj = buildNetwork(shape, n, links, seed + t);
-  const five = pickSeeds(makeRng(seed * 31 + t), adj, 5);
-  return { adj, first: { one: five.slice(0, 1), five, biggest: [mostConnected(adj)] } };
+/** Hub network number `t` (the figure's is EXAMPLE). */
+export function hubSystem(t = EXAMPLE) {
+  return buildNetwork('hubs', BANKS, HUB_LINKS, HUB_SEED + t);
 }
 
-/**
- * The stress test behind the line chart. For each shock and capital level:
- * the share of banks that fail in each of `trials` networks of one kind, the
- * average share, and the number of networks in which most banks fail. Also
- * the network whose results sit closest to the averages (drawn as the example).
- */
-export function stressTest(kind, { n = BANKS, trials = TRIALS, capitals = CAPITALS, seed = NETWORKS[kind].seed } = {}) {
-  const shares = Object.fromEntries(SHOCKS.map((s) => [s, capitals.map(() => new Float64Array(trials))]));
-  for (let t = 0; t < trials; t++) {
-    const { adj, first } = stressNetwork(kind, t, n, seed);
-    for (const s of SHOCKS) capitals.forEach((c, i) => (shares[s][i][t] = cascade(adj, c, first[s]).count / n));
+/** Ways to share out the extra capital: `top` most connected banks get EXTRA ÷ top points each. */
+export const SHARES = [
+  { value: 'none', label: 'None', top: 0 },
+  { value: 'every', label: 'Every bank +1', top: BANKS },
+  { value: 'top12', label: 'Top 12 +4', top: 12 },
+  { value: 'top1', label: 'Top bank +48', top: 1 },
+];
+export const shareOf = (value) => SHARES.find((s) => s.value === value);
+
+/** Each bank's capital, in % of assets, once the `top` most connected get the extra points. */
+export function capitalFor(adj, top, base = CAPITAL, extra = EXTRA) {
+  const capital = new Array(adj.length).fill(base);
+  if (top > 0) {
+    const order = byLinks(adj);
+    for (let r = 0; r < top; r++) capital[order[r]] += extra / top;
   }
-  const mean = Object.fromEntries(SHOCKS.map((s) => [s, shares[s].map((v) => v.reduce((a, b) => a + b, 0) / trials)]));
-  const collapses = Object.fromEntries(SHOCKS.map((s) => [s, shares[s].map((v) => v.filter((x) => x > 0.5).length)]));
-  let typical = 0;
-  let best = Infinity;
-  for (let t = 0; t < trials; t++) {
-    let err = 0;
-    for (const s of SHOCKS) capitals.forEach((_, i) => (err += (shares[s][i][t] - mean[s][i]) ** 2));
-    if (err < best) (best = err), (typical = t);
-  }
-  return { kind, n, trials, capitals, shares, mean, collapses, typical };
+  return capital;
 }
 
-/** The lowest capital at which, on average, fewer than `limit` of all banks fail (null if none). */
-export function lowestCapital(test, shock, limit = 0.25) {
-  const i = test.mean[shock].findIndex((m) => m < limit);
-  return i < 0 ? null : test.capitals[i];
+/** The loss lands on bank `at`: absorbed if it does not exceed the bank's capital, otherwise a cascade. */
+export function landing(adj, capital, at, loss = LOSS) {
+  if (loss <= capital[at]) return { absorbed: true, waves: [], failed: new Uint8Array(adj.length), count: 0 };
+  return { absorbed: false, ...cascade(adj, capital, [at]) };
+}
+
+/** Banks that fail, for every place the loss can land; and the worst of them. */
+export function everywhere(adj, capital, loss = LOSS) {
+  const sizes = adj.map((_, i) => landing(adj, capital, i, loss).count);
+  const worst = Math.max(...sizes);
+  return { sizes, worst, worstAt: sizes.map((s, i) => (s === worst ? i : -1)).filter((i) => i >= 0) };
+}
+
+/** In how many of the hub networks a share of the extra capital keeps the worst place to `limit` failures or fewer. */
+export function holdsAcross(top, limit = 5, networks = ALTERNATIVES) {
+  let held = 0;
+  for (let t = 0; t < networks; t++) {
+    const adj = hubSystem(t);
+    if (everywhere(adj, capitalFor(adj, top)).worst <= limit) held++;
+  }
+  return held;
 }
 
 /**
@@ -193,14 +208,20 @@ export function sweep({ n = 48, capitalPct = 4, shock = 1, trials = 40, maxLinks
   return out;
 }
 
-/** Fruchterman–Reingold layout in the unit square, with a pull toward the centre for loose banks. */
-export function layout(adj, seed = 1, iterations = 320) {
+/**
+ * Fruchterman–Reingold layout, with a pull toward the centre for loose banks.
+ * The banks are laid out in a frame `aspect` times as wide as it is high, and
+ * returned in unit coordinates (x and y from 0 to 1, with a margin), so a
+ * drawing of that shape shows them undistorted.
+ */
+export function layout(adj, seed = 1, iterations = 320, aspect = 1) {
   const rng = makeRng(seed);
   const n = adj.length;
-  const x = Float64Array.from({ length: n }, () => rng());
+  const a = aspect;
+  const x = Float64Array.from({ length: n }, () => rng() * a);
   const y = Float64Array.from({ length: n }, () => rng());
-  const k = Math.sqrt(1 / n) * 0.9;
-  let temp = 0.12;
+  const k = Math.sqrt(a / n) * 0.9;
+  let temp = 0.12 * Math.sqrt(a);
   // Banks outside the main group get a stronger pull to the centre, so small islands stay close.
   const group = new Int32Array(n).fill(-1);
   const groupSize = [];
@@ -252,8 +273,9 @@ export function layout(adj, seed = 1, iterations = 320) {
         dx[j] += ex * f;
         dy[j] += ey * f;
       }
-      dx[i] += (0.5 - x[i]) * pull[i];
-      dy[i] += (0.5 - y[i]) * pull[i];
+      // In a wide frame the pull is weaker across and stronger up and down, so the banks spread sideways.
+      dx[i] += ((a / 2 - x[i]) * pull[i]) / (a * a);
+      dy[i] += (0.5 - y[i]) * pull[i] * a * a;
     }
     for (let i = 0; i < n; i++) {
       const d = Math.sqrt(dx[i] * dx[i] + dy[i] * dy[i]) || 1;
@@ -263,7 +285,7 @@ export function layout(adj, seed = 1, iterations = 320) {
     }
     temp *= 0.985;
   }
-  // Fit into the unit square with a margin.
+  // Fit into the frame with a margin, keeping the shape.
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (let i = 0; i < n; i++) {
     minX = Math.min(minX, x[i]);
@@ -271,11 +293,8 @@ export function layout(adj, seed = 1, iterations = 320) {
     minY = Math.min(minY, y[i]);
     maxY = Math.max(maxY, y[i]);
   }
-  const span = Math.max(maxX - minX, maxY - minY) || 1;
-  const ox = (1 - (maxX - minX) / span) / 2;
-  const oy = (1 - (maxY - minY) / span) / 2;
-  return Array.from({ length: n }, (_, i) => ({
-    x: 0.06 + 0.88 * ((x[i] - minX) / span + ox),
-    y: 0.06 + 0.88 * ((y[i] - minY) / span + oy),
-  }));
+  const s = Math.min((0.88 * a) / (maxX - minX || 1), 0.88 / (maxY - minY || 1));
+  const ox = (a - (maxX - minX) * s) / 2;
+  const oy = (1 - (maxY - minY) * s) / 2;
+  return Array.from({ length: n }, (_, i) => ({ x: ((x[i] - minX) * s + ox) / a, y: (y[i] - minY) * s + oy }));
 }

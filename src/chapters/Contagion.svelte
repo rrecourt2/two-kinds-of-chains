@@ -1,83 +1,45 @@
 <script>
-  import { onDestroy, onMount, getContext, untrack } from 'svelte';
+  import { onDestroy, onMount, tick, untrack } from 'svelte';
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
-  import Slider from '../lib/ui/Slider.svelte';
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { BANKS as N, TRIALS, CAPITALS, NETWORKS, SCENES, INTERBANK_PCT, stressTest, stressNetwork, lowestCapital, layout, cascade, absorbs } from '../lib/sim/network.js';
-  import { linear, line } from '../lib/scales.js';
-  import { pct } from '../lib/format.js';
+  import { BANKS as N, CAPITAL, LOSS, EXTRA, INTERBANK_PCT, ALTERNATIVES, HUB_SEED, EXAMPLE, SHARES, hubSystem, byLinks, capitalFor, landing, everywhere, holdsAcross, layout, absorbs } from '../lib/sim/network.js';
   import { prefersReducedMotion, watchVisibility } from '../lib/motion.js';
 
-  const SCENE_LABEL = { similar: 'Many similar banks, five fail at once', giants: 'A few hubs, the most connected fails' };
   const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
-  const ORDINAL = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth', 'eleventh', 'twelfth', 'thirteenth'];
+  const ORDINAL = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth'];
 
-  // Until the puzzle is done, the figure shows only the stress test; then a second scene opens.
-  const game = getContext('tkc-game');
-  const revealed = $derived(!game.isOpen('contagion'));
+  // The figure's network, its banks from most to least connected, and every way of sharing the extra
+  // capital with its outcome wherever the loss lands, all computed once.
+  const adj = hubSystem();
+  const order = byLinks(adj);
+  const rankOf = new Int32Array(N);
+  order.forEach((b, r) => (rankOf[b] = r));
+  const links = (b) => adj[b].length;
+  const results = Object.fromEntries(SHARES.map((s) => [s.value, { ...s, capital: capitalFor(adj, s.top), ...everywhere(adj, capitalFor(adj, s.top)) }]));
+  const edges = adj.flatMap((nbrs, i) => nbrs.filter((j) => j > i).map((j) => [i, j]));
+  const hub = order[0];
 
-  let scene = $state('similar');
-  let capital = $state(4);
+  // Where the loss lands: one of the least connected banks to begin with, so it stops there.
+  let at = $state(order[N - 1]);
+  let share = $state('none');
   let width = $state(560);
-  let chartW = $state(560);
-  let hover = $state(null);
+  let diagram;
 
-  // The stress test (40 networks × 3 shocks × 9 capital levels) and the example network's layout
-  // are computed once per kind of network, so moving the slider only reads stored results.
-  const tests = {};
-  const examples = {};
-  const testFor = (kind) => (tests[kind] ??= stressTest(kind));
-  function exampleFor(kind) {
-    if (!examples[kind]) {
-      const t = testFor(kind).typical;
-      const { adj, first } = stressNetwork(kind, t);
-      examples[kind] = { adj, first, pos: layout(adj, NETWORKS[kind].seed + t) };
-    }
-    return examples[kind];
-  }
-  const kind = $derived(SCENES[scene].network);
-  const shock = $derived(SCENES[scene].shock);
-  const test = $derived(testFor(kind));
-  const example = $derived(exampleFor(kind));
-  const at = (c) => CAPITALS.indexOf(c);
-  const mean = $derived(test.mean[shock][at(capital)]);
-  const collapses = $derived(test.collapses[shock][at(capital)]);
+  const result = $derived(results[share]);
+  const outcome = $derived(landing(adj, result.capital, at));
+  const hasExtra = (b) => result.capital[b] > CAPITAL;
 
-  // The one rule: how many failed borrowers a bank survives at this capital, from the model's own failure condition.
-  // A typical bank in each scene, and two neighbours for comparison.
-  const TYPICAL = { similar: [10, 8, 12], giants: [2, 3, 4] };
-  const survives = (k) => {
-    const s = absorbs(capital, k);
-    return s === 0 ? 'falls at the first failure' : `survives ${WORDS[s]} failure${s === 1 ? '' : 's'} and falls at the ${ORDINAL[s + 1]}`;
-  };
-  const fallsAt = (k) => `at the ${ORDINAL[absorbs(capital, k) + 1]}`;
-  const rule = $derived.by(() => {
-    const [k, k1, k2] = TYPICAL[scene];
-    return {
-      main: `With ${capital}% capital, a bank with ${WORDS[k]} borrowers ${survives(k)}.`,
-      more: `Each loan is ${INTERBANK_PCT / k}% of its assets. A bank with ${WORDS[k1]} borrowers falls ${fallsAt(k1)}; one with ${WORDS[k2]}, ${fallsAt(k2)}.`,
-    };
-  });
-  const rules = $derived([
-    scene === 'similar' ? '48 banks; each lends 20% of its assets to about ten others, in equal parts.' : '48 banks; each lends 20% of its assets in equal parts, most to two or three others.',
-    'A bank that fails repays nothing: its lenders lose those loans in full.',
-    'A bank fails when its losses exceed its capital.',
-    scene === 'similar' ? 'Five banks fail at once; the rest follow, or not.' : 'The most connected bank fails; the rest follow, or not.',
-  ]);
-
-  // The example network: the outcome for the current settings, revealed one round of failures at a time.
-  const outcome = $derived(cascade(example.adj, capital, example.first[shock]));
+  // The outcome, revealed one round of failures at a time.
   let shown = $state({ key: '', waves: [] });
   let wave = $state(0);
   let seen = false;
   let timer = 0;
-  let diagram;
-  const WAVE_MS = 200;
+  const WAVE_MS = 220;
 
   function play() {
     clearInterval(timer);
@@ -85,11 +47,8 @@
       wave = shown.waves.length;
       return;
     }
-    if (!seen) {
-      wave = 1;
-      return;
-    }
     wave = 1;
+    if (!seen) return;
     timer = setInterval(() => {
       if (wave >= shown.waves.length) clearInterval(timer);
       else wave += 1;
@@ -97,7 +56,7 @@
   }
   $effect(() => {
     const { waves, failed } = outcome;
-    const key = `${scene}:${failed.join('')}`;
+    const key = `${at}:${failed.join('')}`;
     untrack(() => {
       if (key === shown.key) {
         // The same banks fail as before: keep what is on screen.
@@ -125,225 +84,239 @@
     shown.waves.slice(0, wave).forEach((w) => w.forEach((i) => (f[i] = 1)));
     return f;
   });
-  const hitFirst = $derived(new Set(shown.waves[0] ?? []));
   const count = $derived(failedNow.reduce((a, b) => a + b, 0));
   const spreading = $derived(wave < shown.waves.length);
   const rounds = $derived(Math.max(0, shown.waves.length - 1));
 
-  // Network drawing.
-  const netH = $derived(Math.round(Math.min(440, Math.max(300, width * 0.68))));
-  const px = (p) => p.x * width;
-  const py = (p) => p.y * netH;
-  const radius = (i) => 3.5 + 1.6 * Math.sqrt(example.adj[i].length);
+  // The drawing: banks laid out for the shape of the frame, so a phone gets a squarer network.
+  const narrow = $derived(width < 420);
+  const H = $derived(Math.round(Math.min(320, Math.max(280, width * 0.6))));
+  const ASPECTS = [1, 1.3, 1.65, 2];
+  const layouts = {};
+  const aspect = $derived(ASPECTS.reduce((a, b) => (Math.abs(b - width / H) < Math.abs(a - width / H) ? b : a)));
+  const pos = $derived((layouts[aspect] ??= layout(adj, HUB_SEED + EXAMPLE, 320, aspect)));
+  const px = (b) => pos[b].x * width;
+  const py = (b) => pos[b].y * H;
+  const radius = (b) => (narrow ? 3 : 3.5) + (narrow ? 1.4 : 1.6) * Math.sqrt(links(b));
 
-  // Line chart: share of banks that fail, on average, against capital, for the current scene.
-  const CH = 230;
-  const cm = { top: 30, right: 18, bottom: 40, left: 44 };
-  const cx = $derived(linear(2, 10, cm.left, chartW - cm.right));
-  const cy = linear(0, 1, CH - cm.bottom, cm.top);
-  const curve = $derived(line(CAPITALS.map((c, i) => [cx(c), cy(test.mean[shock][i])])));
-  const xTicks = $derived((chartW - cm.left - cm.right) / 8 >= 30 ? CAPITALS : CAPITALS.filter((c) => c % 2 === 0));
-  const tagBelow = $derived(mean > 0.8);
-  const tagLeft = $derived(capital >= 9);
-
-  function onMove(e) {
+  // Tap or click: the nearest bank within reach of the pointer, so small banks are easy to hit on a phone.
+  function onTap(e) {
     const box = e.currentTarget.getBoundingClientRect();
-    hover = Math.max(2, Math.min(10, Math.round(cx.invert(e.clientX - box.left + cm.left))));
+    const mx = e.clientX - box.left;
+    const my = e.clientY - box.top;
+    let best = -1;
+    let gap = Infinity;
+    for (let b = 0; b < N; b++) {
+      const d = Math.hypot(px(b) - mx, py(b) - my) - radius(b);
+      if (d < gap) (gap = d), (best = b);
+    }
+    if (best >= 0 && gap <= 18) at = best;
+  }
+  // The arrow keys move the loss from bank to bank, most connected first.
+  async function onKey(e) {
+    const r = rankOf[at];
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    let next;
+    if (step) next = (r + step + N) % N;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = N - 1;
+    else return;
+    e.preventDefault();
+    at = order[next];
+    await tick();
+    diagram?.querySelector(`[data-bank="${at}"]`)?.focus();
   }
 
-  // The stress test: many similar banks, five failing at once.
-  const similar = testFor('similar');
-  const lowest = lowestCapital(similar, 'five', 0.25);
-  const stressMean = (c) => similar.mean.five[at(c)];
-  const stressNow = $derived(scene === 'similar');
-  const stressed = $derived(stressMean(capital));
-  // Across the 40 networks, the most banks that fail beyond the first five at the answer.
-  const worstExtra = Math.round(Math.max(...similar.shares.five[at(lowest)]) * N) - 5;
+  const describe = (b) => (b === hub ? 'the most connected bank' : `a bank with ${links(b)} links`);
+  const capitalised = (s) => s[0].toUpperCase() + s.slice(1);
+  const failSub = $derived(
+    spreading
+      ? 'Spreading…'
+      : `${capitalised(describe(at))}: ${outcome.absorbed ? 'its capital covers the loss' : count === 1 ? 'the loss stops there' : `${rounds} round${rounds === 1 ? '' : 's'} of failures`}`,
+  );
+  // Where the worst place is, in words: "at any of the three most connected", "at a bank with 4 links".
+  function whereWorst(r) {
+    const ranks = r.worstAt.map((b) => rankOf[b]).sort((a, b) => a - b);
+    const m = ranks.length;
+    if (ranks.every((k, i) => k === i)) return m === 1 ? 'At the most connected bank' : m === 2 ? 'At either of the two most connected' : `At any of the ${WORDS[m]} most connected`;
+    if (m === 1) return `At ${describe(r.worstAt[0])}`;
+    if (ranks.every((k) => k < ORDINAL.length - 1)) return `At the ${ranks.map((k) => ORDINAL[k + 1]).join(' or ')} most connected`;
+    return `At ${m} places`;
+  }
+
+  // The puzzle: a target on the worst place to land.
+  const every = results.every;
+  const top1 = results.top1;
+  const PROGRESS = {
+    none: '',
+    every: `${CAPITAL + 1}% is still less than the ${LOSS}% loss: the bank it lands on falls as before, and ${WORDS[every.worstAt.length]} hubs still bring down all ${N}.`,
+    top12: '',
+    top1: `The biggest hub stands, at ${CAPITAL + EXTRA}%; a loss at the second still brings down ${top1.worst} of the ${N}.`,
+  };
   const puzzle = $derived({
-    goal: 'A stress test: five of these banks fail at once. Find the lowest capital at which, on average, fewer than a quarter of all 48 banks fail.',
-    met: stressNow && capital === lowest,
-    checks: [{ label: `On average, fewer than a quarter of the banks fail (now ${pct(stressed)})`, ok: stressed < 0.25 }],
-    progress: stressed < 0.25 && capital > lowest ? `Under a quarter at ${capital}%. Does a lower capital still hold?` : '',
-    hints: ['The chart under the network shows the average at every level of capital.', 'Raise capital one point at a time from 4%. When the drop comes, it is sudden.'],
-    found: `${lowest}%. With ${lowest - 2}% capital, five failures at once bring down ${pct(stressMean(lowest - 2))} of the banks on average; with ${lowest - 1}%, ${pct(stressMean(lowest - 1))}; with ${lowest}%, ${pct(stressMean(lowest))}, never more than ${WORDS[worstExtra] ?? worstExtra} banks beyond the first five. Two points of capital separate a collapse from a contained crisis.`,
+    goal: `Share out the ${EXTRA} points so that, wherever the loss lands, no more than five banks fail.`,
+    met: result.worst <= 5,
+    checks: [{ label: `Wherever the loss lands, five banks or fewer fail (now up to ${result.worst})`, ok: result.worst <= 5 }],
+    progress: PROGRESS[share],
+    hints: ['Put the loss on the biggest hubs first. Which banks carry it furthest?', `Extra capital stops the loss at a bank only once it covers all ${LOSS}%.`],
+    found: 'Four points each for the 12 most connected: they absorb the loss and stop the rest, so never more than four banks fall.',
   });
-  // Numbers quoted in the explanation, read from the same stress test.
-  const giants = testFor('giants');
-  const giantsLowest = lowestCapital(giants, 'biggest', 0.25);
+
+  // Numbers quoted in the explanation, read from the same model.
+  const none = results.none;
+  const onlyHit = none.sizes.filter((s) => s === 1).length;
+  const atMostNine = none.sizes.filter((s) => s <= 9).length;
+  const allFall = none.sizes.filter((s) => s === N).length;
+  const hubSurvives = absorbs(CAPITAL, links(hub));
+  const smallLoan = INTERBANK_PCT / 2;
+  const top3 = new Set(order.slice(0, 3));
+  const touchTop3 = edges.filter(([i, j]) => top3.has(i) || top3.has(j)).length;
+  // The model note: the same shares on the other hub networks grown the same way.
+  const robust = holdsAcross(12);
+  const robustEvery = holdsAcross(N);
 </script>
 
 <Chapter
-  n={8}
-  kicker="Contagion"
-  title="2008: when links became conditions"
-  lede="The links between banks were meant to spread risk thinly. A stress test shows what they really do."
+  n={9}
+  kicker="The stress test"
+  title="When links become conditions"
+  lede="Loans between banks spread risk thinly, until a loss lands in the wrong place. Then every link becomes a condition."
   puzzle="contagion"
 >
   {#snippet setup()}
     <p>
-      Before 2008, banks grew ever more connected through interbank loans, derivatives, repo funding and shared
-      holdings of the same mortgage securities. The common view was that connections spread risk thinly, so the
-      system as a whole was safer. That was half right.
+      A development bank seldom lends to a small firm directly. It lends through a country’s banks, and those banks
+      lend to each other. Every loan between them is a link in a chain, and a condition: a bank stands only while
+      enough of the banks it lent to stand.
     </p>
     <p>
-      Every loan to another bank is also a condition: the lender stays standing only while enough of its borrowers do.
-      So one question decides everything below: how many of its borrowers can fail before a bank falls? The answer
-      depends on its capital, the buffer that absorbs its losses, and on how many borrowers share its lending.
+      The links are not spread evenly. A few hubs deal with nine or more other banks; more than half deal with only
+      two or three. One of these banks takes a large loss on its own loans. Where it lands decides whether it
+      stops there or runs along the links.
+    </p>
+    <p>
+      The supervisor can ask for more capital: {EXTRA} extra percentage points in all, shared out as it sees fit. One
+      point for every bank, or more for a few?
     </p>
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="An interbank network" sub="48 banks that lend to each other, and what a shock does to them. Failures spread in rounds." {rules}>
-      <Puzzle id="contagion" {...puzzle} onshow={() => ((scene = 'similar'), (capital = lowest))} />
+    <Instrument
+      title="The stress test"
+      sub="{N} banks, sized by their links. Tap or click any bank to land the loss there; failures spread in rounds."
+      rules={[
+        `Each bank lends ${INTERBANK_PCT}% of its assets to its linked banks, in equal parts.`,
+        `Each holds ${CAPITAL}% capital; a bank whose losses exceed it fails and repays nothing.`,
+        `One bank loses ${LOSS}% of its assets on its own loans.`,
+      ]}
+    >
+      <Puzzle id="contagion" {...puzzle} onshow={() => ((share = 'top12'), (at = hub))} />
       <div class="tkc-controls tkc-controls--wide">
         <div class="ctl">
-          <Slider id="c-capital" label="Capital" bind:value={capital} min={2} max={10} format={(v) => `${v}% of assets`} />
-          <p class="rule"><strong>{rule.main}</strong> {rule.more}</p>
+          <Segmented name="c-extra" label="Extra capital" bind:value={share} options={SHARES.map(({ value, label }) => ({ value, label }))} />
+          <p class="tkc-small">{EXTRA} points in all: one for every bank, four each for the 12 most connected, or all {EXTRA} for the most connected.</p>
         </div>
-        {#if revealed}
-          <Segmented name="c-scene" label="The scene" bind:value={scene} options={Object.entries(SCENE_LABEL).map(([value, label]) => ({ value, label }))} />
-        {/if}
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width} bind:this={diagram}>
-        <svg {width} height={netH} role="img" aria-label="{SCENE_LABEL[scene]}: one network of {N} banks, with {capital}% capital. {count} of {N} banks have failed{spreading ? ' so far' : ''}.">
-          {#each example.adj as nbrs, i}
-            {#each nbrs as j}
-              {#if j > i}
-                <line x1={px(example.pos[i])} y1={py(example.pos[i])} x2={px(example.pos[j])} y2={py(example.pos[j])} class="edge" class:hot={failedNow[i] && failedNow[j]} />
-              {/if}
+        <!-- Each bank is a radio that takes focus and the arrow keys; a tap anywhere picks the nearest bank. -->
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_interactive_supports_focus -->
+        <svg {width} height={H} role="radiogroup" aria-label="Where the loss lands: {N} banks, most connected first. The arrow keys move the loss." onclick={onTap}>
+          <g aria-hidden="true">
+            {#each edges as [i, j] (`${i}-${j}`)}
+              <line x1={px(i)} y1={py(i)} x2={px(j)} y2={py(j)} class="edge" class:hot={failedNow[i] && failedNow[j]} />
             {/each}
+          </g>
+          {#each order as b (b)}
+            <circle
+              cx={px(b)}
+              cy={py(b)}
+              r={radius(b)}
+              class="bank"
+              class:extra={hasExtra(b)}
+              class:failed={failedNow[b]}
+              data-bank={b}
+              role="radio"
+              aria-checked={b === at}
+              aria-label="{capitalised(describe(b))}{b === hub ? `, ${links(b)} links` : ''}"
+              tabindex={b === at ? 0 : -1}
+              onkeydown={onKey}
+            />
           {/each}
-          {#each example.pos as p, i}
-            <circle cx={px(p)} cy={py(p)} r={radius(i)} class="bank" class:failed={failedNow[i]} />
-          {/each}
-          {#each [...hitFirst] as i (i)}
-            <circle cx={px(example.pos[i])} cy={py(example.pos[i])} r={radius(i) + 3.5} class="ring" />
-          {/each}
+          <circle cx={px(at)} cy={py(at)} r={radius(at) + 4} class="ring" aria-hidden="true" />
         </svg>
         <div class="tkc-legend">
-          <span><span class="tkc-swatch sw-bank"></span>Healthy bank (size = number of borrowers)</span>
-          <span><span class="tkc-swatch sw-ring"></span>Hit by the shock</span>
+          <span><span class="tkc-swatch sw-bank"></span>Bank, sized by its links</span>
+          <span><span class="tkc-swatch sw-ring"></span>Where the loss lands</span>
           <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>Failed</span>
+          <span><span class="tkc-swatch sw-extra"></span>Extra capital</span>
         </div>
-        <p class="tkc-caption">One of the {TRIALS} networks behind the chart below: the one whose results come closest to their average.</p>
       </div>
 
       <div class="tkc-stats two" use:announce>
-        <Stat
-          label="Banks that fail, this network"
-          value="{count} of {N}"
-          sub={spreading ? 'Spreading…' : count <= hitFirst.size ? 'Absorbed: no other bank failed' : `${rounds} round${rounds === 1 ? '' : 's'} of contagion`}
-          swatch="var(--tkc-conditions)"
-        />
-        <Stat
-          label="Average of {TRIALS} networks"
-          value={pct(mean)}
-          sub={collapses === 0 ? `Most banks fail in none of the ${TRIALS}` : collapses === TRIALS ? `Most banks fail in all ${TRIALS}` : `Most banks fail in ${collapses} of the ${TRIALS}`}
-        />
-      </div>
-
-      <div class="tkc-chart curve" bind:clientWidth={chartW}>
-        <div class="tkc-fig-title small">Across {TRIALS} networks like this one</div>
-        <svg
-          width={chartW}
-          height={CH}
-          role="img"
-          aria-label="Banks that fail, on average over {TRIALS} networks like this one ({SCENE_LABEL[scene].toLowerCase()}), against capital: {CAPITALS.map((c, i) => `${c}% capital, ${pct(test.mean[shock][i])}`).join('; ')}."
-        >
-          {#each [0, 0.25, 0.5, 0.75, 1] as t}
-            <line class={t === 0 ? 'tkc-base' : 'tkc-grid'} x1={cm.left} x2={chartW - cm.right} y1={cy(t)} y2={cy(t)} />
-            <text class="tkc-axis-label" x={cm.left - 6} y={cy(t) + 4} text-anchor="end">{t * 100}%</text>
-          {/each}
-          <path d={curve} class="bold" />
-          {#each CAPITALS as c, i (c)}
-            <circle cx={cx(c)} cy={cy(test.mean[shock][i])} r="3" class="pt-small" />
-          {/each}
-          <line class="now" x1={cx(capital)} x2={cx(capital)} y1={cm.top} y2={cy(0)} />
-          <circle cx={cx(capital)} cy={cy(mean)} r="5.5" class="pt" />
-          <text class="tkc-label tkc-halo" x={cx(capital) + (tagLeft ? -9 : 9)} y={cy(mean) + (tagBelow ? 18 : -9)} text-anchor={tagLeft ? 'end' : 'start'}>{pct(mean)}</text>
-          {#if hover !== null}
-            <line class="cross" x1={cx(hover)} x2={cx(hover)} y1={cm.top} y2={cy(0)} />
-          {/if}
-          {#each xTicks as c (c)}
-            <text class="tkc-axis-label" x={cx(c)} y={CH - cm.bottom + 16} text-anchor="middle">{c}%</text>
-          {/each}
-          <text class="tkc-axis-title" x={cm.left + (chartW - cm.left - cm.right) / 2} y={CH - 4} text-anchor="middle">Capital, as a share of assets</text>
-          <text class="tkc-axis-title" x={cm.left - 38} y={cm.top - 14}>Banks that fail, on average</text>
-          <rect x={cm.left} y={cm.top} width={Math.max(0, chartW - cm.left - cm.right)} height={CH - cm.top - cm.bottom} fill="transparent" role="presentation" onpointermove={onMove} onpointerleave={() => (hover = null)} />
-        </svg>
-        {#if hover !== null}
-          <div class="tkc-tip" style:left="{Math.min(chartW - 170, Math.max(0, cx(hover) + 10))}px" style:top="44px">
-            <div>With {hover}% capital</div>
-            <div class="tkc-tip-row"><strong>{pct(test.mean[shock][at(hover)])}</strong> fail on average</div>
-          </div>
-        {/if}
+        <Stat label="Banks that fail" value="{count} of {N}" sub={failSub} swatch="var(--tkc-conditions)" />
+        <Stat label="Worst place to land" value="{result.worst} of {N}" sub={whereWorst(result)} />
       </div>
 
       {#snippet model()}
-        <p>Each bank lends 20% of its assets to the banks it is linked to, split evenly, and holds capital of {capital}% of assets; every link runs both ways. A failed borrower’s loan is lost in full, so a bank with k borrowers fails once more than {capital} ÷ 20 × k of them have failed. With exactly that many, its losses equal its capital and it stands.</p>
-        <p>“Many similar banks” is a random network: every pair of banks is linked with the same chance, giving about ten borrowers each. “A few hubs” grows by preferential attachment: each newcomer links to two banks, more often to those that already have many links. “Five fail at once” picks five banks at random; the most connected bank is the one with the most links; the model has links, not sizes.</p>
-        <p>The chart averages {TRIALS} networks of each kind, the same {TRIALS} for every reader. The diagram shows the one whose results come closest to that average. The model follows Watts (2002) and Gai and Kapadia (2010).</p>
+        <p>Each bank lends {INTERBANK_PCT}% of its assets to the banks it is linked to, split evenly; every link runs both ways. Each holds {CAPITAL}% capital, plus any extra points. The bank where the loss lands loses {LOSS}% of its assets and fails only if that exceeds its capital. A failed bank repays nothing, so a bank with k partners loses {INTERBANK_PCT} ÷ k % for each one that fails, and fails once its losses exceed its capital. Failures spread in rounds until a round adds none.</p>
+        <p>The network grows by preferential attachment: each new bank links to two others, more often to those with many links already. Across {ALTERNATIVES} networks grown this way, four points each for the 12 most connected keep the worst place to five failures or fewer in {robust}; one point for every bank, in {robustEvery === 0 ? 'none' : robustEvery}. After Watts (2002) and Gai and Kapadia (2010).</p>
       {/snippet}
     </Instrument>
   {/snippet}
 
   {#snippet after()}
     <p>
-      With 4% capital, a bank with ten borrowers survives two failures. So a single failure seldom spreads: across the
-      {TRIALS} networks of similar banks, on average {(similar.mean.one[at(4)] * N).toFixed(1)} of the {N} banks fail,
-      the one that was hit and seldom another. A dense network absorbs small shocks so well that it looks safe. That is
-      the trap. Five failures at once bring down all {N}, in every one of the {TRIALS} networks. A fall in house prices
-      was that kind of shock: it hit everyone holding the same mortgage securities together. The same links that absorbed
-      one failure carry five to every bank. Andrew Haldane of the Bank of England called the system “robust yet fragile”.
+      With no extra capital the system looks sound from almost everywhere. Of the {N} places the loss can land,
+      {onlyHit} bring down only the bank hit, and {atMostNine} at most nine banks. The other {WORDS[allFall]} are the
+      biggest hubs, and each brings down all {N}: robust yet fragile, as central bankers came to call it.
     </p>
     <p>
-      Climbers roped together know the pattern. On easy ground, the rope lets the others hold one who slips. On a
-      steep face, one fall can pull the whole team off. And the buffer does not work like a dial: below a certain
-      level of capital, the system does not bend a little more. It breaks.
+      The hubs are not the weak links: the biggest can lose {WORDS[hubSurvives]} of its {links(hub)} partners and
+      stand. But when it fails, {links(hub)} banks lose a loan at once. A bank with two partners has lent each
+      {smallLoan}% of its assets, twice its capital, so it falls too, and its lenders may follow. More than a third of all
+      links end at the three biggest hubs.
     </p>
     <p>
-      It breaks because contagion feeds on itself: every bank that falls is one more failed borrower for the banks that
-      lent to it. With enough capital the losses die out within a round or two; with too little, each round of failures
-      sets up the next. Every link had become a condition, and the chain of conditions ran through the whole system.
+      Spread evenly, the {EXTRA} points give every bank {CAPITAL + 1}%, still short of the {LOSS}% loss: a buffer
+      helps only once it covers the loss. All {EXTRA} on the biggest hub make it safe, but the next two still bring
+      down {top1.worst} each. At the twelve most connected, {CAPITAL + 4}% covers the loss where the links meet, and the
+      other banks have too few links to carry it far.
     </p>
     <p>
-      The second scene, now open in the figure, links the same {N} banks as <em>a few hubs</em>. Most banks in it have
-      only two or three borrowers, so each loan is a large share of their assets: with 6% capital, such a bank falls at the
-      first failure. A failure picked at random brings down {pct(giants.mean.one[at(6)])} of the banks on average,
-      because most banks have few links. When the most connected bank fails, {pct(giants.mean.biggest[at(6)])} go down. Even the 7%
-      that contained the stress test leaves {pct(giants.mean.biggest[at(7)])}; it takes {giantsLowest}% to keep the
-      fall of the most connected bank under a quarter. That is the shape of September 2008. Lehman Brothers, a hub, filed for bankruptcy on the 15th,
-      the largest bankruptcy in US history, and the next day the Federal Reserve agreed to lend AIG up to $85 billion.
-      AIG had sold credit protection to banks around the world; letting it fail would have passed its losses to all of them.
+      September 2008 had this shape. A large investment bank, a hub, was allowed to fail on the 15th. The next day an
+      insurer that had sold credit protection to banks around the world was rescued: its failure would have passed the
+      loss to all of them.
     </p>
     <h3>Hubs inside organizations</h3>
     <p>
-      Organizations grow hubs the same way the hubs grew in the figure. Work flows to whoever already handles the
-      most: the expert everyone asks, the committee that sees every deal, the central system every other system reads
-      from. Each new link makes the hub a little more useful, so the next link goes there too.
-    </p>
-    <p>
-      On a normal day a hub is efficient: one place to ask, one place to look. It is also a queue, as chapter 4 showed,
-      and a single point of failure. When the hub is busy, everyone waits; when it stops, everything stops. On 19 July
-      2024 a faulty update to one security product crashed about 8.5 million Windows computers, grounding flights and
-      disrupting banks and hospitals on the same day. Small, spread-out dependencies get absorbed. A hub’s failure is
-      everyone’s.
+      Organizations grow hubs the same way: work flows to whoever already handles the most, such as the expert everyone
+      asks, the committee that sees every deal or the system every other system reads from. On a normal day a hub is
+      efficient. On a bad day it is where a loss travels furthest, and where a deputy or a second route counts most.
     </p>
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Which single event would hit many of our teams, systems or suppliers at the same time?">
+    <BankNote ask="Which partner, supplier or system in our chain would bring down many others if it failed?">
       <p>
-        After 2008, regulators used three tools: more capital (bigger buffers), central clearing and resolution plans
-        (robust hubs, and failures that can be survived), and ring-fencing (firebreaks). Inside a bank the same three
-        shapes appear as slack, a deputy for every hub, and teams that can keep working when a neighbour stops.
+        In 2011 the world’s bank supervisors agreed that the banks whose failure would travel furthest should hold more
+        capital than the rest: 1 to 3.5 extra percentage points, set by how large, interlinked and hard to replace a
+        bank is. National supervisors now do the same for the banks that matter most at home.
       </p>
     </BankNote>
   {/snippet}
 </Chapter>
 
 <style>
+  .ctl {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+  svg {
+    cursor: pointer;
+    touch-action: manipulation;
+  }
   .edge {
     stroke: var(--tkc-rule);
     stroke-width: 1;
@@ -351,7 +324,7 @@
   }
   .edge.hot {
     stroke: var(--tkc-conditions);
-    opacity: 0.45;
+    opacity: 0.5;
   }
   .bank {
     fill: var(--tkc-surface);
@@ -359,14 +332,27 @@
     stroke-width: 1.5;
     transition: fill 180ms ease, stroke 180ms ease;
   }
+  .bank.extra {
+    stroke: var(--tkc-options);
+    stroke-width: 2.5;
+  }
   .bank.failed {
     fill: var(--tkc-conditions);
     stroke: var(--tkc-surface);
+    stroke-width: 1.5;
+  }
+  .bank:focus {
+    outline: none;
+  }
+  .bank:focus-visible {
+    stroke: var(--tkc-focus);
+    stroke-width: 3;
   }
   .ring {
     fill: none;
     stroke: var(--tkc-ink);
-    stroke-width: 1.75;
+    stroke-width: 2;
+    pointer-events: none;
   }
   .sw-bank {
     background: var(--tkc-surface);
@@ -376,63 +362,27 @@
   .sw-ring {
     width: 12px;
     height: 12px;
-    background: var(--tkc-conditions);
-    box-shadow: 0 0 0 1.5px var(--tkc-surface), 0 0 0 3px var(--tkc-ink);
+    background: transparent;
+    box-shadow: inset 0 0 0 2px var(--tkc-ink);
+    border-radius: 50%;
+  }
+  .sw-extra {
+    background: var(--tkc-surface);
+    box-shadow: inset 0 0 0 2.5px var(--tkc-options);
     border-radius: 50%;
   }
   .two {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
-  .curve {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
-    border-top: 1px solid var(--tkc-hair);
-    padding-top: 14px;
+  /* "48 of 48" stays on one line, in a smaller size on the narrowest phones. */
+  .two :global(.tkc-stat-value) {
+    white-space: nowrap;
   }
-  .small {
-    font-size: 0.9375rem;
-  }
-  .ctl {
-    display: grid;
-    gap: 8px;
-    min-width: 0;
-  }
-  .rule {
-    font-size: 0.875rem;
-    line-height: 1.5;
-    color: var(--tkc-ink-2);
-    text-wrap: pretty;
-  }
-  .rule strong {
-    color: var(--tkc-ink);
-    font-weight: 600;
-  }
-  .bold {
-    fill: none;
-    stroke: var(--tkc-conditions);
-    stroke-width: 2.5;
-    stroke-linejoin: round;
-    stroke-linecap: round;
-  }
-  .pt-small {
-    fill: var(--tkc-conditions);
-    stroke: var(--tkc-surface);
-    stroke-width: 1.5;
-  }
-  .pt {
-    fill: var(--tkc-conditions);
-    stroke: var(--tkc-surface);
-    stroke-width: 2;
-  }
-  .now {
-    stroke: var(--tkc-ink);
-    stroke-width: 1;
-  }
-  .cross {
-    stroke: var(--tkc-muted);
-    stroke-width: 1;
+  @container fig (max-width: 300px) {
+    .two :global(.tkc-stat-value) {
+      font-size: 1.25rem;
+    }
   }
   @media (prefers-reduced-motion: reduce) {
     .bank {
