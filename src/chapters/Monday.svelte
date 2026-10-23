@@ -172,11 +172,14 @@
 
   <section class="sources" aria-labelledby="{prefix}-sources">
     <h3 class="tkc-eyebrow" id="{prefix}-sources">Sources and further reading</h3>
+    <details class="src-list">
+      <summary>{sources.length} sources, chapter by chapter</summary>
     <ul>
       {#each sources as [who, year, what, why] (what)}
         <li><span class="src-who">{who}{year ? ` (${year})` : ''}.</span> <span class="src-what">{what}.</span> <span class="src-why">{why}</span></li>
       {/each}
     </ul>
+    </details>
     <p class="tkc-caption">
       All models in this story are deliberately simple, so their assumptions can be read in each “How this model
       works” note. They show the shape of each effect, not a forecast for any particular process.
@@ -433,6 +436,16 @@
     gap: 12px;
     border-top: 1px solid var(--tkc-hair);
     padding-top: 20px;
+  }
+  .src-list summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--tkc-ink-2);
+    padding: 4px 0;
+  }
+  .src-list summary:focus-visible {
+    outline: 2px solid var(--tkc-focus);
+    outline-offset: 2px;
   }
   .sources ul {
     margin: 0;

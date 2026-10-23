@@ -15,6 +15,8 @@
   const total = CHAPTERS.length - 1;
   setContext('tkc-id', prefix);
   setContext('tkc-total', total);
+  // A chapter's number comes from its place in the story, so chapters can move without renumbering.
+  setContext('tkc-number', (id) => CHAPTERS.findIndex((c) => c.id === id));
   // Every chapter has a puzzle except the playbook at the end.
   const game = createGame(CHAPTERS.filter((c) => c.puzzle !== false).map((c) => c.id));
   setContext('tkc-game', game);

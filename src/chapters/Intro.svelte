@@ -112,11 +112,7 @@
     max-width: 40rem;
     text-wrap: pretty;
   }
-  /* On a phone the guess comes first; the thesis further down says the same. */
   @container tkc (max-width: 560px) {
-    .deck {
-      display: none;
-    }
     .masthead {
       gap: 8px;
     }

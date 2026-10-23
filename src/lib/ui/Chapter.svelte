@@ -5,6 +5,8 @@
   const prefix = getContext('tkc-id') ?? 'tkc';
   const total = getContext('tkc-total') ?? 12;
   const game = getContext('tkc-game');
+  const numberOf = getContext('tkc-number');
+  const number = $derived(puzzle && numberOf && numberOf(puzzle) > 0 ? numberOf(puzzle) : n);
   // The explanation waits until the chapter's puzzle is solved or its answer shown.
   const unlocked = $derived(!puzzle || !game || !game.isOpen(puzzle));
   function toPuzzle() {
@@ -16,7 +18,7 @@
 
 <article class="chapter" aria-labelledby="{prefix}-chapter-title">
   <header class="head">
-    <div class="tkc-eyebrow">Chapter {n} of {total} · {kicker}</div>
+    <div class="tkc-eyebrow">Chapter {number} of {total} · {kicker}</div>
     <h2 class="tkc-display tkc-chapter-title" id="{prefix}-chapter-title" tabindex="-1">{title}</h2>
     {#if lede}<p class="tkc-lede">{lede}</p>{/if}
   </header>
