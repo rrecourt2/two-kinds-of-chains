@@ -37,9 +37,9 @@
     { title: 'Hubs with a second route', text: 'The people, committees and systems that everything passes through each have a deputy or a fallback, so one failure does not become everyone’s.', ch: 'contagion' },
     { title: 'Claims that have met a test', text: 'Fire drills, reverse stress tests and near misses test the safest-looking assumptions, and categories leave room for the case nobody foresaw.', ch: 'black-swans' },
     { title: 'A person where the AI swings', text: 'Where AI or automation is erratic, a person keeps the good results and drops the bad ones before they move on; autopilot is kept for work that is steady, or whose mistakes are small, visible and easy to undo.', ch: 'tools' },
-    { title: 'Gates only before what cannot be undone', text: 'Checks come first only in front of steps that cannot be undone, such as a payment, and any qualified person may do them, so the wait is the check’s own and not one person’s diary.', ch: 'gate' },
+    { title: 'Gates in front of what cannot be undone', text: 'Where a step cannot be undone, such as a payment, the check comes before it, and any qualified person may do it, so the wait is the check’s own and not one person’s diary.', ch: 'gate' },
     { title: 'Modular work', text: 'Work is saved in finished pieces, each with a clear owner and a clear interface, so an interruption costs only the piece in hand and trouble in one part stays there.', ch: 'modules' },
-    { title: 'Few conditions before the money moves', text: 'Only the conditions that must truly come first stand before disbursement; the rest become promises with deadlines, and a late document can be met another way where one exists.', ch: 'disbursement' },
+    { title: 'Few conditions before the money moves', text: 'Only the conditions that must truly come first stand before disbursement; the rest become undertakings with deadlines, and a late document can be met another way where one exists.', ch: 'disbursement' },
   ];
 
   const sources = [
@@ -83,7 +83,7 @@
 
 <article class="monday" aria-labelledby="{prefix}-chapter-title">
   <header class="head">
-    <div class="tkc-eyebrow">Chapter {total} of {total} · Playbook</div>
+    <div class="tkc-eyebrow">Chapter {total} of {total} · Patterns</div>
     <h2 class="tkc-display tkc-chapter-title" id="{prefix}-chapter-title" tabindex="-1">What it means on Monday</h2>
     <p class="tkc-lede">The controls can stay. What changes is their shape. Two questions sort any step in a process: does it do the work or check it, and is there an alternative when it is unavailable?</p>
   </header>

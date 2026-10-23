@@ -119,7 +119,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['Every required working link costs both people 2% of their time.', 'Three shapes: everyone linked to everyone; everyone linked to one approver; teams joined by one person each.', 'Useful work is the time left once the links are kept up.', 'With a whole day free, the approver can sign off the work of 12 people; their own links come out of that day first.']} title="Grow the network" sub="The links each way of working requires, and the useful work left once they are kept up. Each required link costs both people 2% of their time.">
+    <Instrument rules={['Every required working link costs both people 2% of their time.', 'Three shapes: everyone linked to everyone; everyone linked to one approver; teams joined by one person each.', 'Useful work is the time left once the links are kept up.', 'With a whole day free, the approver can sign off the work of 12 people; their own links come out of that day first.']} title="Grow the network" sub="The links each way of working requires, and the useful work left once they are kept up.">
       <Puzzle id="graph" {...puzzle} predict onshow={() => ((kind = 'mesh'), (nodes = 60))} />
       <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
         <Slider id="g-nodes" label="Number of people" bind:value={nodes} min={2} max={MAX} />

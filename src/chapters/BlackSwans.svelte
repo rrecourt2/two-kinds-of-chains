@@ -112,7 +112,7 @@
     </p>
     <p>
       Take a claim a portfolio report might make: every Category A project has an agreed Environmental and Social Action
-      Plan (ESAP) on file, the list of fixes and deadlines a client signs up to when appraisal finds gaps. It has held
+      Plan (ESAP) on file. It has held
       for years, and every audit sample so far has agreed with it. Four files lie on the desk. Opening one takes time,
       so the question is which ones matter.
     </p>
@@ -168,15 +168,13 @@
     <h3>The box nobody drew</h3>
     <p>
       The puzzle’s logic was sound, and it would never have opened the solar plant’s file: its category described the
-      site, and the risk arrived through a purchase order. Forced labour falls under Performance Standard 2, whose
-      supply-chain duties are written for primary suppliers, those that provide essential goods “on an ongoing basis”:
-      find the risk, remedy it, and change suppliers where it cannot be remedied. Panels bought once, through a
-      contractor, sat at the edge of those words.
+      site, and the risk arrived through a purchase order. The standards’ supply-chain duties are written for suppliers
+      who deliver “on an ongoing basis”; panels bought once, through a contractor, sat at the edge of those words.
     </p>
     <p>
       The boxes have moved before: lending through banks and funds fitted none of A, B or C, so by the late 1990s a
-      fourth box, FI, had been added. The standards are outcome-based, leaving room for judgment rather than a checklist;
-      one even plans for the unplanned, with a “chance find procedure” for heritage nobody expected to dig up.
+      fourth box, FI, had been added. The standards themselves set outcomes and leave room for judgment, rather than a
+      checklist.
     </p>
     <p>
       A rulebook that must foresee every case answers each surprise with a new box, one more condition that every later

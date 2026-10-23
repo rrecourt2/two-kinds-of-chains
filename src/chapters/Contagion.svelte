@@ -313,9 +313,9 @@
       first failure. A failure picked at random brings down {pct(giants.mean.one[at(6)])} of the banks on average,
       because most banks have few links. When the most connected bank fails, {pct(giants.mean.biggest[at(6)])} go down. Even the 7%
       that contained the stress test leaves {pct(giants.mean.biggest[at(7)])}; it takes {giantsLowest}% to keep the
-      fall of the most connected bank under a quarter. That is the shape of September 2008: Lehman Brothers filed for bankruptcy on the 15th,
+      fall of the most connected bank under a quarter. That is the shape of September 2008. Lehman Brothers, a hub, filed for bankruptcy on the 15th,
       the largest bankruptcy in US history, and the next day the Federal Reserve agreed to lend AIG up to $85 billion.
-      AIG had sold credit protection to banks around the world.
+      AIG had sold credit protection to banks around the world; letting it fail would have passed its losses to all of them.
     </p>
     <h3>Hubs inside organizations</h3>
     <p>

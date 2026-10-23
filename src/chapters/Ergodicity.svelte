@@ -104,7 +104,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['Each round a fair coin: heads adds 50% to the stake, tails takes 40% of it.', '2,000 players, 100 rounds, all starting with the same wealth.', 'Pooled players add up their results every round and share the total equally.']} title="The coin game" sub="Heads: +50%. Tails: −40%. Wealth after each round, against the start. Each grey line is one player.">
+    <Instrument rules={['Each round a fair coin: heads adds 50% to the stake, tails takes 40% of it.', '2,000 players, 100 rounds, all starting with the same wealth.', 'Pooled players add up their results every round and share the total equally.']} title="The coin game" sub="Wealth after each round, against the start. Each grey line is one player.">
       <Puzzle id="ergodicity" {...puzzle} onshow={() => ((stake = 80), (pool = 5))} />
       <div class="tkc-controls">
         <Slider id="e-stake" label="Share of wealth staked each round" bind:value={stake} min={10} max={100} step={5} format={(v) => `${v}%`} />

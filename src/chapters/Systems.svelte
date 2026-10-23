@@ -91,7 +91,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['A request passes through six systems; each step takes a day.', 'Each form has a one-in-ten chance of a hidden problem.', 'An approver spots a problem they can see half the time; one approver at the end spots 90%.', 'Approvers are in 85% of days, and nobody stands in for them.']} title="One request, six linked systems" sub="How long 1,500 simulated requests take. Filling in a system takes a day, and so does each approval. Each form has a one-in-ten chance of a hidden problem.">
+    <Instrument rules={['A request passes through six systems; each step takes a day.', 'Each form has a one-in-ten chance of a hidden problem.', 'Each approver catches half the problems in the data in front of them; one approver at the end catches 90%.', 'Approvers are in 85% of days, and nobody stands in for them.']} title="One request, six linked systems" sub="How long 1,500 simulated requests take, in working days.">
       <Puzzle id="systems" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls">
         <Segmented

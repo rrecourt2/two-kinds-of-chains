@@ -80,7 +80,7 @@
     `As signed, all twelve conditions come before the money; each usually takes ${weeks(fastest)} to ${weeks(slowestTypical)} weeks.`,
     `Any one can be late, and about one document in ${words[Math.round(1 / PARAMS.returned)]} comes back for correction.`,
     `The money moves ${words[PARAMS.check]} working days after the last condition is met.`,
-    `Some may follow the money as promises; policy keeps at least ${words[POLICY_BEFORE]} first, while the lender can still say no.`,
+    `Some may follow the money as undertakings with deadlines; policy keeps at least ${words[POLICY_BEFORE]} first, while the lender can still say no.`,
   ];
 
   // Shared horizontal range: working days after signing.
@@ -257,7 +257,7 @@
     </p>
     <p>
       A chain like this can bend without dropping a condition. Some conditions can become conditions subsequent:
-      promises to deliver within an agreed period after the first disbursement, where missing one is an event of
+      undertakings to deliver within an agreed period after the first disbursement, where missing one is an event of
       default. And some late documents have an accepted alternative, such as a certified copy of a board resolution, a
       regulator’s comfort letter or a broker’s letter of undertaking: an <span class="tkc-or">OR</span> inside the
       chain.
@@ -442,7 +442,7 @@
           The slider takes conditions off the list before the money moves in a fixed order: at 11, Process agent; at 10,
           Hedging; at 9, Security registered; at 8, Insurance; at 7, Equity paid in; at 6, Permits; at 5, ESAP actions; at
           4, Central bank. KYC checks, Board approval, Security signed and Legal opinion never move. A condition taken off
-          becomes a promise due after the first disbursement; its document may still arrive before.
+          becomes an undertaking due after the first disbursement; its document may still arrive before.
         </p>
         <p>
           Security registered keeps a safeguard when it moves: the money still waits for its filing evidence (proof of
@@ -460,7 +460,7 @@
 
   {#snippet after()}
     <p>
-      Each condition on its own would keep the promise: every one of the twelve is met in time for at least {worstEach}
+      Each condition on its own is usually in time: every one of the twelve is met in time for at least {worstEach}
       clients in 100. All twelve together keep it for only {allTogether}. That is the arithmetic of chapter 1: a chain of
       <span class="tkc-and">ANDs</span> holds only when every link holds at once.
     </p>
@@ -486,13 +486,14 @@
     </p>
     <h3>Which conditions must come first</h3>
     <p>
-      Before the money moves, a missing document keeps the door shut; afterwards it is a default to manage. That is why
+      This is the question of chapter 12 again, asked of a whole loan. Before the money moves, a missing document keeps
+      the door shut; afterwards it is a default to manage. That is why
       four never move here: the lender knows the client, the borrower’s board has approved the loan, the security is
       signed and a legal opinion says it holds. Registration can follow the money only with its filing evidence in hand.
     </p>
     <p>
       The whole story fits in this one loan. Specialists each do their part well; joined by ANDs, their parts make a long
-      chain, and variability finds its weakest link. An OR here and a promise with a deadline there keep every condition
+      chain, and variability finds its weakest link. An OR here and an undertaking with a deadline there keep every condition
       on the list, and let the chain bend instead of break.
     </p>
   {/snippet}
@@ -501,7 +502,7 @@
     <BankNote ask="Which of our conditions precedent truly need the money to wait?">
       <p>
         Each condition on a list was added for a reason, usually a good one. The list rarely records which reasons need
-        the money to wait, and which a promise with a deadline, or another document, would serve as well.
+        the money to wait, and which an undertaking with a deadline, or another document, would serve as well.
       </p>
     </BankNote>
   {/snippet}

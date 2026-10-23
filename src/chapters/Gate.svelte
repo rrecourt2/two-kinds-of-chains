@@ -135,7 +135,7 @@
   n={12}
   kicker="Gates"
   title="The gate worth keeping"
-  lede="Some checks earn their wait, because the step after them cannot be undone. Even then, most of the wait may not be the check."
+  lede="Some checks earn their wait, because the step after them cannot be undone."
   puzzle="gate"
 >
   {#snippet setup()}
@@ -152,8 +152,7 @@
     </p>
     <p>
       So every change of account is checked before the money moves, by the reviewer named on the loan. This week three
-      such instructions arrive at once, and the named reviewer on two of them is away. A deputy with the same training
-      and the same authority is in.
+      such instructions arrive at once, and the named reviewer on two of them is away.
     </p>
   {/snippet}
 
@@ -257,8 +256,8 @@
     </p>
     <h3>Where a gate earns its wait</h3>
     <p>
-      The line runs between what can be undone and what cannot. Where a mistake can be reversed, a person in the loop is
-      enough, and the work moves on while they look (chapter 11). Where it cannot, the check has to come first, and the
+      The line runs between what can be undone and what cannot. Where a mistake is small, visible and easy to put right, the
+      work can move on and be checked afterwards, as autopilot can in chapter 11. Where it cannot, the check has to come first, and the
       wait is worth paying, as long as it is the check’s own wait and not one person’s diary. Chapter 15 asks the
       same question of a whole loan: which conditions must be met before the money moves, and which can follow it.
     </p>
@@ -272,8 +271,8 @@
     <BankNote ask="Which of our gates stand in front of something that cannot be undone, and which merely wait for one person?">
       <p>
         A payment, a signature on a binding contract and data sent outside the bank cannot be called back, and a check
-        in front of them earns its wait. Many other sign-offs guard steps that could be corrected afterwards, and many
-        name one person where any of several qualified colleagues would decide the same way.
+        in front of them earns its wait. A sign-off in front of a step that can be corrected afterwards, or one that only a
+        single named person may give, is a different kind of gate.
       </p>
     </BankNote>
   {/snippet}

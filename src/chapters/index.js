@@ -37,5 +37,5 @@ export const CHAPTERS = [
   { id: 'graph', short: 'Networks', title: 'The shape of the network', component: Graph, part: 4 },
   { id: 'modules', short: 'Modules', title: 'Two watchmakers', component: Modules, part: 4 },
   { id: 'disbursement', short: 'Disbursement', title: 'Time to disbursement', component: Disbursement, part: 4 },
-  { id: 'monday', short: 'Playbook', title: 'What it means on Monday', component: Monday, part: 4, puzzle: false },
+  { id: 'monday', short: 'Patterns', title: 'What it means on Monday', component: Monday, part: 4, puzzle: false },
 ];

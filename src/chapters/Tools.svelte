@@ -133,8 +133,7 @@
       Since the coin game in chapter 7, variability has mostly done harm in this story. Swings that look generous on
       paper left the typical player poorer, and more variable years drove the specialist off island after island. The species
       that survived was the generalist, which spread its bets over four plants; variability still cost it, only less.
-      This chapter is about something stronger, a design that gains from variability, and its example is the newest
-      link in many chains: AI.
+      This chapter turns to the newest link in many chains, AI, and to what its swings do to two ways of using it.
     </p>
     <p>
       A modern AI model can read a request written in plain language, draft the answer and fill in the systems behind it.
@@ -251,8 +250,8 @@
     <p>
       The fixes from earlier chapters work here too: one record for the AI to read, rather than many systems to fill in,
       and people reviewing the finished work side by side, rather than a sign-off at every step. The rest of this part is
-      about chains that bend instead of breaking, and ends with a loan that cannot move until a dozen conditions are
-      met.
+      about chains that bend instead of breaking. It starts with a sign-off worth keeping, and ends with a loan that
+      cannot move until a dozen conditions are met.
     </p>
   {/snippet}
 

@@ -164,7 +164,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['A watch has 1,000 parts; each minute a watchmaker places one, unless interrupted.', 'An interruption undoes all of Tempus’s unfinished watch.', 'Hora builds in modules of ten; an interruption undoes only the module in hand.']} title="The two workshops" sub="Both watchmakers at work, one part a minute. An interruption undoes the work in hand: all of Tempus’s unfinished watch, only Hora’s current module.">
+    <Instrument rules={['A watch has 1,000 parts; each minute a watchmaker places one, unless interrupted.', 'An interruption undoes all of Tempus’s unfinished watch.', 'Hora builds in modules of ten; an interruption undoes only the module in hand.']} title="The two workshops" sub="Both watchmakers at work, one part a minute.">
       <Puzzle id="modules" {...puzzle} predict onshow={() => (interrupt = 10)} />
 
       <div class="tkc-controls tkc-controls--wide" class:tkc-wait={!live} inert={live ? undefined : true}>
