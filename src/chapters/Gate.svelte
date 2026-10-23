@@ -1,397 +1,332 @@
 <script>
-  import { getContext } from 'svelte';
+  import { onMount } from 'svelte';
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
-  import Segmented from '../lib/ui/Segmented.svelte';
+  import Slider from '../lib/ui/Slider.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { INSTRUCTIONS, DESIGNS, REVIEW_DAYS, LAST_DAY, runDesign } from '../lib/sim/gate.js';
-  import { linear } from '../lib/scales.js';
+  import { STOPS, LIMIT, YEARS, PARAMS, chapterReady, chapterStep } from '../lib/sim/gate.js';
+  import { linear, log10 } from '../lib/scales.js';
 
-  // A prediction: the choice of design opens after the first answer or a hint.
-  const game = getContext('tkc-game');
-  const live = $derived(game.engaged('gate'));
-
-  // The scenario is fixed, so each design is worked out once; switching only picks one.
-  const RUNS = Object.fromEntries(DESIGNS.map((d) => [d.id, runDesign(d)]));
-  let design = $state('named');
+  const stopAt = (amount) => STOPS.findIndex((s) => s.at === amount);
+  const ANSWER = stopAt(1);
+  let stop = $state(0); // every payment checked, as the bank does today
   let width = $state(560);
-  const run = $derived(RUNS[design]);
 
-  // ---- Words and numbers the text quotes, all from the model ----
-  const words = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven'];
-  const num = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
-  const dayCount = (v) => (v === Infinity ? 'never' : `${num(v)} day${v === 1 ? '' : 's'}`);
-  const row = (id, key) => RUNS[id].rows.find((r) => r.id === key);
-  const fraudId = INSTRUCTIONS.find((i) => i.fraud).id;
-  const waitedB = row('named', 'B').reviewStart; // days B waits for its named reviewer
-  const before = RUNS.named.avgValidDays;
-  const after = RUNS.any.avgValidDays;
-  const quicker = after - RUNS['pay-first'].avgValidDays;
-  const foundLate = row('pay-first', fraudId).foundAt;
-  const awayUntil = INSTRUCTIONS.find((i) => i.named > 0).named;
+  // A thousand simulated years at every stop, worked out in short steps the first time the chapter
+  // opens, so the page never stalls; a later visit or a reset finds them ready.
+  let sims = $state.raw(chapterReady());
+  onMount(() => {
+    if (sims) return;
+    let timer = 0;
+    const step = () => {
+      const done = chapterStep();
+      if (done) sims = done;
+      else timer = setTimeout(step, 0);
+    };
+    timer = setTimeout(step, 0);
+    return () => clearTimeout(timer);
+  });
+  const run = $derived(sims ? sims.stops[stop] : null);
+
+  // ---- Words and numbers, all from the model ----
+  const money = (v) => (v === 0 ? '$0' : v < 0.095 ? `$${Math.round(v * 100) * 10},000` : Number.isInteger(v) ? `$${v}m` : `$${v.toFixed(1)}m`);
+  const share = (v) => (v === 0 ? '0%' : v < 0.001 ? 'under 0.1%' : v < 0.1 ? `${(v * 100).toFixed(1)}%` : `${Math.round(v * 100)}%`);
+  const whole = (v) => (v > 0 && v < 0.005 ? 'under 1%' : `${Math.round(v * 100)}%`);
+  const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+  const fraction = (v) => {
+    const k = Math.round(v * 10);
+    return k === 5 ? 'half' : k === 10 ? 'all' : `${WORDS[k]}-tenth${k === 1 ? '' : 's'}`;
+  };
+  const T = $derived.by(() => {
+    if (!sims) return null;
+    const s = sims.stops;
+    const answer = s[ANSWER];
+    const all = s[0];
+    const ten = s[stopAt(10)];
+    return {
+      half: fraction(answer.checkedShare),
+      money: fraction(answer.moneyShare),
+      worstA: money(answer.worst),
+      busyA: share(answer.busy),
+      busyAll: share(all.busy),
+      lateAll: share(all.late),
+      mean10: money(ten.mean),
+      worst10: money(ten.worst),
+      over10: ten.over,
+      named: share(sims.named.late),
+    };
+  });
 
   const rules = [
-    `Three payment instructions, A to C, ask to change where the money goes; ${fraudId} is fraudulent.`,
-    `A check takes ${words[REVIEW_DAYS]} day, and it always catches the fraud.`,
-    `B’s and C’s named reviewer is away until day\u00a0${awayUntil}; a qualified deputy is in.`,
-    'Money paid to a fraudster cannot be recovered.',
+    'About 600 account changes a year, $50,000 to $80m each; one in 200 is fraud.',
+    'A check catches every fraud; any of three qualified reviewers does one a day.',
+    'Each reviewer is in nine days in ten; payment is promised within three working days.',
   ];
 
-  const puzzle = {
-    goal: 'Payments wait for the check, and clients complain. Which change makes valid payments quicker without letting the fraudulent one through?',
-    choices: [
-      { value: 'pay-first', label: 'Pay first, check after' },
-      { value: 'any', label: 'Let any qualified reviewer do the check' },
-      { value: 'neither', label: 'Neither: speed and safety trade off' },
+  // The coin game's trap: the average year sits inside the limit while the worst does not.
+  const trap = $derived(!!run && run.mean <= LIMIT && run.worst > LIMIT);
+  const puzzle = $derived({
+    goal: 'Set the check so that no year in 1,000 loses more than $5m, and fewer than 1 payment in 100 is late.',
+    met: !!run && run.worst <= LIMIT && run.late < 0.01,
+    checks: [
+      { label: `No year loses more than $5m${run ? ` (worst now ${money(run.worst)})` : ''}`, ok: !!run && run.worst <= LIMIT },
+      { label: `Fewer than 1 payment in 100 late${run ? ` (now ${share(run.late)})` : ''}`, ok: !!run && run.late < 0.01 },
     ],
-    answer: 'any',
-    wrong: (v) =>
-      v === 'pay-first'
-        ? 'Valid payments would go out at once, but so would the fraudulent one. What can a check do once the money has gone?'
-        : `Here they need not. What does instruction B wait ${words[waitedB]} days for: the check, or one person?`,
+    progress: trap ? `The average year loses ${money(run.mean)}, under the limit; the worst year loses ${money(run.worst)}.` : '',
     hints: [
-      `The check takes ${words[REVIEW_DAYS]} day. Instruction B waits ${words[waitedB]} days before it, for one person to come back.`,
-      'A check after the payment can find the fraud, but it cannot bring the money back.',
+      'A check costs a reviewer the same day whatever the amount. Which payments carry most of the money?',
+      'Watch the worst of the 1,000 years, not the average one: a single bad year breaks the limit.',
     ],
-    found: `Let any qualified reviewer do the check. Valid payments go out after ${dayCount(after)} on average, against ${dayCount(before)} before, and the fraudulent instruction is still held. Paying first is ${quicker === 1 ? 'a day' : dayCount(quicker)} quicker still, and pays the fraudster.`,
-  };
-  const showAnswer = () => (design = 'any');
-
-  // ---- One row per instruction, days 0 to 6 ----
-  const PAD = 8;
-  const TOP = 3;
-  const TRACK = 24;
-  const MID = TOP + TRACK / 2;
-  const H = TOP + TRACK + 18;
-  // The chart can measure 0 for a moment while the chapter mounts; keep the scale the right way round.
-  const span = $derived(Math.max(width, 120));
-  const x = $derived(linear(0, LAST_DAY, PAD, span - PAD));
-  const dayW = $derived((span - 2 * PAD) / LAST_DAY);
-  // Room for a label of 11px SVG text (a little generous; bold runs wider) after a lead-in.
-  const textW = (s, bold = false) => s.length * (bold ? 6.5 : 6.1);
-  const fits = (s, space, lead = 6, bold = false) => lead + textW(s, bold) + 4 <= space;
-
-  const checkFirst = $derived(DESIGNS.find((d) => d.id === design).checkFirst);
-  const truth = (r) => (r.fraud ? 'fraudulent' : 'valid');
-  const away = (ins) => (ins.named === 0 ? 'named reviewer in' : ins.named === null ? 'named reviewer away' : `named reviewer away until day\u00a0${ins.named}`);
-  const by = (r) => (r.checkedBy === 'deputy' ? 'by the deputy' : 'by the named reviewer');
-  const outcome = (r) =>
-    r.outcome === 'paid'
-      ? `Paid on day\u00a0${r.paidAt}`
-      : r.outcome === 'held'
-        ? `Held on day\u00a0${r.foundAt}, not paid`
-        : r.outcome === 'paid-fraud'
-          ? `Paid to a fraudster on day\u00a0${r.paidAt}${r.foundAt !== null ? `; found on day\u00a0${r.foundAt}` : ''}`
-          : 'Still waiting';
-  const describe = (r) => {
-    const checked = r.reviewStart === null ? 'never checked' : `checked ${by(r)} from day ${r.reviewStart} to day ${r.reviewEnd}`;
-    if (!checkFirst) {
-      const end = r.outcome === 'paid-fraud' ? (r.foundAt === null ? 'the fraud is never found' : `the fraud is found on day ${r.foundAt}, after the money has gone`) : 'it passes';
-      return `Instruction ${r.id}, ${truth(r)}: paid on day ${r.paidAt}, before any check; ${checked}; ${end}.`;
-    }
-    const waits = r.reviewStart === null ? 'waiting throughout' : r.reviewStart > 0 ? `waits until day ${r.reviewStart}, ` : '';
-    return `Instruction ${r.id}, ${truth(r)}: ${waits}${r.reviewStart === null ? '' : `${checked}; `}${outcome(r).toLowerCase()}.`;
-  };
-  // The reviewer's name sits under the check, kept inside the chart at the edges.
-  const whoAt = (r) => {
-    const s = by(r);
-    const cx = (x(r.reviewStart) + x(r.reviewEnd)) / 2;
-    const half = textW(s) / 2;
-    if (cx - half < 0) return { s, tx: Math.max(0, x(r.reviewStart) - 6), anchor: 'start' };
-    if (cx + half > width) return { s, tx: Math.min(width, x(r.reviewEnd) + 6), anchor: 'end' };
-    return { s, tx: cx, anchor: 'middle' };
-  };
-  const waitEnd = (r) => (r.reviewStart === null ? LAST_DAY : Math.min(r.reviewStart, LAST_DAY));
-  // Paying first, any wait for the check comes after the payment.
-  const waitFrom = (r) => (!checkFirst && r.paidAt !== null ? r.paidAt : 0);
-  const waitLabel = (r) => {
-    const space = (waitEnd(r) - waitFrom(r)) * dayW;
-    const long = r.checkedBy === 'named' ? 'waiting for the named reviewer' : 'waiting';
-    return fits(long, space) ? long : fits('waiting', space) ? 'waiting' : '';
-  };
-  const bandLabel = (long, short, from, lead) => {
-    const space = (LAST_DAY - from) * dayW;
-    return fits(long, space, lead, true) ? long : fits(short, space, lead, true) ? short : '';
-  };
-
-  const validSub = $derived.by(() => {
-    const valid = run.rows.filter((r) => !r.fraud);
-    const days = [...new Set(valid.map((r) => r.paidAt))];
-    if (days.length === 1) return days[0] === null ? 'not paid yet' : `${valid.map((r) => r.id).join(' and ')} on day ${days[0]}`;
-    return valid.map((r) => `${r.id} on day ${r.paidAt ?? '–'}`).join(', ');
+    found: T ? `Check every payment above $1m: that ${T.half} of the payments carries ${T.money} of the money.` : 'Check every payment above $1m.',
   });
-  const fraudRow = $derived(run.rows.find((r) => r.fraud));
-  const fraudSub = $derived(
-    fraudRow.outcome === 'held'
-      ? `${fraudRow.id} was held on day ${fraudRow.foundAt}`
-      : `${fraudRow.id} was found on day ${fraudRow.foundAt}, after the money had gone`,
+  const showAnswer = () => (stop = ANSWER);
+
+  // ---- The chart: one dot per simulated year, losses on a log scale, years without loss on a row of their own ----
+  const H = 300;
+  const m = { top: 22, right: 10, left: 46 };
+  const BOTTOM = H - 64; // foot of the log scale
+  const ZERO = H - 42; // the row of years that lose nothing
+  const LO = 0.035;
+  const HI = 120;
+  const span = $derived(Math.max(width, 200));
+  const x = $derived(linear(1, YEARS, m.left + 4, span - m.right - 4));
+  const y = log10(LO, HI, BOTTOM, m.top);
+  const yOf = (v) => (v === 0 ? ZERO : y(v));
+  const narrow = $derived(span < 420);
+  const R = $derived(narrow ? 1.6 : 2.1);
+  const yTicks = [0.1, 1, 10, 100];
+  const xTicks = $derived(narrow ? [1, 500, 1000] : [1, 250, 500, 750, 1000]);
+
+  const dots = $derived(run ? run.losses.map((l, t) => ({ cx: x(t + 1), cy: yOf(l), over: l > LIMIT })) : []);
+
+  // Direct labels, each placed where it collides with nothing placed before it.
+  const CHAR = 6.6; // a little wider than a 12px bold character
+  const box = (text, tx, ty, anchor) => {
+    const w = text.length * CHAR;
+    const x0 = anchor === 'end' ? tx - w : tx;
+    return { text, x: tx, y: ty, anchor, x0, x1: x0 + w, y0: ty - 11, y1: ty + 3 };
+  };
+  const clash = (a, b) => a.x0 < b.x1 + 4 && b.x0 < a.x1 + 4 && a.y0 < b.y1 + 2 && b.y0 < a.y1 + 2;
+  const labels = $derived.by(() => {
+    if (!run) return [];
+    const left = m.left + 4;
+    const right = span - m.right - 2;
+    const placed = [];
+    const fits = (b) => b.x0 >= m.left && b.x1 <= span - m.right + 2 && b.y0 >= 0 && placed.every((p) => !clash(p, b));
+    const place = (cls, options) => placed.push({ ...(options.find(fits) ?? options[0]), cls });
+    const nothing = run.lossless === YEARS ? 'No year loses anything' : `${run.lossless.toLocaleString('en-US')} years lose nothing`;
+    if (run.lossless) place('zero', [box(nothing, right, ZERO - 6, 'end')]);
+    if (run.worst > 0) {
+      const cx = x(run.worstYear + 1);
+      const cy = yOf(run.worst);
+      const s = `Worst year ${money(run.worst)}`;
+      place('worst', [box(s, cx + 9, cy + 4, 'start'), box(s, cx - 9, cy + 4, 'end'), box(s, cx + 9, cy - 8, 'start'), box(s, cx - 9, cy - 8, 'end'), box(s, cx + 9, cy + 16, 'start'), box(s, cx - 9, cy + 16, 'end')]);
+    }
+    // The limit and the average label away from each other: one above its line, the other below.
+    const below = run.mean > LIMIT;
+    const near = (v, under) => (under ? y(v) + 15 : y(v) - 5);
+    const sides = (s, v, under) => [box(s, right, near(v, under), 'end'), box(s, left, near(v, under), 'start'), box(s, right, near(v, !under), 'end'), box(s, left, near(v, !under), 'start')];
+    place('limit', sides(`Board limit ${money(LIMIT)}`, LIMIT, below));
+    if (run.mean > 0) place('avg', sides(`Average year ${money(run.mean)}`, run.mean, !below));
+    return placed;
+  });
+
+  const describe = $derived(
+    run
+      ? `${YEARS.toLocaleString('en-US')} simulated years, checking ${stop === 0 ? 'every payment' : stop === STOPS.length - 1 ? 'no payment' : `payments above ${STOPS[stop].label}`}. ` +
+          (run.worst === 0
+            ? 'No year loses anything to fraud.'
+            : `The worst year loses ${money(run.worst)}, the average year ${money(run.mean)}; ${run.over === 0 ? 'no year goes over' : `${run.over} years go over`} the board’s limit of ${money(LIMIT)}.`)
+      : 'Simulating a thousand years of payments.',
   );
 </script>
 
 <Chapter
-  n={12}
+  n={11}
   kicker="Gates"
   title="The gate worth keeping"
-  lede="Some checks earn their wait, because the step after them cannot be undone."
+  lede="Some checks earn their wait, because the payment after them cannot be undone. The question is which payments."
   puzzle="gate"
 >
   {#snippet setup()}
     <p>
-      Most of this story has counted conditions as costs: links that must all hold, and waits for someone to be free.
-      Some are worth keeping. The person in the loop of the previous chapter checked work that could be undone; a bad
-      draft was dropped and little was lost. Some steps cannot be undone, and money sent to the wrong account is the
-      plainest of them.
+      A development lender pays out money every working day. About 600 times a year, a payment comes with a request to
+      send it to a new bank account. Almost all are genuine: a client has changed banks. About one in 200 comes from a
+      fraudster with a copied letterhead, and money paid to a fraudster rarely comes back.
     </p>
     <p>
-      Before a disbursement, a payment instruction sometimes asks for the money to go to a different bank account.
-      Most such requests are genuine: a client has changed banks. A few come from fraudsters who have copied a real
-      letterhead and timed their letter to the payment. Once that money has landed, it is usually gone.
+      A call to the client, on a number already on file, catches every fraud. It is one more link between request and
+      payment: one of three qualified reviewers must make it, which takes a day, and the bank promises to pay within
+      three working days.
     </p>
     <p>
-      So every change of account is checked before the money moves, by the reviewer named on the loan. This week three
-      such instructions arrive at once, and the named reviewer on two of them is away.
+      The board has set one limit: no year may lose more than $5m to fraud, however good the years around it. Today
+      every payment is checked.
     </p>
   {/snippet}
 
   {#snippet figure()}
-    <Instrument
-      title="Three payment instructions, day by day"
-      sub="Each row is one instruction to change the account the money goes to, from the day it arrives (day 0)."
-      {rules}
-    >
-      <Puzzle id="gate" {...puzzle} predict onshow={showAnswer} />
-      <div class="tkc-controls tkc-controls--wide" class:tkc-wait={!live} inert={live ? undefined : true}>
-        <Segmented name="g-design" label="The design" bind:value={design} options={DESIGNS.map((d) => ({ value: d.id, label: d.label }))} />
+    <Instrument title="A thousand years of payments" sub="Each dot is one simulated year and what fraud took from it; each gridline is ten times the one below." {rules}>
+      <Puzzle id="gate" {...puzzle} onshow={showAnswer} />
+      <div class="tkc-controls">
+        <Slider id="g-check" label="Check payments above" bind:value={stop} min={0} max={STOPS.length - 1} format={(i) => STOPS[i].label} />
       </div>
 
-      <div class="tkc-chart timeline" bind:clientWidth={width}>
-        {#each run.rows as r, k (r.id)}
-          {@const ins = INSTRUCTIONS[k]}
-          <section class="item" aria-label="Instruction {r.id}">
-            <div class="item-head">
-              <p class="item-name"><strong>{r.id}</strong> · {truth(r)} · <span>{away(ins)}</span></p>
-              <p class="item-out">
-                <span class="tkc-swatch mark {r.outcome}" aria-hidden="true"></span>{outcome(r)}
-              </p>
-            </div>
-            <svg {width} height={H} role="img" aria-label={describe(r)}>
-              {#each Array(LAST_DAY + 1) as _, d (d)}
-                <line class="tkc-grid" x1={x(d)} x2={x(d)} y1={TOP} y2={TOP + TRACK} />
-              {/each}
-              {#if waitEnd(r) > waitFrom(r)}
-                {@const label = waitLabel(r)}
-                <rect class="wait" x={x(waitFrom(r)) + 0.5} y={TOP + 0.5} width={x(waitEnd(r)) - x(waitFrom(r)) - 1} height={TRACK - 1} rx="4" />
-                {#if label}<text class="in-text" x={x(waitFrom(r)) + 6} y={MID + 4}>{label}</text>{/if}
-              {/if}
-              {#if r.outcome === 'held'}
-                {@const label = bandLabel('held, not paid', 'held', r.reviewEnd, 9)}
-                <rect class="held-band" x={x(r.reviewEnd)} y={TOP} width={x(LAST_DAY) - x(r.reviewEnd)} height={TRACK} rx="4" />
-                {#if label}<text class="in-text held-text" x={x(r.reviewEnd) + 9} y={MID + 4}>{label}</text>{/if}
-              {/if}
-              {#if r.outcome === 'paid-fraud' && r.foundAt !== null}
-                {@const label = bandLabel('fraud found; money gone', 'money gone', r.foundAt, 6)}
-                <rect class="gone-band" x={x(r.foundAt)} y={TOP} width={x(LAST_DAY) - x(r.foundAt)} height={TRACK} rx="4" />
-                {#if label}<text class="in-text gone-text" x={x(r.foundAt) + 6} y={MID + 4}>{label}</text>{/if}
-              {/if}
-              {#if r.reviewStart !== null && r.reviewEnd > r.reviewStart}
-                {@const who = whoAt(r)}
-                <rect class="check" x={x(r.reviewStart)} y={TOP} width={x(r.reviewEnd) - x(r.reviewStart)} height={TRACK} rx="4" />
-                <text class="who" x={who.tx} y={TOP + TRACK + 13} text-anchor={who.anchor}>{who.s}</text>
-              {/if}
-              {#if r.outcome === 'held'}
-                <rect class="held-mark" x={x(r.reviewEnd) - 2} y={TOP - 2} width="4" height={TRACK + 4} rx="1.5" />
-              {/if}
-              {#if r.paidAt !== null}
-                <circle class="dot {r.outcome}" cx={x(r.paidAt)} cy={MID} r="7" />
-              {/if}
-            </svg>
-          </section>
-        {/each}
-        <svg {width} height="34" role="img" aria-label="Days 0 to {LAST_DAY} after the instructions arrive.">
-          {#each Array(LAST_DAY + 1) as _, d (d)}
-            <text class="tkc-axis-label" x={x(d)} y="12" text-anchor="middle">{d}</text>
+      <div class="tkc-chart" bind:clientWidth={width}>
+        <svg width={span} height={H} role="img" aria-label={describe}>
+          {#each yTicks as t (t)}
+            <line class="tkc-grid" x1={m.left} x2={span - m.right} y1={y(t)} y2={y(t)} />
+            <text class="tkc-axis-label" x={m.left - 6} y={y(t) + 4} text-anchor="end">${t}m</text>
           {/each}
-          <text class="tkc-axis-label" x="0" y="29">days after the instructions arrive</text>
+          <line class="tkc-base" x1={m.left} x2={span - m.right} y1={BOTTOM} y2={BOTTOM} />
+          <line class="tkc-grid" x1={m.left} x2={span - m.right} y1={ZERO} y2={ZERO} />
+          <text class="tkc-axis-label" x={m.left - 6} y={ZERO + 4} text-anchor="end">$0</text>
+          {#each xTicks as t (t)}
+            <text class="tkc-axis-label" x={x(t)} y={H - 22} text-anchor={t === 1 ? 'start' : t === YEARS ? 'end' : 'middle'}>{t.toLocaleString('en-US')}</text>
+          {/each}
+          <text class="tkc-axis-title" x={m.left + (span - m.left - m.right) / 2} y={H - 4} text-anchor="middle">Simulated year</text>
+
+          {#if run}
+            {#each dots as d, t (t)}
+              {#if !d.over}<circle class="yr" cx={d.cx} cy={d.cy} r={R} />{/if}
+            {/each}
+            {#each dots as d, t (t)}
+              {#if d.over}<circle class="yr over" cx={d.cx} cy={d.cy} r={R} />{/if}
+            {/each}
+            {#if run.mean > 0}
+              <line class="avg" x1={m.left} x2={span - m.right} y1={y(run.mean)} y2={y(run.mean)} />
+            {/if}
+            <line class="limit" x1={m.left} x2={span - m.right} y1={y(LIMIT)} y2={y(LIMIT)} />
+            {#if run.worst > 0}
+              <circle class="ring" cx={x(run.worstYear + 1)} cy={yOf(run.worst)} r="5.5" />
+            {/if}
+            {#each labels as l (l.cls)}
+              <text class="tkc-label tkc-halo lab-{l.cls}" x={l.x} y={l.y} text-anchor={l.anchor}>{l.text}</text>
+            {/each}
+          {:else}
+            <line class="limit" x1={m.left} x2={span - m.right} y1={y(LIMIT)} y2={y(LIMIT)} />
+            <text class="tkc-label-2" x={m.left + (span - m.left - m.right) / 2} y={y(0.4)} text-anchor="middle">Simulating a thousand years…</text>
+          {/if}
         </svg>
         <div class="tkc-legend">
-          <span><span class="tkc-swatch sw-wait"></span>Waiting</span>
-          <span><span class="tkc-swatch sw-check"></span>Check, one day</span>
-          <span><span class="tkc-swatch mark paid"></span>Paid</span>
-          <span><span class="tkc-swatch mark held"></span>Held, not paid</span>
-          <span><span class="tkc-swatch mark paid-fraud"></span>Paid to a fraudster</span>
+          <span><span class="tkc-swatch dot"></span>A year within the limit</span>
+          <span><span class="tkc-swatch dot over"></span>A year over the limit</span>
         </div>
       </div>
 
       <div class="tkc-stats" use:announce>
-        <Stat label="Average days until a valid payment is made" value={dayCount(run.avgValidDays)} sub={validSub} swatch="var(--tkc-options)" />
-        <Stat label="Fraudulent payments made" value="{run.fraudPaid} of {run.fraudTotal}" sub={fraudSub} swatch="var(--tkc-conditions)" />
+        <Stat
+          label="Worst year in 1,000"
+          value={run ? money(run.worst) : '…'}
+          sub={run ? (run.worst === 0 ? 'no year loses anything' : `average ${money(run.mean)}, typical year ${money(run.median)}`) : 'simulating'}
+          swatch={run && run.worst > LIMIT ? 'var(--tkc-conditions)' : ''}
+        />
+        <Stat label="Payments late" value={run ? share(run.late) : '…'} sub={run ? `${whole(run.checkedShare)} of payments checked` : 'simulating'} />
       </div>
 
       {#snippet model()}
-        <p>Each instruction is checked by the first qualified reviewer who is in. With the named reviewer only, A is checked on day 0, and B and C on day {awayUntil}, when their reviewer is back. With any qualified reviewer, the deputy takes B and C on day 0 and the named reviewer keeps A. The deputy works from the same evidence, with the same authority; only who may do the check changes.</p>
-        <p>A check takes {words[REVIEW_DAYS]} day and always gets the answer right. A valid instruction is paid the moment it passes; the fraudulent one is flagged and held. Paying first sends all three on day 0 and checks them afterwards, by any qualified reviewer, so the fraud is found on day {foundLate}, after the money has gone. The scenario stipulates that money paid to a fraudster cannot be recovered.</p>
-        <p>Delay and loss are kept apart: the model puts no price on a day’s wait against a lost payment. The average counts the valid instructions only, from the day they arrive.</p>
+        <p>
+          Each simulated year has {PARAMS.days} working days. Requests arrive at random, {PARAMS.perDay} a working day on
+          average. Amounts follow a lognormal distribution with a median of $1m and a spread (σ) of {PARAMS.sigma}, kept
+          between $50,000 and $80m. Each request is a fraud with a chance of one in {PARAMS.fraudEvery}; a fraud paid
+          unchecked is lost in full.
+        </p>
+        <p>
+          Requests at or above the amount set wait in one line, first come first served, for any of the three reviewers
+          who is in; absences come in spells of about {WORDS[PARAMS.spell]} days. A check done on one day pays the next,
+          and a payment is late after {WORDS[PARAMS.promise]} working days. Every setting meets the same {YEARS.toLocaleString('en-US')}
+          independent years.{#if T}
+            With each request waiting for its own named reviewer, the same $1m gate leaves {T.named} of payments late.{/if}
+        </p>
       {/snippet}
     </Instrument>
   {/snippet}
 
   {#snippet after()}
-    <p>
-      The check stays where it was, in front of the money, and nothing about it is weaker: the same evidence, the same
-      authority, the same day’s work. What changed is who may do it. Instruction B waited {words[waitedB]} days for one
-      person to come back, for a check that takes {words[REVIEW_DAYS]}.
-    </p>
-    <p>
-      In the language of this story, the gate is still an <span class="tkc-and">AND</span>: no change of account is paid
-      unchecked. Inside it there is now an <span class="tkc-or">OR</span>: any qualified reviewer may open it. These are
-      the stand-ins of chapter 1, now in front of a step that cannot be undone. A gate like this earns its place. It
-      does work that nothing else in the chain can do, and its cost was never the check, only the queue for one name.
-    </p>
-    <p>
-      Paying first takes the wait away and keeps the check, which still finds the fraud on day {foundLate}. By then the
-      check has become an inquest. It can say what went wrong; it cannot stop it.
-    </p>
-    <h3>Where a gate earns its wait</h3>
-    <p>
-      The line runs between what can be undone and what cannot. Where a mistake is small, visible and easy to put right, the
-      work can move on unchecked and be put right later, as autopilot can in chapter 11. Where it cannot, the check has to come first, and the
-      wait is worth paying, as long as it is the check’s own wait and not one person’s diary. Chapter 15 asks the
-      same question of a whole loan: which conditions must be met before the money moves, and which can follow it.
-    </p>
-    <p>
-      Real checks are less clean. They miss some frauds and hold up some valid payments while a client is called back;
-      the model assumes this one is always right. Neither changes what the deputy does to the wait.
-    </p>
+    {#if T}
+      <p>
+        A check costs a reviewer the same day whatever the amount, but what it saves grows with the amount. So the gate
+        earns its wait where a loss would be large and could not be undone. Below $1m, payments go straight through, and
+        the frauds among them cost the worst of the 1,000 years {T.worstA}. Above it, every fraud is stopped, and the
+        reviewers are busy {T.busyA} of their days.
+      </p>
+      <p>
+        The trap is the average. Checking only above $10m, the average year loses {T.mean10}, inside the limit, yet the
+        worst year loses {T.worst10} and {T.over10} years in 1,000 break it. Like the player in the coin game, the bank
+        does not live the average year. It lives one year after another, and a year that breaks the limit is not mended
+        by the calm years around it.
+      </p>
+      <p>
+        Checking everything fails the other way. Every payment waits for a reviewer, the three are {T.busyAll} busy, and at
+        that load the line grows the way full calendars make it grow: {T.lateAll} of payments are late. A gate everywhere
+        is a queue everywhere.
+      </p>
+      <p>
+        The gate itself is an <span class="tkc-and">AND</span>: no large payment goes out unchecked. Inside it sits an
+        <span class="tkc-or">OR</span>, taken as given here: any of three qualified reviewers may make the call. If each
+        payment waited for its own named reviewer instead, the same gate would make payments late again.
+      </p>
+      <p>
+        A lizard caught by the tail can shed it and grow another, but it guards its head. A chain that bends works the
+        same way: it lets small losses through, where they can be survived, and holds firm where a single loss would be
+        one too many.
+      </p>
+    {:else}
+      <p class="tkc-small">Simulating a thousand years…</p>
+    {/if}
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Which of our gates stand in front of something that cannot be undone, and which merely wait for one person?">
+    <BankNote ask="Which of our checks are sized to what we cannot afford to lose, and which make every amount wait alike?">
       <p>
-        A payment, a signature on a binding contract and data sent outside the bank cannot be called back, and a check
-        in front of them earns its wait. A sign-off in front of a step that can be corrected afterwards, or one that only a
-        single named person may give, is a different kind of gate.
+        Bank capital rules for operational risk long asked for enough to survive the worst year in a thousand, not the
+        average year. Payment controls often grow with the amount, with more checks, and more senior ones, for larger
+        sums. Dual control, the four-eyes rule, asks for two qualified people, not two named ones.
       </p>
     </BankNote>
   {/snippet}
 </Chapter>
 
 <style>
-  .timeline {
-    display: grid;
-    gap: 10px;
-  }
-  .item {
-    display: grid;
-    gap: 2px;
-    min-width: 0;
-  }
-  .item-head {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 0 14px;
-    font-size: 0.8125rem;
-    line-height: 1.4;
-  }
-  .item-name {
-    margin: 0;
-    color: var(--tkc-ink-2);
-  }
-  .item-name strong {
-    color: var(--tkc-ink);
-    font-size: 0.9375rem;
-  }
-  .item-name span {
-    color: var(--tkc-muted);
-  }
-  .item-out {
-    margin: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    color: var(--tkc-ink);
-  }
-  .item svg,
-  .timeline > svg {
-    display: block;
-  }
-  /* Outcome keys, in the row headings and the legend. */
-  .mark.paid,
-  .mark.paid-fraud {
-    border-radius: 50%;
-  }
-  .mark.paid {
-    background: var(--tkc-options);
-  }
-  .mark.paid-fraud {
-    background: var(--tkc-conditions);
-  }
-  .mark.held {
-    width: 4px;
-    border-radius: 1.5px;
-    background: var(--tkc-ink);
-  }
-  .mark.waiting {
-    background: var(--tkc-surface);
-    border: 1px dashed var(--tkc-muted);
-  }
-  .sw-wait {
-    background: var(--tkc-surface);
-    border: 1px dashed var(--tkc-muted);
-  }
-  .sw-check {
-    background: var(--tkc-ink-2);
-  }
-  /* Chart marks */
-  .wait {
-    fill: var(--tkc-surface);
-    stroke: var(--tkc-muted);
-    stroke-width: 1;
-    stroke-dasharray: 3 2;
-  }
-  .check {
+  .yr {
     fill: var(--tkc-ink-2);
+    opacity: 0.4;
   }
-  .held-band {
-    fill: var(--tkc-sunken);
-  }
-  .held-mark {
-    fill: var(--tkc-ink);
-  }
-  .gone-band {
-    fill: var(--tkc-conditions-wash);
-    stroke: var(--tkc-conditions);
-    stroke-width: 1;
-  }
-  .dot {
-    stroke: var(--tkc-surface);
-    stroke-width: 2;
-  }
-  .dot.paid {
-    fill: var(--tkc-options);
-  }
-  .dot.paid-fraud {
+  .yr.over {
     fill: var(--tkc-conditions);
+    opacity: 0.85;
   }
-  .in-text {
-    font-size: 11px;
-    fill: var(--tkc-ink-2);
+  .limit {
+    stroke: var(--tkc-conditions);
+    stroke-width: 1.5;
   }
-  .held-text {
-    font-weight: 600;
-    fill: var(--tkc-ink);
+  .avg {
+    stroke: var(--tkc-ink);
+    stroke-width: 1.5;
+    stroke-dasharray: 6 4;
   }
-  .gone-text {
-    font-weight: 600;
+  .ring {
+    fill: none;
+    stroke: var(--tkc-ink);
+    stroke-width: 1.5;
+  }
+  .lab-limit {
     fill: var(--tkc-conditions-ink);
   }
-  .who {
-    font-size: 11px;
-    fill: var(--tkc-muted);
+  .lab-zero {
+    fill: var(--tkc-ink-2);
+    font-weight: 400;
+  }
+  .dot {
+    border-radius: 50%;
+    background: var(--tkc-ink-2);
+    opacity: 0.55;
+  }
+  .dot.over {
+    background: var(--tkc-conditions);
+    opacity: 1;
   }
 </style>
