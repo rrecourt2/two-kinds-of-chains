@@ -1,120 +1,173 @@
-// The fast track (chapter 6): a banking version of Braess's paradox (Braess, 1968).
-// Every deal needs two independent opinions, a committee's and a second one, in one of
-// two equally good orders (the old routes):
-//   regional committee, then an outside adviser;
-//   the adviser, then the head-office committee.
-// The fast track lets the head-office committee's sign-off count as the second opinion:
-// a deal cleared by the regional committee may go straight to the head-office committee.
-// A committee takes a working day for every two deals on its agenda; the adviser always
-// takes 20 working days (each deal has its own adviser). Each deal team takes the route
-// that is quickest for its own deal, so the deals settle where no team can gain by
-// switching alone (a Nash, or Wardrop, equilibrium).
+// The fast track: one investment committee with an urgent lane.
+// The committee meets every Monday and hears up to five papers. About four deals are ready a
+// week (a Poisson count), each at a random moment in the week, and a deal ready during a week is
+// first heard the next Monday. Urgent papers go to the top of the agenda, in the order they became
+// ready; ordinary papers follow in the same order. An urgent paper reaches the committee before
+// anyone has read it, so at its first hearing it is deferred a week with a chance of one in five:
+// it takes its place that Monday and comes back, at the top, to be decided. Waits are counted in
+// working days, from the day a deal is ready to the Monday it is decided.
+//
+// Common random numbers: every deal carries its own ready time, its rank (it is marked urgent when
+// its rank is below the share marked) and its deferral draw, so every position of the chapter's
+// slider sees the same deals, and the positions differ only in which deals carry the mark.
 
-export const REVIEW_DAYS = 20;
-export const DAYS_PER_DEAL = 0.5;
-/** Deals a quarter in the chapter, one deal team each. */
-export const DEALS = 40;
+import { makeRng, poisson } from './rng.js';
 
-export const ROUTES = [
-  { id: 'route1', name: 'Regional committee, then adviser', short: 'Regional, then adviser', tiny: 'Committee first', stages: ['regional', 'review'] },
-  { id: 'route2', name: 'Adviser, then head-office committee', short: 'Adviser, then head office', tiny: 'Adviser first', stages: ['review', 'head'] },
-  { id: 'fast', name: 'Fast track: both committees', short: 'Fast track', tiny: 'Fast track', stages: ['regional', 'head'] },
+/** Papers the committee can hear on a Monday. */
+export const ROOM = 5;
+/** Deals ready in a typical week. */
+export const READY = 4;
+/** Chance that an urgent paper, read unprepared, is deferred a week at its first hearing. */
+export const DEFER = 0.2;
+/** Working days in a week. */
+export const DAYS = 5;
+export const SEED = 2026;
+/** Weeks left out at the start of a run, while the agenda fills to its usual level. */
+export const WARM = 52;
+/** The slider's positions: the share of deals marked urgent, 0% to 100% in tenths. */
+export const SHARES = Array.from({ length: 11 }, (_, i) => i / 10);
+/** Mondays in the figure: one quarter. */
+export const MONDAYS = 13;
+/**
+ * The quarter the figure shows (seed 2026): of the quarters in 300 years, the one whose average
+ * waits come closest to the long-run averages across all eleven slider positions (test/fasttrack.test.js).
+ */
+export const QUARTER = 166;
+
+/** The expected wait of a lone urgent paper, with no other paper marked: half a week to the next Monday, plus the chance of a deferral. */
+export const LONE_URGENT = DAYS / 2 + DAYS * DEFER;
+
+/** Deals ready in each of `weeks` weeks: per deal its moment in the week (0–5 days), its rank and its deferral draw. */
+export function deals(weeks, seed = SEED, ready = READY) {
+  const rng = makeRng(seed);
+  const out = [];
+  for (let w = 0; w < weeks; w++) {
+    const k = poisson(rng, ready);
+    const week = [];
+    for (let i = 0; i < k; i++) week.push({ day: DAYS * rng(), rank: rng(), draw: rng() });
+    week.sort((a, b) => a.day - b.day);
+    out.push(week);
+  }
+  return out;
+}
+
+/**
+ * Runs the committee through the deals `D`. Returns the average waits (urgent, ordinary, all
+ * deals), the share decided at their first Monday, the places used and the deferrals per Monday,
+ * and the papers still waiting after a meeting, all counted after the warm-up. `keep` = [from, to)
+ * also returns those Mondays in detail: the papers in each place and the papers still waiting.
+ */
+export function simulate(D, { share = 0, defer = DEFER, room = ROOM, warm = WARM, keep = null } = {}) {
+  let urgent = [];
+  let ordinary = [];
+  const kept = [];
+  let sumU = 0, nU = 0, sumO = 0, nO = 0, first = 0, used = 0, deferred = 0, waiting = 0;
+  for (let w = 0; w < D.length; w++) {
+    const t = DAYS * w;
+    const counted = w >= warm;
+    const record = keep && w >= keep[0] && w < keep[1];
+    const places = record ? [] : null;
+    const waits = record ? [] : null;
+    let left = room;
+    const nextU = [];
+    for (const d of urgent) {
+      if (left === 0) {
+        nextU.push(d);
+        continue;
+      }
+      left--;
+      if (!d.deferred && d.draw < defer) {
+        d.deferred = true;
+        nextU.push(d);
+        if (counted) deferred++;
+        if (record) places.push('deferred');
+        continue;
+      }
+      const wait = t - d.ready;
+      if (counted) (sumU += wait), nU++, wait < DAYS && first++;
+      if (record) places.push('urgent'), waits.push(wait);
+    }
+    const nextO = [];
+    for (const d of ordinary) {
+      if (left === 0) {
+        nextO.push(d);
+        continue;
+      }
+      left--;
+      const wait = t - d.ready;
+      if (counted) (sumO += wait), nO++, wait < DAYS && first++;
+      if (record) places.push('ordinary'), waits.push(wait);
+    }
+    urgent = nextU;
+    ordinary = nextO;
+    if (counted) (used += room - left), (waiting += urgent.length + ordinary.length);
+    if (record) kept.push({ week: w, places, waits, waiting: { urgent: urgent.length, ordinary: ordinary.length } });
+    // Deals ready during the week, heard from the next Monday on.
+    for (const x of D[w]) (x.rank < share ? urgent : ordinary).push({ ready: t + x.day, draw: x.draw, deferred: false });
+  }
+  const weeks = Math.max(1, D.length - warm);
+  return {
+    share,
+    urgent: nU ? sumU / nU : null,
+    ordinary: nO ? sumO / nO : null,
+    average: nU + nO ? (sumU + sumO) / (nU + nO) : null,
+    firstMonday: nU + nO ? first / (nU + nO) : null,
+    placesUsed: used / weeks / room,
+    deferredPerWeek: deferred / weeks,
+    waitingAfter: waiting / weeks,
+    mondays: kept,
+  };
+}
+
+/** Days a team saves by marking its deal urgent, at this share: the ordinary wait less the urgent one. */
+export function saving(row) {
+  if (row.ordinary == null) return null;
+  return row.ordinary - (row.urgent ?? LONE_URGENT);
+}
+
+/** The long run behind the tiles and the text: 4,000 years of Mondays, at each of the slider's positions. */
+export function longRun({ seed = SEED, years = 4000 } = {}) {
+  const D = deals(52 * years, seed);
+  return SHARES.map((share) => {
+    const r = simulate(D, { share });
+    return { share, urgent: r.urgent, ordinary: r.ordinary, average: r.average, firstMonday: r.firstMonday, placesUsed: r.placesUsed, deferredPerWeek: r.deferredPerWeek };
+  });
+}
+
+// longRun() for seed 2026, rounded to three decimals: the urgent and ordinary waits and the
+// average in working days, the share decided at their first Monday, the share of places used,
+// and the deferrals per Monday. The test recomputes it.
+export const LONG_RUN = [
+  { share: 0, urgent: null, ordinary: 3.947, average: 3.947, firstMonday: 0.745, placesUsed: 0.801, deferredPerWeek: 0 },
+  { share: 0.1, urgent: 3.494, ordinary: 4.433, average: 4.339, firstMonday: 0.7, placesUsed: 0.817, deferredPerWeek: 0.08 },
+  { share: 0.2, urgent: 3.494, ordinary: 5.123, average: 4.796, firstMonday: 0.661, placesUsed: 0.832, deferredPerWeek: 0.159 },
+  { share: 0.3, urgent: 3.512, ordinary: 6.17, average: 5.372, firstMonday: 0.629, placesUsed: 0.848, deferredPerWeek: 0.239 },
+  { share: 0.4, urgent: 3.562, ordinary: 7.762, average: 6.081, firstMonday: 0.607, placesUsed: 0.864, deferredPerWeek: 0.319 },
+  { share: 0.5, urgent: 3.664, ordinary: 10.272, average: 6.96, firstMonday: 0.594, placesUsed: 0.88, deferredPerWeek: 0.399 },
+  { share: 0.6, urgent: 3.856, ordinary: 14.456, average: 8.085, firstMonday: 0.584, placesUsed: 0.896, deferredPerWeek: 0.479 },
+  { share: 0.7, urgent: 4.225, ordinary: 22.076, average: 9.569, firstMonday: 0.567, placesUsed: 0.912, deferredPerWeek: 0.559 },
+  { share: 0.8, urgent: 4.984, ordinary: 38.445, average: 11.671, firstMonday: 0.523, placesUsed: 0.928, deferredPerWeek: 0.638 },
+  { share: 0.9, urgent: 6.945, ordinary: 85.229, average: 14.776, firstMonday: 0.415, placesUsed: 0.944, deferredPerWeek: 0.718 },
+  { share: 1, urgent: 18.766, ordinary: null, average: 18.766, firstMonday: 0.169, placesUsed: 0.96, deferredPerWeek: 0.798 },
 ];
 
-/** The agenda at which a committee takes as long as the outside adviser (40 deals). */
-export const FULL = REVIEW_DAYS / DAYS_PER_DEAL;
-
-/** Days a committee takes with this many deals a quarter on its agenda. */
-export const committeeDays = (agenda) => agenda * DAYS_PER_DEAL;
-
 /**
- * Agendas and times for a given split of deals over the routes. A route's time is
- * the time a deal on it takes, or would take if it switched to it.
+ * The figure's quarter at one share: thirteen Mondays, each with the papers in its five places
+ * ('urgent', 'ordinary' or 'deferred') and the papers still waiting after the meeting, plus the
+ * quarter's own average wait. Pass `D` to reuse the deals across shares.
  */
-export function routeTimes({ route1 = 0, route2 = 0, fast = 0 }) {
-  const regional = route1 + fast;
-  const head = route2 + fast;
-  const stage = { regional: committeeDays(regional), head: committeeDays(head), review: REVIEW_DAYS };
-  const times = {
-    route1: stage.regional + REVIEW_DAYS,
-    route2: REVIEW_DAYS + stage.head,
-    fast: stage.regional + stage.head,
-  };
-  const deals = route1 + route2 + fast;
-  const average = deals > 0 ? (route1 * times.route1 + route2 * times.route2 + fast * times.fast) / deals : 0;
-  return { agenda: { regional, head }, stage, times, average };
+export function quarter(share, { D = deals(MONDAYS * (QUARTER + 1)), q = QUARTER } = {}) {
+  const from = MONDAYS * q;
+  const r = simulate(D.length > from + MONDAYS ? D.slice(0, from + MONDAYS) : D, { share, keep: [from, from + MONDAYS] });
+  const waits = r.mondays.flatMap((m) => m.waits);
+  return { share, mondays: r.mondays, average: waits.reduce((a, b) => a + b, 0) / waits.length, decided: waits.length };
 }
 
-/**
- * Where the deals settle when each team takes the quickest route for its own deal.
- * Returns the split per route, the committees' agendas, each stage's days, each
- * route's time (also for routes nobody uses), and the time every deal takes.
- */
-export function equilibrium({ deals, fastTrack }) {
-  const n = Math.max(0, deals);
-  let split;
-  if (!fastTrack) {
-    split = { route1: n / 2, route2: n / 2, fast: 0 };
-  } else if (n <= FULL) {
-    // Few deals: two committees still beat a committee and an adviser, so everyone takes the fast track.
-    split = { route1: 0, route2: 0, fast: n };
-  } else if (n <= 2 * FULL) {
-    // More deals: the fast track fills until each committee takes as long as the adviser.
-    split = { route1: n - FULL, route2: n - FULL, fast: 2 * FULL - n };
-  } else {
-    // So many deals that two committees are slower than a committee and an adviser.
-    split = { route1: n / 2, route2: n / 2, fast: 0 };
-  }
-  const r = routeTimes(split);
-  const used = ROUTES.filter((route) => split[route.id] > 0).map((route) => r.times[route.id]);
-  // With no deals at all, the time a first deal would take on the quickest open route.
-  const open = ROUTES.filter((route) => fastTrack || route.id !== 'fast').map((route) => r.times[route.id]);
-  const time = used.length ? Math.max(...used) : Math.min(...open);
-  return { deals: n, fastTrack: !!fastTrack, split, ...r, time };
-}
-
-/**
- * The fast track filling up: `onFast` of the deal teams have switched to it and the rest
- * split evenly between the two old routes, which then take the same time. With k teams on
- * the fast track (40 deals) each committee has 20 + k/2 deals, the fast track takes
- * 20 + k/2 days and the old routes 30 + k/4, so the fast track is quicker until k = 40,
- * where both take 40 days. `saving` is the gap a team sees when it weighs a switch, with
- * the times as they stand; the switching deal itself adds half a day to the committee it
- * joins, which `switchGain` counts.
- */
-export function uptake(onFast, deals = DEALS) {
-  const n = Math.max(0, deals);
-  const k = Math.min(n, Math.max(0, onFast));
-  const split = { route1: (n - k) / 2, route2: (n - k) / 2, fast: k };
-  const r = routeTimes(split);
-  return { deals: n, onFast: k, split, ...r, fastTime: r.times.fast, oldTime: r.times.route1, saving: r.times.route1 - r.times.fast };
-}
-
-/** Days one team saves by moving its deal from route `from` to route `to`, all else as it is. */
-export function switchGain(split, from, to) {
-  if (!(split[from] >= 1)) return null;
-  const moved = { ...split, [from]: split[from] - 1, [to]: (split[to] ?? 0) + 1 };
-  return routeTimes(split).times[from] - routeTimes(moved).times[to];
-}
-
-/** The number of deals a quarter at which opening the fast track neither helps nor hurts. */
-export function breakEven() {
-  // With everyone on the fast track a deal takes 2 x n/2 = n days; with it closed, n/4 + 20.
-  return REVIEW_DAYS / (2 * DAYS_PER_DEAL - DAYS_PER_DEAL / 2);
-}
-
-/**
- * The best split for all deals together (lowest average time), for reference and tests.
- * The chapter does not show it. Total time is convex in the split, so the symmetric
- * optimum is the global one.
- */
-export function plannerOptimum({ deals, fastTrack = true }) {
-  const n = Math.max(0, deals);
-  if (!fastTrack) return { split: { route1: n / 2, route2: n / 2, fast: 0 }, ...routeTimes({ route1: n / 2, route2: n / 2 }) };
-  // With route1 = route2 = a and fast = n - 2a, each committee has n - a deals and the
-  // total is 2d(n - a)^2 + 2aR (d days per deal, R days for the adviser), smallest at
-  // a = n - R / 2d, kept within [0, n/2].
-  const a = Math.min(n / 2, Math.max(0, n - REVIEW_DAYS / (2 * DAYS_PER_DEAL)));
-  const split = { route1: a, route2: a, fast: n - 2 * a };
-  return { split, ...routeTimes(split) };
+let views = null;
+/** The eleven slider positions, computed once: the long-run row and the figure's quarter for each. */
+export function agendaViews() {
+  if (views) return views;
+  const D = deals(MONDAYS * (QUARTER + 1));
+  views = SHARES.map((share, i) => ({ share, long: LONG_RUN[i], saving: saving(LONG_RUN[i]), ...quarter(share, { D }) }));
+  return views;
 }

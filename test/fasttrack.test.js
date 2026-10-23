@@ -1,239 +1,186 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { REVIEW_DAYS, DAYS_PER_DEAL, DEALS, ROUTES, committeeDays, routeTimes, equilibrium, breakEven, plannerOptimum, uptake, switchGain } from '../src/lib/sim/fasttrack.js';
+import { ROOM, READY, DEFER, DAYS, SEED, WARM, SHARES, MONDAYS, QUARTER, LONE_URGENT, LONG_RUN, deals, simulate, saving, longRun, quarter, agendaViews } from '../src/lib/sim/fasttrack.js';
 
-const close = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} ≈ ${b}`);
-const SLIDER = Array.from({ length: 11 }, (_, i) => 10 + 5 * i); // 10, 15, … 60 deals a quarter
+const near = (a, b, tol) => assert.ok(Math.abs(a - b) <= tol, `${a} not within ${tol} of ${b}`);
+// The chapter's format: one decimal below 20 days, whole days above.
+const one = (v) => (v < 20 ? v.toFixed(1) : String(Math.round(v)));
+const at = (share) => LONG_RUN[Math.round(share * 10)];
 
-test('fast track: a committee takes a day per two deals; a review always 20 days', () => {
-  assert.equal(REVIEW_DAYS, 20);
-  assert.equal(DAYS_PER_DEAL, 0.5);
-  assert.equal(committeeDays(40), 20);
-  assert.deepEqual(
-    ROUTES.map((r) => [r.id, r.stages.join('>')]),
-    [['route1', 'regional>review'], ['route2', 'review>head'], ['fast', 'regional>head']],
-  );
-  const r = routeTimes({ route1: 20, route2: 20, fast: 0 });
-  assert.deepEqual(r.agenda, { regional: 20, head: 20 });
-  assert.deepEqual(r.times, { route1: 30, route2: 30, fast: 20 });
+// The chapter's long run: 4,000 years of Mondays, seed 2026, every slider position on the same deals.
+const D = deals(52 * 4000);
+const LONG = SHARES.map((share) => simulate(D, { share }));
+
+test('fast track: the committee, the deals and the slider', () => {
+  assert.equal(ROOM, 5);
+  assert.equal(READY, 4);
+  assert.equal(DEFER, 0.2);
+  assert.equal(DAYS, 5);
+  assert.equal(SEED, 2026);
+  assert.equal(WARM, 52);
+  assert.deepEqual(SHARES, [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]);
+  assert.equal(MONDAYS, 13);
+  assert.equal(LONE_URGENT, 3.5);
 });
 
-test('fast track: closed, forty deals split evenly and take 30 days each', () => {
-  const e = equilibrium({ deals: 40, fastTrack: false });
-  assert.deepEqual(e.split, { route1: 20, route2: 20, fast: 0 });
-  assert.deepEqual(e.agenda, { regional: 20, head: 20 });
-  assert.equal(e.stage.regional, 10);
-  assert.equal(e.time, 30);
-  for (const n of SLIDER) close(equilibrium({ deals: n, fastTrack: false }).time, n / 4 + 20);
-});
-
-test('fast track: open, forty deals all take it and take 40 days each', () => {
-  const e = equilibrium({ deals: 40, fastTrack: true });
-  assert.deepEqual(e.split, { route1: 0, route2: 0, fast: 40 });
-  assert.deepEqual(e.agenda, { regional: 40, head: 40 });
-  assert.equal(e.stage.regional, 20);
-  assert.equal(e.stage.head, 20);
-  assert.equal(e.time, 40);
-  // The empty routes would take just as long: nobody gains by going back.
-  assert.deepEqual(e.times, { route1: 40, route2: 40, fast: 40 });
-});
-
-test('fast track: open gives n days up to 40 deals, then 40 days up to 80', () => {
-  for (let n = 1; n <= 40; n++) {
-    const e = equilibrium({ deals: n, fastTrack: true });
-    close(e.time, n);
-    assert.equal(e.split.fast, n);
+test('fast track: deals are seeded, ready in order within the week, about four a week', () => {
+  const a = deals(200);
+  assert.deepEqual(a, deals(200));
+  // A longer run starts with the same weeks, so every length of run sees the same deals.
+  assert.deepEqual(deals(1000).slice(0, 200), a);
+  assert.notDeepEqual(deals(200, 7), a);
+  let n = 0;
+  for (const week of D) {
+    n += week.length;
+    for (let i = 0; i < week.length; i++) {
+      assert.ok(week[i].day >= 0 && week[i].day < DAYS);
+      if (i) assert.ok(week[i].day >= week[i - 1].day);
+    }
   }
-  for (let n = 40; n <= 80; n++) {
-    const e = equilibrium({ deals: n, fastTrack: true });
-    close(e.time, 40);
-    assert.deepEqual(e.split, { route1: n - 40, route2: n - 40, fast: 80 - n });
-    assert.deepEqual(e.agenda, { regional: 40, head: 40 });
-  }
-  // Beyond 80 deals nobody takes the fast track and it changes nothing.
-  const many = equilibrium({ deals: 100, fastTrack: true });
-  assert.equal(many.split.fast, 0);
-  close(many.time, equilibrium({ deals: 100, fastTrack: false }).time);
+  near(n / D.length, READY, 0.02);
 });
 
-test('fast track: every deal goes somewhere and every used route takes the same time', () => {
-  for (const fastTrack of [false, true]) {
-    for (const n of SLIDER) {
-      const e = equilibrium({ deals: n, fastTrack });
-      close(e.split.route1 + e.split.route2 + e.split.fast, n);
-      for (const r of ROUTES) if (e.split[r.id] > 0) close(e.times[r.id], e.time);
-      close(e.average, e.time);
+test('fast track: the long-run table is what the model gives', () => {
+  const fresh = longRun();
+  assert.equal(fresh.length, 11);
+  for (let i = 0; i < 11; i++) {
+    const t = LONG_RUN[i];
+    const r = fresh[i];
+    assert.equal(t.share, SHARES[i]);
+    for (const k of ['urgent', 'ordinary', 'average', 'firstMonday', 'placesUsed', 'deferredPerWeek']) {
+      if (r[k] == null) assert.equal(t[k], null, `${k} at ${t.share}`);
+      else near(t[k], r[k], 0.0005 + 1e-12);
+    }
+    near(LONG[i].average, r.average, 1e-12);
+  }
+  assert.equal(LONG_RUN[0].urgent, null);
+  assert.equal(LONG_RUN[10].ordinary, null);
+});
+
+test('fast track: the agenda never holds more than five papers, and nothing is lost', () => {
+  const short = deals(52 * 50);
+  for (const share of SHARES) {
+    const r = simulate(short, { share, keep: [0, short.length] });
+    let decided = 0;
+    for (const m of r.mondays) {
+      assert.ok(m.places.length <= ROOM);
+      // Work-conserving: a place is left empty only when nobody is waiting, apart from papers
+      // deferred that Monday, which took a place and wait for the next.
+      const deferred = m.places.filter((p) => p === 'deferred').length;
+      if (m.waiting.urgent + m.waiting.ordinary > deferred) assert.equal(m.places.length, ROOM, `week ${m.week} at ${share}`);
+      if (share === 0) assert.ok(!m.places.includes('urgent') && !m.places.includes('deferred'));
+      if (share === 1) assert.ok(!m.places.includes('ordinary'));
+      decided += m.waits.length;
+      for (const w of m.waits) assert.ok(w > 0);
+    }
+    const arrived = short.slice(0, -1).reduce((a, w) => a + w.length, 0);
+    const last = r.mondays[r.mondays.length - 1].waiting;
+    assert.equal(decided + last.urgent + last.ordinary, arrived);
+  }
+});
+
+test('fast track: going first alone only reorders the line; the deferrals stretch it', () => {
+  // With no deferrals the average wait is the same whichever deals are marked.
+  const base = simulate(D, { share: 0, defer: 0 }).average;
+  for (const share of SHARES) near(simulate(D, { share, defer: 0 }).average, base, 0.005);
+  near(base, at(0).average, 1e-3);
+  // With them, the average rises with every step of the slider.
+  for (let i = 1; i < 11; i++) assert.ok(LONG_RUN[i].average > LONG_RUN[i - 1].average, `${SHARES[i]}`);
+});
+
+test('fast track: the tiles and the text', () => {
+  // Average wait: 3.9 days with no marks, 7.0 at half, 18.8 with every deal marked.
+  assert.equal(one(at(0).average), '3.9');
+  assert.equal(one(at(0.5).average), '7.0');
+  assert.equal(one(at(1).average), '18.8');
+  // “Grows almost fivefold, to about 19 working days.”
+  assert.equal(Math.round(at(1).average), 19);
+  const ratio = at(1).average / at(0).average;
+  assert.ok(ratio > 4.5 && ratio < 5, `ratio ${ratio}`);
+  // Marking saves: 0.4 days before anyone marks (a lone urgent paper waits 3.5 days), 0.9 at one
+  // deal in ten, 6.6 at half, 78 at nine in ten; nothing is left to pass at 100%.
+  assert.equal(one(saving(at(0))), '0.4');
+  assert.equal(one(saving(at(0.1))), '0.9');
+  assert.ok(saving(at(0.1)) < 1);
+  assert.equal(one(saving(at(0.5))), '6.6');
+  assert.equal(one(saving(at(0.9))), '78');
+  assert.equal(saving(at(1)), null);
+  assert.equal(one(at(0.1).urgent), '3.5');
+  assert.equal(one(at(0.1).ordinary), '4.4');
+  // Deferrals take 0.8 places a week at 100%; the agenda goes from 80% to 96% full.
+  assert.equal(at(1).deferredPerWeek.toFixed(1), '0.8');
+  assert.equal(Math.round(100 * at(0).placesUsed), 80);
+  assert.equal(Math.round(100 * at(1).placesUsed), 96);
+  near(at(1).placesUsed, (READY * (1 + DEFER)) / ROOM, 0.005);
+  // Decided at the first Monday: 75% with no marks, 17% with every deal marked.
+  assert.equal(Math.round(100 * LONG[0].firstMonday), 75);
+  assert.equal(Math.round(100 * LONG[10].firstMonday), 17);
+});
+
+test('fast track: marking is quicker for a team at every share, and quicker still as more mark', () => {
+  // So each team marks while it can, and every team ends up marked.
+  for (let i = 0; i < 10; i++) assert.ok(saving(LONG_RUN[i]) > 0, `${SHARES[i]}`);
+  for (let i = 1; i < 10; i++) assert.ok(saving(LONG_RUN[i]) > saving(LONG_RUN[i - 1]), `${SHARES[i]}`);
+  // The ordinary deals are pushed back with every mark.
+  for (let i = 2; i < 10; i++) assert.ok(LONG_RUN[i].ordinary > LONG_RUN[i - 1].ordinary);
+  // A lone urgent paper: half a week to the next Monday, plus one deferral in five.
+  near(simulate(D, { share: 0.01 }).urgent, LONE_URGENT, 0.05);
+});
+
+test('fast track: the headline holds on other seeds', () => {
+  for (const seed of [1, 7, 11, 99]) {
+    const Ds = deals(52 * 4000, seed);
+    const none = simulate(Ds, { share: 0 }).average;
+    const all = simulate(Ds, { share: 1 }).average;
+    near(none, 3.95, 0.05);
+    assert.ok(all > 17 && all < 21, `seed ${seed}: ${all}`);
+    assert.ok(all / none > 4.4 && all / none < 5.1, `seed ${seed}: ratio ${all / none}`);
+    for (const share of [0.1, 0.5, 0.9]) {
+      const r = simulate(Ds, { share });
+      assert.ok(r.ordinary > r.urgent, `seed ${seed}, ${share}`);
     }
   }
 });
 
-test('fast track: no team can switch route and gain', () => {
-  for (const fastTrack of [false, true]) {
-    const open = ROUTES.filter((r) => fastTrack || r.id !== 'fast');
-    for (const n of SLIDER) {
-      const e = equilibrium({ deals: n, fastTrack });
-      for (const from of open) {
-        if (e.split[from.id] < 1) continue;
-        for (const to of open) {
-          if (to === from) continue;
-          // One deal moves: its new route's committees see it, its old route's no longer do.
-          const moved = { ...e.split, [from.id]: e.split[from.id] - 1, [to.id]: e.split[to.id] + 1 };
-          const after = routeTimes(moved).times[to.id];
-          assert.ok(after >= e.time - 1e-9, `${n} deals, ${fastTrack ? 'open' : 'closed'}: ${from.id} → ${to.id} takes ${after}, not less than ${e.time}`);
-        }
-      }
-    }
+test('fast track: the figure’s quarter is the one closest to the long run across the slider', () => {
+  const Dq = deals(52 * 300);
+  const runs = SHARES.map((share) => simulate(Dq, { share, keep: [0, Dq.length] }));
+  const err = (q) =>
+    SHARES.reduce((e, _, i) => {
+      const w = runs[i].mondays.slice(q * MONDAYS, (q + 1) * MONDAYS).flatMap((m) => m.waits);
+      return e + Math.log(w.reduce((a, b) => a + b, 0) / w.length / LONG_RUN[i].average) ** 2;
+    }, 0);
+  let best = null;
+  for (let q = 8; q < Math.floor(Dq.length / MONDAYS) - 1; q++) if (!best || err(q) < best.err) best = { q, err: err(q) };
+  assert.equal(best.q, QUARTER);
+  // The figure's quarter, computed alone, matches the long run's weeks.
+  for (const i of [0, 5, 10]) {
+    const v = quarter(SHARES[i]);
+    assert.deepEqual(v.mondays, runs[i].mondays.slice(QUARTER * MONDAYS, (QUARTER + 1) * MONDAYS));
   }
 });
 
-test('fast track: the first team to take it saves nearly ten days', () => {
-  const r = routeTimes({ route1: 19, route2: 20, fast: 1 });
-  assert.equal(r.times.fast, 20.5);
-  assert.equal(30 - r.times.fast, 9.5);
-});
-
-test('fast track: helps up to 25 deals, hurts from 30; break-even about 26.7', () => {
-  close(breakEven(), 80 / 3);
-  const gain = (n) => equilibrium({ deals: n, fastTrack: false }).time - equilibrium({ deals: n, fastTrack: true }).time;
-  close(gain(breakEven()), 0);
-  for (const n of SLIDER) {
-    if (n <= 25) assert.ok(gain(n) > 0, `helps at ${n}`);
-    else assert.ok(gain(n) < 0, `hurts at ${n}`);
+test('fast track: the eleven views, computed once', () => {
+  const views = agendaViews();
+  assert.equal(views, agendaViews());
+  assert.equal(views.length, 11);
+  for (const [i, v] of views.entries()) {
+    assert.equal(v.share, SHARES[i]);
+    assert.equal(v.long, LONG_RUN[i]);
+    assert.equal(v.mondays.length, MONDAYS);
+    assert.equal(v.mondays[0].week, QUARTER * MONDAYS);
   }
-  assert.equal(gain(10), 12.5); // 22.5 days closed, 10 open
-  assert.equal(gain(25), 1.25); // 26.25 closed, 25 open
-  assert.equal(gain(30), -2.5); // 27.5 closed, 30 open
-  assert.equal(gain(40), -10); // 30 closed, 40 open
-});
-
-test('fast track: the best split for all, checked against every whole-deal split', () => {
-  for (const n of [10, 20, 25, 30, 35, 40, 50, 60]) {
-    const p = plannerOptimum({ deals: n });
-    let best = Infinity;
-    for (let a = 0; a <= n; a++) for (let b = 0; a + b <= n; b++) best = Math.min(best, routeTimes({ route1: a, route2: b, fast: n - a - b }).average);
-    close(p.average, best, 1e-9);
-    // Planned for all, a deal is never slower than when each team chooses for itself.
-    assert.ok(p.average <= equilibrium({ deals: n, fastTrack: true }).time + 1e-9);
-  }
-  // From 40 deals the best plan leaves the fast track empty; below 40 it uses it.
-  assert.equal(plannerOptimum({ deals: 40 }).split.fast, 0);
-  close(plannerOptimum({ deals: 40 }).average, 30);
-  assert.equal(plannerOptimum({ deals: 30 }).split.fast, 10);
-  close(plannerOptimum({ deals: 30 }).average, 80 / 3);
-});
-
-// The chapter's slider: deal teams on the fast track, 0 to 40 in steps of two, the rest split evenly.
-const TEAMS = Array.from({ length: 21 }, (_, i) => 2 * i);
-
-test('fast track uptake: the slider’s ends are the two settled states', () => {
-  assert.equal(DEALS, 40);
-  const none = uptake(0);
-  const closed = equilibrium({ deals: 40, fastTrack: false });
-  assert.deepEqual(none.split, closed.split);
-  assert.equal(none.oldTime, 30);
-  assert.equal(none.fastTime, 20);
-  assert.equal(none.saving, 10);
-  const all = uptake(40);
-  const open = equilibrium({ deals: 40, fastTrack: true });
-  assert.deepEqual(all.split, open.split);
-  assert.deepEqual(all.times, open.times);
-  assert.equal(all.fastTime, 40);
-  assert.equal(all.oldTime, 40);
-  assert.equal(all.saving, 0);
-  // Out-of-range values are clamped.
-  assert.equal(uptake(-3).onFast, 0);
-  assert.equal(uptake(55).onFast, 40);
-});
-
-test('fast track uptake: both routes slow as teams switch, the fast track twice as fast', () => {
-  for (const k of TEAMS) {
-    const u = uptake(k);
-    close(u.split.route1 + u.split.route2 + u.split.fast, 40);
-    assert.ok(Number.isInteger(u.split.route1), `whole deals at ${k}`);
-    assert.equal(u.split.route1, u.split.route2);
-    assert.deepEqual(u.agenda, { regional: 20 + k / 2, head: 20 + k / 2 });
-    close(u.fastTime, 20 + k / 2);
-    close(u.oldTime, 30 + k / 4);
-    close(u.times.route2, u.oldTime);
-    close(u.saving, 10 - k / 4);
-    // The average across all forty deals rises with every switch: 30 + k²/160.
-    close(u.average, 30 + (k * k) / 160);
-  }
-  for (let k = 1; k <= 40; k++) {
-    assert.ok(uptake(k).fastTime > uptake(k - 1).fastTime);
-    assert.ok(uptake(k).oldTime > uptake(k - 1).oldTime);
-    assert.ok(uptake(k).average > uptake(k - 1).average);
-  }
-});
-
-test('fast track uptake: quicker than the old routes at every k below 40; they meet at 40 days', () => {
-  for (let k = 0; k < 40; k += 0.5) {
-    const u = uptake(k);
-    assert.ok(u.fastTime < u.oldTime, `${k}: fast ${u.fastTime} < old ${u.oldTime}`);
-    assert.ok(u.saving > 0);
-  }
-  const all = uptake(40);
-  assert.equal(all.fastTime, all.oldTime);
-  assert.equal(all.oldTime, 40);
-});
-
-test('fast track uptake: counted exactly, a switching team gains until 38 have switched, then neither gains nor loses', () => {
-  for (const k of TEAMS.filter((t) => t < 40)) {
-    const u = uptake(k);
-    for (const from of ['route1', 'route2']) {
-      const g = switchGain(u.split, from, 'fast');
-      // Its own deal adds half a day to the committee it joins.
-      close(g, u.saving - DAYS_PER_DEAL);
-      if (k <= 36) assert.ok(g >= 0.5, `${k}: gain ${g}`);
-      else assert.equal(g, 0);
-    }
-  }
-  close(switchGain(uptake(0).split, 'route1', 'fast'), 9.5);
-  // At 40 nobody gains by switching back: the old routes would take 40 days too.
-  const all = uptake(40);
-  for (const to of ['route1', 'route2']) {
-    assert.equal(switchGain(all.split, 'fast', to), 0);
-    assert.equal(routeTimes({ ...all.split, fast: 39, [to]: 1 }).times[to], 40);
-  }
-  // One team at a time, the team with the most to gain moves: all forty end on the fast track.
-  let s = { route1: 20, route2: 20, fast: 0 };
-  const gains = [];
-  while (s.fast < 40) {
-    const from = s.route1 >= s.route2 ? 'route1' : 'route2';
-    const g = switchGain(s, from, 'fast');
-    assert.ok(g >= 0, `team ${s.fast + 1} would lose ${-g}`);
-    gains.push(g);
-    s = { ...s, [from]: s[from] - 1, fast: s.fast + 1 };
-  }
-  assert.equal(gains.filter((g) => g > 0).length, 38);
-  assert.equal(routeTimes(s).times.fast, 40);
-});
-
-test('fast track: the settled flows meet Wardrop’s conditions, open or closed', () => {
-  for (const fastTrack of [false, true]) {
-    const available = ROUTES.filter((r) => fastTrack || r.id !== 'fast');
-    for (let n = 0; n <= 100; n += 0.5) {
-      const e = equilibrium({ deals: n, fastTrack });
-      // Flows are non-negative and add up to the deals.
-      for (const r of ROUTES) assert.ok(e.split[r.id] >= 0, `${n}: ${r.id} flow ${e.split[r.id]}`);
-      close(e.split.route1 + e.split.route2 + e.split.fast, n);
-      if (!fastTrack) assert.equal(e.split.fast, 0);
-      // Every used route takes the same time, and no available route is quicker.
-      const used = available.filter((r) => e.split[r.id] > 0);
-      for (const r of used) close(e.times[r.id], e.time);
-      for (const r of available) assert.ok(e.times[r.id] >= e.time - 1e-9, `${n}, ${fastTrack ? 'open' : 'closed'}: ${r.id} takes ${e.times[r.id]} < ${e.time}`);
-    }
-  }
-  // Opening the fast track neither helps nor hurts at 80/3 deals a quarter.
-  close(breakEven(), 80 / 3);
-  close(equilibrium({ deals: 80 / 3, fastTrack: true }).time, equilibrium({ deals: 80 / 3, fastTrack: false }).time);
-});
-
-test('fast track uptake: flows on the slider are non-negative and add up to 40', () => {
-  for (let k = 0; k <= 40; k += 0.5) {
-    const u = uptake(k);
-    for (const r of ROUTES) assert.ok(u.split[r.id] >= 0);
-    close(u.split.route1 + u.split.route2 + u.split.fast, DEALS);
-  }
+  // The quarter tells the long run's story: about 4 days with no marks, about 19 with all.
+  near(views[0].average, LONG_RUN[0].average, 0.5);
+  near(views[10].average, LONG_RUN[10].average, 0.5);
+  assert.equal(Math.round(views[10].average), 19);
+  for (const i of [3, 6, 9]) assert.ok(views[i].average > views[i - 3].average);
+  // With no marks the agenda has room to spare; with every deal marked, every place is taken
+  // and papers are still waiting after every meeting.
+  assert.ok(views[0].mondays.some((m) => m.places.length < ROOM));
+  assert.ok(views[10].mondays.every((m) => m.places.length === ROOM && m.waiting.urgent > 0));
+  assert.ok(views[10].mondays.some((m) => m.places.includes('deferred')));
+  const waitingAt = (v) => Math.max(...v.mondays.map((m) => m.waiting.urgent + m.waiting.ordinary));
+  assert.ok(waitingAt(views[10]) > 3 * waitingAt(views[0]));
 });

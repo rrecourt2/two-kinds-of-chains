@@ -1,344 +1,170 @@
 <script>
-  import { getContext, onMount } from 'svelte';
-  import { Tween } from 'svelte/motion';
-  import { cubicOut } from 'svelte/easing';
+  import { getContext } from 'svelte';
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
+  import Stat from '../lib/ui/Stat.svelte';
+  import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { uptake, ROUTES, REVIEW_DAYS, DEALS } from '../lib/sim/fasttrack.js';
-  import { linear, line } from '../lib/scales.js';
-  import { prefersReducedMotion } from '../lib/motion.js';
+  import { agendaViews, MONDAYS, ROOM, LONE_URGENT } from '../lib/sim/fasttrack.js';
 
-  // A prediction: the slider and the small chart open after the first answer or a hint.
+  // A prediction: the slider opens after the first answer or a hint.
   const game = getContext('tkc-game');
   const live = $derived(game.engaged('emergence'));
 
-  // Deal teams on the fast track; the rest split evenly between the two old routes.
-  let onFast = $state(0);
+  // All eleven slider positions, computed once: the long run for the tiles, one quarter for the figure.
+  const VIEWS = agendaViews();
+  const NONE = VIEWS[0].long;
+
+  let marked = $state(0);
   let width = $state(560);
-  let chart = $state();
-  let hover = $state(null);
+  const view = $derived(VIEWS[Math.round(marked / 10)]);
 
-  const now = $derived(uptake(onFast));
+  // One decimal below 20 days, whole days above.
+  const num = (v) => (v < 20 ? v.toFixed(1) : String(Math.round(v)));
+  const days = (v) => `${num(v)} days`;
 
-  const num = (v) => String(Math.round(v * 10) / 10);
-  const dealsText = (v) => `${num(v)} deal${v === 1 ? '' : 's'}`;
-  const daysText = (v) => `${num(v)} day${v === 1 ? '' : 's'}`;
-  const savedText = (v) => (v === 0.5 ? 'half a day' : daysText(v));
-
-  // Deals per route and committee days glide to their new values.
-  const toTween = (u) => [u.split.route1, u.split.route2, u.split.fast, u.stage.regional, u.stage.head];
-  const tween = new Tween(toTween(uptake(0)), { duration: 650, easing: cubicOut });
-  $effect(() => {
-    tween.set(toTween(now), { duration: prefersReducedMotion() ? 0 : 650 });
-  });
-
-  // Geometry of the route bars: one row per route (name and count, a dot per deal, then the bar), and a day axis.
-  const MAX_DAYS = 40;
-  const BAR_TOP = 38;
-  const BAR_H = 38;
-  const ROW = 94;
-  const AXIS = 2 * ROW + BAR_TOP + BAR_H + 8;
-  const H = AXIS + 24;
-  const DOT_PITCH = 8;
-  const PER_LINE = 20;
-  const GAP = 2;
-  const PAD = 5;
-  const x = $derived(linear(0, MAX_DAYS, 0, width));
-
-  // Text inside a segment or a row's header: the longest version that fits. The numbers are drawn
-  // with tabular figures, as wide as a zero, which a canvas does not apply, so digits are measured as zeros.
-  let fontFamily = $state('system-ui, sans-serif');
-  let ctx = null;
-  onMount(() => {
-    fontFamily = getComputedStyle(chart).fontFamily || fontFamily;
-  });
-  function textWidth(s, weight) {
-    try {
-      ctx ??= document.createElement('canvas').getContext('2d');
-      ctx.font = `${weight} 12px ${fontFamily}`;
-      return ctx.measureText(s.replace(/[0-9]/g, '0')).width;
-    } catch {
-      return s.length * 7;
-    }
-  }
-  const fits = (lines, room) => lines.every((l, i) => textWidth(l, i === 0 && lines.length > 1 ? 650 : 400) + 3 <= room);
-
-  const STAGES = {
-    regional: { name: 'Regional committee', short: 'Regional' },
-    head: { name: 'Head-office committee', short: 'Head office' },
-    review: { name: 'Outside adviser', short: 'Adviser' },
-  };
-  function label(stage, w) {
-    const s = STAGES[stage];
-    const room = w - 2 * PAD;
-    const options =
-      stage === 'review'
-        ? [
-            [s.name, `always ${daysText(REVIEW_DAYS)}`],
-            [s.short, daysText(REVIEW_DAYS)],
-            [daysText(REVIEW_DAYS)],
-          ]
-        : [
-            [s.name, `${dealsText(now.agenda[stage])} · ${daysText(now.stage[stage])}`],
-            [s.short, `${dealsText(now.agenda[stage])} · ${daysText(now.stage[stage])}`],
-            [s.short, dealsText(now.agenda[stage])],
-            [dealsText(now.agenda[stage])],
-          ];
-    return options.find((o) => fits(o, room)) ?? [];
-  }
-  // Row headers: the name's length is set by the figure's width alone, so names stay put while the slider
-  // moves; an empty route's longer note shortens instead.
-  const heads = $derived.by(() => {
-    const busiest = `${dealsText(88)} · ${daysText(88.8)}`;
-    const key = ['name', 'short', 'tiny'].find((k) => ROUTES.every((r) => textWidth(r[k], 600) + 12 + textWidth(busiest, 400) <= width)) ?? 'tiny';
-    const room = (route) => width - 12 - textWidth(route[key], 600);
-    const note = (route, level) => {
-      const days = daysText(now.times[route.id]);
-      const count = now.split[route.id];
-      return count > 0 ? `${dealsText(count)} · ${days}` : [`No deals · would take ${days}`, `None · would take ${days}`, `would take ${days}`][level];
-    };
-    const level = [0, 1, 2].find((l) => ROUTES.every((r) => textWidth(note(r, l), 400) <= room(r))) ?? 2;
-    return ROUTES.map((route) => ({ name: route[key], sum: note(route, level) }));
-  });
+  // The agenda: one row per Monday, five places, then a dot for each paper still waiting.
+  const wide = $derived(width >= 480);
+  const S = $derived(wide ? 17 : 15);
+  const GAP = 4;
+  const ROW = $derived(S + 5);
+  const HEAD = 24;
+  const LABEL = $derived(wide ? 30 : 22);
+  const placesEnd = $derived(LABEL + ROOM * S + (ROOM - 1) * GAP);
+  const dotsX = $derived(placesEnd + (wide ? 22 : 14));
+  // The dots keep one spacing across the slider, set by the longest queue at any position.
+  const MOST = Math.max(...VIEWS.flatMap((v) => v.mondays.map((m) => m.waiting.urgent + m.waiting.ordinary)));
+  const pitch = $derived(Math.max(4, Math.min(10, (width - dotsX - 2) / MOST)));
+  const dotR = $derived(Math.min(3.4, pitch * 0.38));
+  const H = $derived(HEAD + MONDAYS * ROW);
 
   const rows = $derived(
-    ROUTES.map((route, k) => {
-      const days = { regional: tween.current[3], head: tween.current[4], review: REVIEW_DAYS };
-      let left = 0;
-      const segs = route.stages.map((stage) => {
-        const w = Math.max(0, x(days[stage]));
-        const seg = { stage, x: left, w: Math.max(0, w - GAP), lines: label(stage, w - GAP) };
-        left += w;
-        return seg;
-      });
-      return { ...route, top: k * ROW, segs, dots: Math.round(tween.current[k]), empty: now.split[route.id] === 0, ...heads[k] };
-    }),
+    view.mondays.map((m, k) => ({
+      y: HEAD + k * ROW,
+      places: Array.from({ length: ROOM }, (_, j) => m.places[j] ?? 'empty'),
+      dots: [...Array(m.waiting.urgent).fill('urgent'), ...Array(m.waiting.ordinary).fill('ordinary')],
+    })),
   );
 
-  const ariaLabel = $derived(
-    `${now.onFast} of ${DEALS} deal teams on the fast track. ` +
-      rows.map((r) => `${r.name}: ${r.sum}.`).join(' ') +
-      ` Each committee has ${dealsText(now.agenda.regional)} on its agenda and takes ${daysText(now.stage.regional)}.`,
-  );
-
-  // The mechanism in one line.
-  const sentence = $derived(
-    now.onFast < DEALS
-      ? `The fast track takes ${daysText(now.fastTime)}; the old routes ${num(now.oldTime)}. A team that switches now saves ${savedText(now.saving)}.`
-      : `The fast track takes ${daysText(now.fastTime)}. Nobody gains by switching back: the old routes would take ${daysText(now.oldTime)} too.`,
-  );
-  // Read once the slider has come to rest, not at every step.
-  let spoken = $state('');
-  let first = true;
-  $effect(() => {
-    const text = sentence;
-    if (first) {
-      first = false;
-      return;
-    }
-    const t = setTimeout(() => (spoken = text), 900);
-    return () => clearTimeout(t);
+  const share = $derived(marked === 0 ? 'no deal' : marked === 100 ? 'every deal' : `${marked}% of deals`);
+  const ariaLabel = $derived.by(() => {
+    const ms = view.mondays;
+    const count = (kind) => ms.reduce((a, m) => a + m.places.filter((p) => p === kind).length, 0);
+    const empty = ms.reduce((a, m) => a + ROOM - m.places.length, 0);
+    const waiting = ms.map((m) => m.waiting.urgent + m.waiting.ordinary);
+    return (
+      `Thirteen Mondays with ${share} marked urgent: ${count('urgent')} urgent and ${count('ordinary')} ordinary papers decided, ` +
+      `${count('deferred')} deferred unread, ${empty} places empty. After each meeting, between ${Math.min(...waiting)} and ` +
+      `${Math.max(...waiting)} papers are still waiting.`
+    );
   });
 
-  // The small chart: time on each route as teams switch.
-  const CH = 196;
-  const cm = { top: 30, right: 12, bottom: 42, left: 28 };
-  const cx = $derived(linear(0, DEALS, cm.left, width - cm.right));
-  const cy = linear(0, MAX_DAYS, CH - cm.bottom, cm.top);
-  const fastAt = (k) => uptake(k).fastTime;
-  const oldAt = (k) => uptake(k).oldTime;
-  const ends = (f) => line([[cx(0), cy(f(0))], [cx(DEALS), cy(f(DEALS))]]);
-  const atK = $derived(tween.current[2]);
-  // Direct labels: "Old routes" above its line, "Fast track" below its line, clear of both ends.
-  const oldLabel = $derived.by(() => {
-    const k0 = 2;
-    const k1 = cx.invert(cx(k0) + textWidth('Old routes', 600));
-    return { x: cx(k0), y: cy(oldAt(k1)) - 7 };
-  });
-  const fastLabel = $derived({ x: cx(5), y: cy(fastAt(5)) + 16 });
-
-  function onMove(e) {
-    const box = e.currentTarget.getBoundingClientRect();
-    const k = cx.invert(e.clientX - box.left + cm.left);
-    hover = Math.max(0, Math.min(DEALS, 2 * Math.round(k / 2)));
-  }
-
-  const chartLabel = $derived(
-    `Days a deal takes as deal teams switch to the fast track: the fast track rises from ${fastAt(0)} to ${fastAt(DEALS)} days, the old routes from ${oldAt(0)} to ${oldAt(DEALS)}, and the fast track stays quicker until all ${DEALS} teams have switched. Now ${now.onFast} have switched.`,
+  // The tiles: the long run at this position.
+  const saves = $derived(view.saving);
+  const saveSub = $derived(
+    marked === 0
+      ? `${num(LONE_URGENT)} days if marked, ${num(view.long.ordinary)} if not`
+      : saves === null
+        ? 'every deal is marked; it passes no one'
+        : `${num(view.long.urgent)} days urgent, ${num(view.long.ordinary)} ordinary`,
   );
 
   const puzzle = {
-    goal: 'Forty deals a quarter, 30 days each. The fast track skips the 20-day adviser, and each team picks the quickest route for its own deal. Once every team has chosen, what happens to the time a deal takes?',
+    goal: 'Each team marks its deal urgent whenever that is quicker for it. Once every team has chosen, what happens to the average wait?',
     choices: [
-      { value: 'shorter', label: 'Shorter: it skips the 20-day adviser' },
-      { value: 'same', label: 'About the same' },
+      { value: 'shorter', label: 'Shorter: urgent deals go first' },
+      { value: 'same', label: 'The same: the line is only reordered' },
       { value: 'longer', label: 'Longer' },
     ],
     answer: 'longer',
     wrong: (v) =>
       v === 'shorter'
-        ? 'That is what the first team to take it finds. Watch both committees’ agendas as more teams switch.'
-        : 'Watch both committees’ agendas as more teams switch.',
+        ? 'That is what the first deals to be marked find. Watch the agenda as more teams mark theirs.'
+        : 'Moving up the line alone would keep the average where it is. Watch the orange places as more teams mark their deals.',
     hints: [
-      'A deal on the fast track goes through both committees. Whose agendas does it join?',
-      'Suppose every team takes the fast track. How many deals does each committee then have, and how long does it take?',
+      'Is marking still quicker for a team once most deals carry the mark?',
+      'With every deal marked, nobody passes anybody. What is left of the fast track then?',
     ],
-    found: 'Longer: 40 days instead of 30. The fast track swapped a fixed step for a shared one: every deal now waits on both committees.',
+    found: 'Longer: with every deal marked urgent, the average wait grows almost fivefold, to about 19 working days.',
   };
 </script>
 
 <Chapter
-  n={6}
   kicker="Shortcuts"
   title="The fast track"
-  lede="When every part does what is best for itself, what does the whole do?"
+  lede="When every team does what is best for its own deal, what happens to all the deals?"
   puzzle="emergence"
 >
   {#snippet setup()}
     <p>
-      Nobody plans a traffic jam. In 2008, Japanese physicists asked 22 drivers to circle a 230-metre track at a steady
-      30 km/h, and soon a jam formed and rolled backwards around the track, with no accident and no bottleneck. Sensible
-      drivers, each adjusting a little, made a jam that none of them intended: what scientists call emergence.
+      Every deal’s chain of approvals passes through one shared link: the investment committee. It meets on Mondays and
+      has room for five papers. About four deals are ready in a typical week, some weeks more, so most are heard the next
+      Monday and the rest a week or two later.
     </p>
     <p>
-      Banks have their rush hours too. Say a bank signs forty deals a quarter, and each needs two independent opinions
-      before signing: a committee’s, and a second one. There are two equally good ways through: the regional committee,
-      then an outside adviser; or the adviser first, then the head-office committee. Half the teams go each way, and a
-      deal takes 30 days on either.
+      Then the bank opens a fast track: a deal marked urgent goes to the top of the agenda. Nothing else changes, except
+      that an urgent paper reaches the committee before anyone has had time to read it, and now and then the committee
+      defers it to the following Monday.
     </p>
-    <p>
-      Committees slow down as their agendas fill; advisers do not, as each deal has its own. Then the bank adds a fast
-      track: a deal cleared by the regional committee may go straight to the head-office committee, whose sign-off counts
-      as the second opinion.
-    </p>
+    <p>Every team can mark its own deal urgent, and every team wants its deal decided soon.</p>
   {/snippet}
 
   {#snippet figure()}
     <Instrument
-      title="How long a deal takes, route by route"
-      sub="Each bar is one route to approval, in working days; each dot is one deal."
+      title="The committee’s agenda, Monday by Monday"
+      sub="One quarter of Mondays: five places on each agenda, and the papers still waiting after the meeting."
       rules={[
-        '40 deals a quarter, each needing a committee and a second opinion.',
-        'A committee takes one working day for every two deals on its agenda.',
-        'The outside adviser always takes 20 working days.',
-        'Each team picks the route that is quickest for its own deal.',
+        'Each Monday’s agenda has room for five papers; about four deals are ready a week.',
+        'Urgent papers go to the top of the agenda, in the order they are ready.',
+        'Read unprepared, one urgent paper in five is deferred a week.',
       ]}
     >
-      <Puzzle id="emergence" {...puzzle} predict onshow={() => (onFast = DEALS)} />
+      <Puzzle id="emergence" {...puzzle} predict onshow={() => (marked = 100)} />
       <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
-        <Slider id="ft-teams" label="Deal teams on the fast track" bind:value={onFast} min={0} max={DEALS} step={2} format={(v) => `${v} of ${DEALS}`} ends={['None', `All ${DEALS}`]} />
+        <Slider id="ft-urgent" label="Deals marked urgent" bind:value={marked} min={0} max={100} step={10} format={(v) => `${v}%`} ends={['None', 'All']} />
       </div>
 
-      <div class="tkc-chart" bind:clientWidth={width} bind:this={chart}>
+      <div class="tkc-chart" bind:clientWidth={width}>
         <svg {width} height={H} role="img" aria-label={ariaLabel}>
-          {#each rows as r (r.id)}
-            {@const barY = r.top + BAR_TOP}
-            <text class="tkc-label" x="0" y={r.top + 12}>{r.name}</text>
-            <text class="tkc-label-2 count" class:muted={r.empty} x={width} y={r.top + 12} text-anchor="end">{r.sum}</text>
-            {#each Array(Math.min(r.dots, 2 * PER_LINE)) as _, i (i)}
-              <circle class="deal" cx={3 + (i % PER_LINE) * DOT_PITCH} cy={r.top + 22 + Math.floor(i / PER_LINE) * DOT_PITCH} r="2.8" />
+          <text class="tkc-axis-title" x={LABEL} y="13">Agenda</text>
+          <text class="tkc-axis-title" x={dotsX} y="13">Still waiting</text>
+          <line class="tkc-grid" x1={(placesEnd + dotsX) / 2} x2={(placesEnd + dotsX) / 2} y1={HEAD - 2} y2={H} />
+          {#each rows as r, k (k)}
+            {@const mid = r.y + ROW / 2}
+            <text class="tkc-axis-label" x={LABEL - 8} y={mid + 4} text-anchor="end">{k + 1}</text>
+            {#each r.places as kind, j (j)}
+              {@const inset = kind === 'deferred' ? 1 : kind === 'empty' ? 0.5 : 0}
+              <rect class="place {kind}" x={LABEL + j * (S + GAP) + inset} y={mid - S / 2 + inset} width={S - 2 * inset} height={S - 2 * inset} rx="3" />
             {/each}
-            {#each [10, 20, 30] as t (t)}
-              <line class="tkc-grid" x1={x(t)} x2={x(t)} y1={barY - 3} y2={barY + BAR_H + 3} />
+            {#each r.dots as kind, i (i)}
+              <circle class="dot {kind}" cx={dotsX + pitch / 2 + i * pitch} cy={mid} r={dotR} />
             {/each}
-            {#each r.segs as s (s.stage)}
-              {#if s.w > 0.5}
-                {#if r.empty}<rect class="under" x={s.x} y={barY} width={s.w} height={BAR_H} rx="5" />{/if}
-                <rect class="seg {s.stage}" class:empty={r.empty} x={s.x} y={barY} width={s.w} height={BAR_H} rx="5" />
-                {#if s.lines.length === 2}
-                  <text class="seg-text {s.stage}" x={s.x + PAD} y={barY + 16}>
-                    <tspan class="seg-name">{s.lines[0]}</tspan>
-                    <tspan x={s.x + PAD} dy="15">{s.lines[1]}</tspan>
-                  </text>
-                {:else if s.lines.length === 1}
-                  <text class="seg-text {s.stage}" x={s.x + PAD} y={barY + BAR_H / 2 + 4}>{s.lines[0]}</text>
-                {/if}
-              {/if}
-            {/each}
-          {/each}
-          <line class="tkc-base" x1="0" x2={width} y1={AXIS} y2={AXIS} />
-          {#each [0, 10, 20, 30, 40] as t (t)}
-            <line class="tick" x1={x(t)} x2={x(t)} y1={AXIS} y2={AXIS + 4} />
-            <text class="tkc-axis-label" x={x(t)} y={AXIS + 17} text-anchor={t === 0 ? 'start' : t === MAX_DAYS ? 'end' : 'middle'}>{t === MAX_DAYS ? `${t} days` : t}</text>
           {/each}
         </svg>
         <div class="tkc-legend">
-          <span><span class="tkc-swatch key regional"></span>Regional committee</span>
-          <span><span class="tkc-swatch key head"></span>Head-office committee</span>
-          <span><span class="tkc-swatch key review"></span>Outside adviser</span>
-          <span><span class="tkc-swatch key dot"></span>One deal</span>
+          <span><span class="tkc-swatch sw ordinary"></span>Ordinary paper</span>
+          <span><span class="tkc-swatch sw urgent"></span>Marked urgent</span>
+          <span><span class="tkc-swatch sw deferred"></span>Deferred unread</span>
+          <span><span class="tkc-swatch sw empty"></span>Empty place</span>
         </div>
       </div>
 
-      <p class="mech tkc-num">
-        {#if now.onFast < DEALS}
-          The fast track takes <strong>{daysText(now.fastTime)}</strong>; the old routes <strong>{num(now.oldTime)}</strong>. A team that
-          switches now saves <strong>{savedText(now.saving)}</strong>.
-        {:else}
-          The fast track takes <strong>{daysText(now.fastTime)}</strong>. Nobody gains by switching back: the old routes would take
-          <strong>{daysText(now.oldTime)}</strong> too.
-        {/if}
-      </p>
-      <p class="tkc-sr" aria-live="polite">{spoken}</p>
-
-      {#if live}
-        <div class="tkc-chart">
-          <svg {width} height={CH} role="img" aria-label={chartLabel}>
-            {#each [0, 10, 20, 30, 40] as t (t)}
-              <line class="tkc-grid" x1={cm.left} x2={width - cm.right} y1={cy(t)} y2={cy(t)} />
-              {#if t > 0}<text class="tkc-axis-label" x={cm.left - 6} y={cy(t) + 4} text-anchor="end">{t}</text>{/if}
-              <text class="tkc-axis-label" x={cx(t)} y={CH - cm.bottom + 16} text-anchor="middle">{t}</text>
-            {/each}
-            <line class="tkc-base" x1={cm.left} x2={width - cm.right} y1={cy(0)} y2={cy(0)} />
-            <text class="tkc-axis-title" x="0" y="12">Days a deal takes</text>
-            <text class="tkc-axis-title" x={(cm.left + width - cm.right) / 2} y={CH - 6} text-anchor="middle">Deal teams on the fast track</text>
-            <path class="trend old" d={ends(oldAt)} />
-            <path class="trend fast" d={ends(fastAt)} />
-            <line class="now" x1={cx(atK)} x2={cx(atK)} y1={cm.top} y2={cy(0)} />
-            <circle class="pt old" cx={cx(atK)} cy={cy(oldAt(atK))} r="5" />
-            <circle class="pt fast" cx={cx(atK)} cy={cy(fastAt(atK))} r="5" />
-            <text class="tkc-label tkc-halo" x={oldLabel.x} y={oldLabel.y}>Old routes</text>
-            <text class="tkc-label tkc-halo" x={fastLabel.x} y={fastLabel.y}>Fast track</text>
-            {#if hover !== null}
-              <line class="cross" x1={cx(hover)} x2={cx(hover)} y1={cm.top} y2={cy(0)} />
-            {/if}
-            <rect x={cm.left} y={cm.top} width={Math.max(0, width - cm.left - cm.right)} height={CH - cm.top - cm.bottom} fill="transparent" role="presentation" onpointermove={onMove} onpointerleave={() => (hover = null)} />
-          </svg>
-          {#if hover !== null}
-            <div class="tkc-tip" style:left="{Math.min(width - 170, Math.max(0, cx(hover) + 10))}px" style:top="30px">
-              <div>{hover} of {DEALS} teams switched</div>
-              <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span><strong>{daysText(fastAt(hover))}</strong> fast track</div>
-              <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-ink-2)"></span><strong>{daysText(oldAt(hover))}</strong> old routes</div>
-            </div>
-          {/if}
-          <div class="tkc-legend">
-            <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span>Fast track</span>
-            <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-ink-2)"></span>Old routes, either way round</span>
-          </div>
-        </div>
-      {/if}
+      <div class="tkc-stats" use:announce>
+        <Stat label="Marking urgent saves" value={saves === null ? 'Nothing' : days(saves)} sub={saveSub} />
+        <Stat label="Average wait" value={days(view.long.average)} sub={marked === 0 ? 'with no urgent marks' : `${num(NONE.average)} days with no urgent marks`} />
+      </div>
 
       {#snippet model()}
         <p>
-          Forty deals a quarter each need two independent opinions: a committee’s and a second one. One old route goes to
-          the regional committee, then an outside adviser; the other to the adviser, then the head-office committee; the
-          fast track to the regional committee, then the head-office committee. Each deal has its own outside adviser,
-          who takes 20 working days however many deals there are. A committee’s time follows a stipulated congestion
-          rule, a working day for every two deals on its agenda, not a literal timetable: the fuller the agenda, the
-          slower the committee. The adviser’s step is a second opinion that a committee can stand in for, not the
-          independent environmental and social review that higher-risk projects need in any case.
-        </p>
-        <p>
-          The slider illustrates the mechanism; it is not a history of individual decisions. It treats the deals as a
-          smooth flow, puts the chosen number on the fast track and splits the rest evenly between the old routes. With
-          k teams on the fast track, each committee has 20 + k/2 deals, the fast track takes 20 + k/2 days and the old
-          routes 30 + k/4. So the fast track is quicker until k reaches 40, where both take 40 days and no team can save
-          time by switching alone (an equilibrium of the flow, in Wardrop’s sense). The saving shown compares the times
-          as they stand. Counted in whole deals, a switching deal also adds half a day to the committee it joins, so the
-          last switches gain nothing.
+          Deals become ready at random, about four a week (a Poisson count), each at a random moment in the week, and are
+          heard from the next Monday on. Each Monday the committee hears up to five papers: urgent ones first, then
+          ordinary ones, each in the order they became ready. At its first hearing an urgent paper is deferred with a
+          chance of one in five; it keeps its place at the top and is decided the next Monday. A wait runs from the day a
+          deal is ready to its decision, in working days. Every deal has a fixed rank, so each slider position marks the
+          same deals. The tiles average 4,000 simulated years after a year’s warm-up; the figure shows the quarter whose
+          waits come closest to those averages.
         </p>
       {/snippet}
     </Instrument>
@@ -346,160 +172,85 @@
 
   {#snippet after()}
     <p>
-      The fast track starts ten days quicker than the old routes, so the first team takes it, then the next. But every
-      switch puts one more deal on a committee’s agenda, and the fast track passes both committees, so it slows twice as
-      fast as the old routes. The gap closes only when all forty have moved and each committee takes 20 days. Going back
-      is then no better: the old routes pass a 20-day committee and the 20-day adviser. No team can gain by switching
-      alone, so the slower pattern stays.
+      What decided the wait was not where a deal stood in the line, but how full the agenda was, and the agenda was
+      shared. The committee is the one link every deal’s chain passes through, so a paper that moves up the agenda moves
+      another down.
     </p>
     <p>
-      The adviser was the link that did not mind volume: each deal had its own, so it took 20 days however many deals
-      came. A committee is shared, and every deal on its agenda slows all the others. What decided the time was not
-      how many steps a deal passed, but how many of them were shared.
+      That is why the marks spread. The first ones save little: with one deal in ten marked, under a day. But each mark
+      pushes the unmarked deals further back, so the next mark saves more: 6.6 days with half the deals marked, 78 with
+      nine in ten. Nobody can afford to be the last deal without one.
     </p>
     <p>
-      So whether it helps depends on the traffic. With 12 deals a quarter, the same fast track would cut every deal from
-      23 days to 12; it saves time only below about 27 deals a quarter. Scale decides which kind of complexity a rule
-      turns out to be.
-    </p>
-    <h3>Local best, global worse</h3>
-    <p>
-      The mathematician Dietrich Braess described the same effect on roads in 1968: a new road can make every journey
-      slower, because every driver takes it. Cities have seen it happen. When New York closed 42nd Street for Earth Day
-      in 1990, traffic in the area flowed better, not worse, as Gina Kolata reported in The New York Times.
+      Going first, on its own, only reorders the line: one deal’s gain is another’s wait, and the average stays where it
+      was. The deferrals are what stretch it. With every deal marked, they take 0.8 places a week, and the agenda goes
+      from 80% to 96% full. The curve from the queues chapter does the rest: the share of deals decided at their first
+      Monday falls from 75% to 17%.
     </p>
     <p>
-      Every team chose well for its own deal, and together they made every deal slower. In the same way, a new system
-      that serves one team well can add a step for everyone else, and a control that removes one risk can push another
-      somewhere out of sight.
-    </p>
-    <p>
-      Picture five lenders financing one wind farm. Each adds a condition that protects its own position: a reserve
-      account here, a consent right there. Each condition is sensible. Together they can make the project too slow or
-      too costly to build, and then every lender loses.
-    </p>
-    <p>
-      Here the average deal got slower with every switch, from 30 days to 40. A measure of the whole journey, across all
-      deals, is the one number no shortcut can improve at the others’ expense.
+      A shortcut is judged by its first users, and its cost shows only when every deal takes it. The mathematician
+      Dietrich Braess found the same on roads in 1968: a new road can slow every journey once every driver takes it.
+      Here no step was added to any chain. One shared link became busier, and every chain that passes through it slowed.
     </p>
   {/snippet}
 
   {#snippet bank()}
     <BankNote ask="Which of our shortcuts would still save time if every deal took it?">
       <p>
-        A shortcut is usually judged by the first deals that use it. Its full cost shows only once every deal does: in
-        the agendas it fills and the queues it joins.
+        Most lenders have ways to move a deal up: an urgent flag, a paper tabled late with the chair’s consent, a waiver
+        of the reading period. Each is easy to grant one deal at a time. The cost appears in the agenda as a whole: the
+        share of papers marked urgent, and how often those are deferred unread.
       </p>
     </BankNote>
   {/snippet}
 </Chapter>
 
 <style>
-  .count {
-    font-variant-numeric: tabular-nums;
+  .place {
+    transition:
+      fill 180ms ease,
+      stroke 180ms ease;
   }
-  .count.muted {
-    fill: var(--tkc-muted);
+  .place.ordinary {
+    fill: color-mix(in srgb, var(--tkc-ink-2) 34%, var(--tkc-surface));
   }
-  .mech {
-    margin: 0;
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: 1px solid var(--tkc-hair);
-    font-size: 0.9375rem;
-    line-height: 1.5;
-    color: var(--tkc-ink-2);
-    text-wrap: pretty;
-  }
-  .mech strong {
-    color: var(--tkc-ink);
-    font-weight: 700;
-  }
-  .trend {
-    fill: none;
-    stroke-width: 2;
-    stroke-linecap: round;
-  }
-  .trend.fast {
-    stroke: var(--tkc-conditions);
-  }
-  .trend.old {
-    stroke: var(--tkc-ink-2);
-  }
-  .pt {
-    stroke: var(--tkc-surface);
-    stroke-width: 2;
-  }
-  .pt.fast {
-    fill: var(--tkc-conditions);
-  }
-  .pt.old {
-    fill: var(--tkc-ink-2);
-  }
-  .now {
-    stroke: var(--tkc-ink);
-    stroke-width: 1;
-    stroke-dasharray: 3 3;
-  }
-  .cross {
-    stroke: var(--tkc-muted);
-    stroke-width: 1;
-  }
-  .deal {
-    fill: var(--tkc-ink-2);
-  }
-  .under {
-    fill: var(--tkc-surface);
-  }
-  .seg.regional {
-    fill: color-mix(in srgb, var(--tkc-conditions) 72%, var(--tkc-surface));
-  }
-  .seg.head {
-    fill: color-mix(in srgb, var(--tkc-conditions) 26%, var(--tkc-surface));
-    stroke: var(--tkc-conditions);
-    stroke-width: 1.5;
-  }
-  .seg.review {
-    fill: var(--tkc-sunken);
-    stroke: var(--tkc-rule);
-    stroke-width: 1;
-  }
-  .seg.empty {
-    opacity: 0.55;
-  }
-  .seg-text {
-    font-size: 12px;
+  .place.urgent {
     fill: var(--tkc-ink);
-    font-variant-numeric: tabular-nums;
-    pointer-events: none;
   }
-  .seg-text.review {
-    fill: var(--tkc-ink-2);
+  .place.deferred {
+    fill: var(--tkc-surface);
+    stroke: var(--tkc-conditions);
+    stroke-width: 2;
   }
-  .seg-name {
-    font-weight: 650;
-  }
-  .tick {
+  .place.empty {
+    fill: none;
     stroke: var(--tkc-rule);
+    stroke-width: 1;
+    stroke-dasharray: 2 2;
   }
-  .key {
-    border-radius: 3px;
+  .dot.ordinary {
+    fill: color-mix(in srgb, var(--tkc-ink-2) 50%, var(--tkc-surface));
   }
-  .key.regional {
-    background: color-mix(in srgb, var(--tkc-conditions) 72%, var(--tkc-surface));
+  .dot.urgent {
+    fill: var(--tkc-ink);
   }
-  .key.head {
-    background: color-mix(in srgb, var(--tkc-conditions) 26%, var(--tkc-surface));
-    box-shadow: inset 0 0 0 1.5px var(--tkc-conditions);
+  .sw.ordinary {
+    background: color-mix(in srgb, var(--tkc-ink-2) 34%, var(--tkc-surface));
   }
-  .key.review {
-    background: var(--tkc-sunken);
-    box-shadow: inset 0 0 0 1px var(--tkc-rule);
+  .sw.urgent {
+    background: var(--tkc-ink);
   }
-  .key.dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--tkc-ink-2);
+  .sw.deferred {
+    background: var(--tkc-surface);
+    box-shadow: inset 0 0 0 2px var(--tkc-conditions);
+  }
+  .sw.empty {
+    box-sizing: border-box;
+    border: 1px dashed var(--tkc-rule);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .place {
+      transition: none;
+    }
   }
 </style>
