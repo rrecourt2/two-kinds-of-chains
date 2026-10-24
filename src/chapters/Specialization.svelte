@@ -35,11 +35,11 @@
   // Twelve roles are the cheapest design from 721 pins a day; the first slider step past that is 794 (exponent 2.9).
   const FIRST_TWELVE = 794;
   const puzzle = $derived({
-    goal: 'Twelve specialist roles make the cheapest pins of all, once the market is big enough. Find the smallest market at which they are cheaper than every shorter chain.',
+    goal: 'Twelve roles make the cheapest pins once the market is big enough. Find the smallest market where they beat every shorter chain.',
     met: best.roles === 12 && demand <= FIRST_TWELVE,
     progress: best.roles === 12 ? `Twelve roles win at ${int(demand)} pins a day. Do they still win in a smaller market?` : '',
     hints: ['Start from a town and drag the market up slowly. The coloured bar marks the cheapest design.', 'It lies between a town and a city, nearer the city.'],
-    found: '794 pins a day on the slider; strictly, the switch comes just past 720, about seventy times a village. Even there the twelve specialists are idle for almost half the day.',
+    found: 'Just past 720 pins a day, 794 on the slider, and even there the twelve specialists are idle almost half the day.',
   });
 
   // The chain diagram follows the cheapest design.
@@ -63,7 +63,7 @@
     </p>
     <p>
       Specialists get faster with practice. They stop losing time switching between tasks, and they can justify
-      special tools. This is good complexity: more roles and more handoffs, yet more output per person.
+      special tools. This is good complexity: more links in the chain and more handoffs, yet more output per person.
     </p>
     <p>
       Smith added a condition that is easy to miss: <em>the division of labour is limited by the extent of the
@@ -72,7 +72,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['A pin takes twelve operations.', 'One trained pin-maker working alone makes 10 pins a day.', 'Split the work into n roles, and each specialist works n times faster at their share.', 'Every role needs at least one whole person, busy or not.']} title="The pin workshop" sub="What a pin costs in worker-minutes, for each way of splitting the 12 operations into specialist roles. The cheapest design is coloured, and drawn as a chain below; in a tie, the shorter chain.">
+    <Instrument rules={['A pin takes twelve operations; one pin-maker doing all twelve makes 10 a day.', 'Split into n roles, each specialist works n times faster at their share.', 'Every role needs at least one whole person, busy or not.']} title="The pin workshop" sub="Worker-minutes per pin for each way of splitting the work; the cheapest is coloured and drawn as a chain below.">
       <Puzzle id="specialization" {...puzzle} onshow={() => (exponent = 2.9)} />
       <div class="tkc-controls tkc-controls--wide">
         <Slider
@@ -141,10 +141,9 @@
         </svg>
       </div>
 
-      <div class="tkc-stats tkc-stats--3" use:announce>
-        <Stat label="Best design at this market size" value="{best.roles} role{best.roles > 1 ? 's' : ''}" sub="{int(best.workers)} worker{best.workers > 1 ? 's' : ''} in total" swatch="var(--tkc-options)" />
+      <div class="tkc-stats" use:announce>
+        <Stat label="Cheapest design" value="{best.roles} role{best.roles > 1 ? 's' : ''}" sub="{int(best.workers)} worker{best.workers > 1 ? 's' : ''}, busy {pct(best.utilization)} of the day" swatch="var(--tkc-options)" />
         <Stat label="Worker-minutes per pin" value={fmtMin(best.minutesPerPin)} sub={best.roles === 1 ? 'Everyone does everything' : `${(solo.minutesPerPin / best.minutesPerPin).toFixed(1)}× cheaper than working alone`} />
-        <Stat label="Specialists busy" value={pct(best.utilization)} sub={best.utilization < 0.4 ? 'Mostly idle: the market is too small' : 'of each working day'} />
       </div>
 
       {#snippet model()}
@@ -161,22 +160,22 @@
       keep a heart surgeon busy.
     </p>
     <p>
-      This is why chains grow as markets grow. According to the OECD, around 70% of international trade now involves
-      global value chains, in which parts cross borders several times before they become a product. It is also how many economies have
-      grown: a country that could not yet build a whole car or phone can make one part of it well, and sell that part to
-      the world.
+      This is why chains grow as markets grow. Around 70% of international trade now passes through global value
+      chains, in which parts cross borders several times before they become a product. It is also how many economies
+      have grown: a country that could not yet build a whole car or phone can make one part of it well, and sell that
+      part to the world.
     </p>
     <h3>Chips: one of the longest chains, and one of the most inventive</h3>
     <p>
-      Until the late 1980s, almost every chip company designed and made its own chips. In 1987 Morris Chang founded TSMC
-      in Taiwan to do one thing only: make chips that other companies design. Designers such as Nvidia and Qualcomm could do without a factory of their own. Arm licenses chip blueprints, a handful of firms write the design software, and ASML in
-      the Netherlands builds the machines that print the circuits. Each link specializes, and the chain has been one of
-      the most innovative in industry.
+      Until 1987 almost every chip company designed and made its own chips, when Morris Chang founded a firm in Taiwan
+      to do one thing only: make chips that others design. Since then each link has specialized, from the blueprints
+      and the design software to the machines that print the circuits, and the chain has been one of the most
+      innovative in industry.
     </p>
     <p>
-      Its weak spots are the links without an alternative. TSMC makes most of the world’s most advanced chips, and only
-      ASML builds the most advanced printing machines. Specialization concentrates skill. It does not have to
-      concentrate dependence, but here it does.
+      Its weak spots are the links without an alternative. One firm makes most of the world’s most advanced chips, and
+      only one, in the Netherlands, builds the machines that print them. Specialization concentrates skill. It does not
+      have to concentrate dependence, but here it does.
     </p>
   {/snippet}
 
@@ -184,7 +183,8 @@
     <BankNote ask="Where could one specialist team serve the whole bank, instead of each unit keeping its own?">
       <p>
         A shared team of specialists, in environmental and social risk, say, or in legal, that serves every deal is
-        specialization. A sign-off that only one named person can give is dependence.
+        specialization: busy because it sees every case, and skilled for the same reason. A sign-off that only one named
+        person can give is dependence.
       </p>
     </BankNote>
   {/snippet}

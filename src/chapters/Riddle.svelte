@@ -30,7 +30,7 @@
   const weekGap = $derived(narrow ? 5 : 8);
   const cell = $derived(Math.max(6, Math.min(24, (width - labelW - 4 * weekGap - DAYS * gap) / DAYS)));
   const dayX = (d) => labelW + d * (cell + gap) + Math.floor(d / 5) * weekGap;
-  const rowY = (r) => (stacked ? 50 : 34) + r * (cell + gap + (stacked ? 18 : 4));
+  const rowY = (r) => (stacked ? 64 : 34) + r * (cell + gap + (stacked ? 18 : 4));
   const labelY = (r) => (stacked ? rowY(r) - 5 : rowY(r) + cell / 2 + 4);
   const height = $derived(stacked ? rowY(COUNT) - 12 : rowY(COUNT) + 8);
   const label = (r) => (narrow && !stacked ? ROLES[r].replace('Investment officer', 'Investment').replace('E&S specialist', 'E&S') : ROLES[r]);
@@ -42,7 +42,7 @@
   });
 
   const puzzle = {
-    goal: 'Six people must all be in for a decision, and each is in on 90% of days. Which change gives the most days on which the decision can be made?',
+    goal: 'Which of these changes gives the most days on which the decision can be made?',
     choices: [
       { value: 'attend', label: 'Better planning lifts everyone’s attendance from 90% to 97%' },
       { value: 'standin', label: 'Each of the six gets one qualified stand-in, who is also in on 90% of days' },
@@ -72,8 +72,10 @@
       from another, rubber, brass, paint and glue from others. Nobody runs the whole chain, and nobody waits for
       anybody. The pencil costs less than a coffee.
     </p>
-    <p>A loan that needs six colleagues and six systems in one building can take weeks.</p>
-    <p>Both are chains, and the pencil’s chain is far longer. Why does it work so much better?</p>
+    <p>
+      A loan that needs six colleagues and six systems in one building can take weeks. Both are chains, and the
+      pencil’s chain is far longer. Why does it work so much better?
+    </p>
     <p>
       Some work needs every link on the same day: a credit committee, a joint site visit, a same-day payment cut-off,
       or simply a working day that needs remote access, sign-in, the client file and the risk model all at once.
@@ -81,11 +83,11 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['Six roles; a decision needs all six covered on the same day.', 'At the start, each person is in on 90% of days; absences come in spells of about three days.', 'A qualified stand-in can cover a role when its named person is away.', 'Nobody’s absences depend on anyone else’s.']} title="Who is in this month?" sub="Six people who must all be in for a decision, over one month. Each square is a working day; the strip on top shows the days the decision could be made.">
+    <Instrument rules={['A decision needs all six roles covered on the same day.', 'Each person is in on 90% of days; absences last about three days.', 'A qualified stand-in can cover a role; nobody’s absences depend on another’s.']} title="Who is in this month?" sub="One month for six people. Each square is a working day; the top strip marks days a decision is possible.">
       <Puzzle id="riddle" {...puzzle} predict onshow={showAnswer} />
       <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
-        <Slider id="r-avail" label="Each person is in" bind:value={availability} min={70} max={99} format={(v) => `${v}% of days`} />
-        <Slider id="r-backup" label="Qualified stand-ins per role" bind:value={backups} min={0} max={3} format={(v) => (v === 0 ? 'None' : String(v))} />
+        <Slider id="r-avail" label="Attendance" bind:value={availability} min={70} max={99} format={(v) => `${v}% of days`} />
+        <Slider id="r-backup" label="Stand-ins per role" bind:value={backups} min={0} max={3} format={(v) => (v === 0 ? 'None' : String(v))} />
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
@@ -93,9 +95,10 @@
           {#each [0, 1, 2, 3] as wk}
             <text class="tkc-axis-label" x={dayX(wk * 5)} y="12">Week {wk + 1}</text>
           {/each}
-          {#if !stacked}<text class="tkc-axis-label" x="0" y="26">{narrow ? 'Decision' : 'Decision possible'}</text>{/if}
+          {#if stacked}<text class="tkc-axis-label" x="0" y="42">Decision possible</text>
+          {:else}<text class="tkc-axis-label" x="0" y="26">{narrow ? 'Decision' : 'Decision possible'}</text>{/if}
           {#each month.allIn as ok, d}
-            <rect x={dayX(d)} y="18" width={cell} height="8" rx="2" fill={ok ? 'var(--tkc-options)' : 'var(--tkc-conditions)'} />
+            <rect x={dayX(d)} y="18" width={cell} height="8" rx="2" class="day" class:blocked={!ok} />
           {/each}
           {#each month.grid as row, r}
             <text class="tkc-label-2" x="0" y={labelY(r)}>{label(r)}</text>
@@ -108,8 +111,7 @@
           <span><span class="tkc-swatch sw-in"></span>Named person in</span>
           {#if backups > 0}<span><span class="tkc-swatch sw-cover"></span>Stand-in covers</span>{/if}
           <span><span class="tkc-swatch sw-gap"></span>Nobody in for this role</span>
-          <span><span class="tkc-swatch" style:background="var(--tkc-options)"></span>Decision possible</span>
-          <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>Blocked</span>
+          <span><span class="tkc-swatch sw-blocked"></span>Decision blocked</span>
         </div>
       </div>
 
@@ -139,7 +141,7 @@
     </p>
     <p>
       The danger is how fast a chain of ANDs falls apart. With four more named roles, the decision is possible on one
-      day in three. The blocked days come in stretches, too: one person’s week of holiday stops everything that needs
+      day in three, though each of the ten is in on nine days in ten. The blocked days come in stretches, too: one person’s week of holiday stops everything that needs
       them.
     </p>
     <p>
@@ -191,5 +193,14 @@
   .sw-gap {
     background: var(--tkc-surface);
     box-shadow: inset 0 0 0 1.5px var(--tkc-conditions);
+  }
+  /* The top strip: possible days in ink, blocked days orange; blue is kept for the stand-ins. */
+  .day {
+    fill: var(--tkc-ink-2);
+  }
+  .day.blocked,
+  .sw-blocked {
+    fill: var(--tkc-conditions);
+    background: var(--tkc-conditions);
   }
 </style>

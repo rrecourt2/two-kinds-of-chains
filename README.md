@@ -1,33 +1,41 @@
 # Two Kinds of Chains
 
 An interactive learning story about good complexity (specialization), bad complexity (dependence) and how scale
-amplifies both, and about how a long, rigid chain of conditions tips into failure. Fifteen short chapters in four
+amplifies both, and about how a long, rigid chain of conditions tips into failure. Twenty-two short chapters in five
 parts, each built around a puzzle with a live model the reader can change, and a closing playbook. Built with Svelte 5 and Vite. Everything
 ships as one file, with no external requests, so it can run inside a locked-down bank intranet.
 
 | # | Chapter | Puzzle and live model |
 |---|---------|------------------------|
-| 0 | Two Kinds of Chains | Guess how many of 100 loans clear six checks, then watch them flow |
+| 0 | Two Kinds of Chains | Guess how many of 100 loans clear six checks the first time, then watch them flow |
 | | **Part 1 · Two kinds of chains** | |
 | 1 | A riddle about chains | Better attendance or a stand-in per role? A month calendar (AND vs OR) |
-| 2 | Why longer chains get cheaper | The smallest market in which twelve specialists pay off; the chip industry's long chain |
+| 2 | Why longer chains get cheaper | The smallest market in which twelve specialists pay off |
 | | **Part 2 · How a chain grows rigid** | |
-| 3 | When systems lean on each other | Faster and safer without dropping a system: copies vs one shared record, gates at every step or once |
-| 4 | Why full calendars make long queues | Get the wait under an hour with reviewers at least 80% busy: named lines vs one shared line |
+| 3 | When systems lean on each other | Faster and safer without dropping a system: copies vs one shared record |
+| 4 | Why full calendars make long queues | Named lines vs one shared line for four busy reviewers |
 | 5 | Don't wait for each other | Which two speed-ups help most when a client request runs in parallel |
-| 6 | The fast track | Forty deals, two committees and a fast track that skips the outside adviser: predict what it does to every deal's time, then move the teams across two at a time |
+| 6 | The fast track | One committee with five places a week and an urgent lane: once every deal is marked urgent, the average wait grows from 3.9 to about 19 days |
 | | **Part 3 · When the world pulls on the chain** | |
 | 7 | When the average lies | Ole Peters' coin game: the paper value against the typical player; staking less and pooling |
-| 8 | 2008: when links became conditions | A stress test on 48 banks: how much capital holds when five fail at once; hubs inside organizations |
-| 9 | How to find a black swan | Wason's selection task with IFC project categories; the box nobody drew |
-| 10 | Why species go extinct | Where the generalist overtakes the specialist as the years get more volatile |
+| 8 | When links become conditions | The stress test: 48 banks around a few hubs; land a loss on any bank, then share 48 points of extra capital so no more than five fail |
+| 9 | How to find a black swan | A dollar loan repaid from local-currency tolls, 96 good months: find the year that breaks the claim (both falls at once); Russell's chicken, Popper's swans |
+| 10 | Why species go extinct | Where the generalist overtakes the specialist as the years get more volatile; why islands |
 | | **Part 4 · Chains that bend** | |
-| 11 | A person in the loop | One AI, twenty requests, with a person in the loop or on autopilot; a steady or an erratic AI |
-| 12 | The gate worth keeping | Three payment instructions, one fraudulent: check first with the named reviewer, with any qualified reviewer, or pay first and check after |
-| 13 | The shape of the network | What sixty fully linked people produce; mesh, hub and modules |
-| 14 | Two watchmakers | Herbert Simon's parable as a live race: one long chain against modules; Gall's law |
+| 11 | The gate worth keeping | A thousand simulated years of payments: check every change of account above an amount, so that no year loses more than $5m and payments stay on time |
+| 12 | The shape of the network | What sixty fully linked people produce; mesh, hub and small teams |
+| 13 | A chain looped back on itself | Forty conditions waiting for each other: how many can be met at two links each (about 8); joint closings; Kauffman's complexity catastrophe |
+| 14 | Two watchmakers | Herbert Simon's parable as a live race: one long chain against modules |
 | 15 | Time to disbursement | Twelve conditions precedent, 2,000 loans: keeping a three-month promise for nine clients in ten |
-| 16 | What it means on Monday | The patterns, chapter by chapter, and the reader's score |
+| 16 | A warning light, not a tripwire | 200 borrowers, 10 in real trouble: two to four strong covenants, not twelve; Bayes in natural frequencies; Occam's razor |
+| | **Part 5 · Chains that learn** | |
+| 17 | A person in the loop | One AI, twenty requests, with a person in the loop or on autopilot; a steady or an erratic AI |
+| 18 | The irony of the reliable machine | A screening system takes 99% of payments; on the day it fails, people out of practice make the mistakes; a day by hand each month |
+| 19 | Only variety absorbs variety | Ashby's law of requisite variety: the smallest menu of answers that keeps exceptions waiting under two weeks; then a more varied world |
+| 20 | Many short chains | Convex tinkering: one big programme or pilots first, in a world nobody can predict |
+| 21 | Running to stand still | Fraud patterns learn round fixed checks: what yearly-reviewed checks catch in year three; one check at random |
+| 22 | How fast to forget | A country cushion sized to the worst year remembered: the memory that keeps losses and idle lending in bounds |
+| 23 | What it means on Monday | A pattern for every chapter, and the reader's score |
 
 ### Puzzles and score
 

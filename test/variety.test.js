@@ -1,0 +1,101 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  REQUESTS,
+  ROOM,
+  WORLDS,
+  MENU,
+  TARGET_DAYS,
+  kindShares,
+  weeklyRates,
+  escalations,
+  meanBacklog,
+  averageWait,
+  outcome,
+  smallestMenu,
+  simulateCommittee,
+} from '../src/lib/sim/variety.js';
+
+const close = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b}`);
+const round1 = (v) => Math.round(v * 10) / 10;
+
+test('kinds follow a long tail that sums to every request', () => {
+  for (const n of Object.values(WORLDS)) {
+    const s = kindShares(n);
+    close(s.reduce((a, b) => a + b, 0), 1, 1e-12, 'shares sum');
+    for (let i = 1; i < n; i++) assert.ok(s[i] < s[i - 1], 'most common first');
+  }
+  const rates = weeklyRates('today');
+  close(rates.reduce((a, b) => a + b, 0), REQUESTS, 1e-9, 'requests a week');
+  assert.equal(Math.round(kindShares(60)[0] * 100), 36, 'the most common kind is 36% of requests (model note)');
+  assert.equal(Math.round(rates[59] * 52), 3, 'the rarest kind today: about three a year (model note)');
+  assert.equal(escalations('today', 60), 0);
+  close(escalations('today', 0), REQUESTS, 1e-9, 'no menu sends everything up');
+});
+
+test('the committee formula is exact for a one-place committee and matches simulation', () => {
+  // With room for one, carried-over cases average lam² / (2 (1 − lam)).
+  for (const lam of [0.2, 0.5, 0.8]) close(meanBacklog(lam, 1), (lam * lam) / (2 * (1 - lam)), 1e-12, `one place, ${lam}`);
+  assert.equal(meanBacklog(5, 5), Infinity);
+  assert.equal(averageWait(6, 5), Infinity);
+  assert.equal(averageWait(0, 5), 0);
+  // A light load waits only for the next meeting: half a week, 2.5 working days.
+  close(averageWait(0.01, 5), 2.5, 1e-6, 'light load');
+  // The same committee simulated week by week, exceptions arriving through the week.
+  for (const lam of [3, 4, escalations('today', 20), escalations('today', 19)]) {
+    const exact = averageWait(lam);
+    const sim = simulateCommittee(lam, { weeks: lam > 4.8 ? 600000 : 200000 });
+    close(sim / exact, 1, 0.04, `simulation at ${lam.toFixed(2)} a week`);
+  }
+  // The fast track's committee: five places, four papers a week, 3.9 days.
+  assert.equal(round1(averageWait(4)), 3.9);
+});
+
+test('the puzzle: twenty answers is the smallest menu under two weeks', () => {
+  assert.equal(smallestMenu('today'), 20);
+  const start = outcome('today', MENU.start);
+  assert.ok(start.jammed && !start.met, 'the default menu of ten jams');
+  assert.equal(Math.round(start.escalated * 10) / 10, 8.4);
+  assert.equal(Math.round(start.growth), 178, 'the queue grows by about 178 a year at ten answers');
+  assert.equal(Math.round((1 - start.answered) * 100), 21, 'one request in five fits no answer at ten');
+  const at = outcome('today', 20);
+  assert.ok(at.met);
+  assert.equal(round1(at.wait), 7.8, 'about eight days');
+  assert.equal(round1(at.escalated), 4.6);
+  assert.equal(Math.round(at.load * 100), 92, 'nine-tenths of the room');
+  const less = outcome('today', 19);
+  assert.ok(!less.met && !less.jammed);
+  assert.equal(round1(less.wait), 20.0);
+  assert.equal(Math.round(less.load * 100), 97);
+  assert.equal(Math.round(less.wait - at.wait), 12, 'one answer fewer costs twelve days');
+  assert.equal(Math.round(at.wait - outcome('today', 30).wait), 5, 'ten more save five days between them');
+  // Every menu from twenty up keeps the wait under two weeks; every menu below it does not.
+  for (let m = MENU.min; m <= MENU.max; m++) assert.equal(outcome('today', m).met, m >= 20, `menu ${m}`);
+  assert.ok(outcome('today', 20).wait < TARGET_DAYS && outcome('today', 19).wait > TARGET_DAYS);
+});
+
+test('the long tail: forty rare kinds that together fill the committee', () => {
+  const rates = weeklyRates('today');
+  const off = rates.slice(20);
+  assert.equal(off.length, 40);
+  assert.ok(Math.max(...off) * 52 < 13, 'none of the forty more than about once a month');
+  close(off.reduce((a, b) => a + b, 0), escalations('today', 20), 1e-9, 'together');
+});
+
+test('a more varied world jams the same menu', () => {
+  const v = weeklyRates('varied');
+  assert.equal(v.length, 120);
+  const fresh = v.slice(60);
+  assert.ok(Math.max(...fresh) * 52 < 3, 'each new kind fewer than three times a year');
+  assert.equal(Math.round(fresh.reduce((a, b) => a + b, 0)), 2, 'together about two a week');
+  const same = outcome('varied', 20);
+  assert.ok(same.jammed);
+  assert.equal(round1(same.escalated), 6.4);
+  assert.equal(Math.round(same.growth), 74);
+  assert.equal(smallestMenu('varied'), 30);
+  assert.ok(smallestMenu('varied') <= MENU.max, 'the slider reaches it');
+  // Principles that settle one unlisted case in three keep the same twenty answers near five days.
+  const principled = outcome('varied', 20, { principles: 1 / 3 });
+  assert.equal(Math.round(principled.wait), 5);
+  assert.ok(principled.met);
+});
