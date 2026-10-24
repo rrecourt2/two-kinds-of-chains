@@ -29,23 +29,23 @@
 
   const moves = [
     { title: 'Alternatives everywhere', text: 'Every approval can be given by more than one qualified person, and every critical system has a tested fallback. No link depends on one name.', ch: 'riddle' },
-    { title: 'Specialists where the volume carries them', text: 'A specialist role pays where there is enough work to keep it busy; below that volume, the extra link mostly adds a wait.', ch: 'specialization' },
-    { title: 'Data entered once, at its source', text: 'Each piece of data has one home, close to the people who create it. Every system reads it from there, and checks run as it is typed, so a problem is caught before anything is built on it.', ch: 'systems' },
+    { title: 'Specialists where the volume carries them', text: 'A specialist role pays where there is enough work to keep it busy; below that volume, the extra link is mostly idle time.', ch: 'specialization' },
+    { title: 'Data entered once, at its source', text: 'Each piece of data has one home, close to the people who create it, and every system reads it from there, so a problem is fixed in one place and every approver sees the same record.', ch: 'systems' },
     { title: 'Slack and one shared line', text: 'The people that everything waits for run below about 80% of their time, and work waits in one line that any qualified colleague can take from.', ch: 'queues' },
-    { title: 'Parallel work', text: 'Every piece that can start, starts. Reviews run side by side on the same record, not one after another.', ch: 'async' },
+    { title: 'Parallel work', text: 'Every piece that can start, starts, and a bad input is stopped as it comes in. The slowest piece then sets the date; speeding up any other changes nothing.', ch: 'async' },
     { title: 'A shortcut judged by its last user', text: 'A shortcut that saves time for the first deals that take it can cost time for all of them once every deal does.', ch: 'emergence' },
     { title: 'Bets sized to survive a bad run', text: 'Each risk is sized so that a bad run cannot end the game, and risks are pooled across units whose luck is independent of each other.', ch: 'ergodicity' },
     { title: 'Buffers where the links meet', text: 'Spare capacity sits with the people, committees and systems that everything passes through, and it is big enough to cover what would hit them.', ch: 'contagion' },
     { title: 'Claims tested by what would break them', text: 'A track record counts the years a claim survived; a reverse stress test starts from the missed payment and looks for the years that would cause it, shocks that arrive together included.', ch: 'black-swans' },
     { title: 'Several sources, not one', text: 'A unit that draws on several sources grows a little more slowly in good years and survives the years when one source fails.', ch: 'extinction' },
     { title: 'Gates sized to the loss', text: 'A check earns its wait where one loss would be too large to survive; on small amounts the same check is mostly a queue.', ch: 'gate' },
-    { title: 'Small teams, light links', text: 'Work sits in small teams that are fully linked inside and lightly linked to each other, so required links grow with the team, not with the whole organisation.', ch: 'graph' },
-    { title: 'Conditions read side by side', text: 'Conditions in different documents can wait for each other; past about one link each, the loops join into one knot that can only be met all at once.', ch: 'knot' },
+    { title: 'Small teams, light links', text: 'Work sits in small teams that are fully linked inside and lightly linked to each other, so required links grow with the team, not with the whole organization.', ch: 'graph' },
+    { title: 'Conditions read side by side', text: 'Conditions in different documents can wait for each other; read side by side, a loop shows while it is small enough to close together. Past about one link each, the loops join into one knot that can only be met all at once.', ch: 'knot' },
     { title: 'Modular work', text: 'Work is saved in finished pieces, each with a clear owner and a clear interface, so an interruption costs only the piece in hand and trouble in one part stays there.', ch: 'modules' },
-    { title: 'Few conditions before the money moves', text: 'Only the conditions that must truly come first stand before disbursement; the rest become undertakings with deadlines, and a late document can be met another way where one exists.', ch: 'disbursement' },
+    { title: 'Conditions that bend', text: 'Every condition stays on the list; a late document can be met another way where one exists, and a condition that need not come first follows the money as an undertaking with a deadline.', ch: 'disbursement' },
     { title: 'Warning lights read against the base rate', text: 'What a covenant breach says depends on how many healthy borrowers trip the same covenant; past a few strong covenants, most breaches are noise and each one becomes a waiver.', ch: 'covenants' },
     { title: 'A person where the AI swings', text: 'Where AI or automation is erratic, a person keeps the good results and drops the bad ones before they move on; autopilot is kept for work that is steady, or whose mistakes are small, visible and easy to undo.', ch: 'tools' },
-    { title: 'The backup that never stands in', text: 'The more reliably a system does the work, the longer its people go without doing it, and the day it fails finds them out of practice.', ch: 'automation' },
+    { title: 'A backup kept in practice', text: 'The more reliably a system does the work, the longer its people go without doing it; a day by hand now and then, with the system checking behind them, keeps the day it fails from finding them out of practice.', ch: 'automation' },
     { title: 'Menus as varied as the world', text: 'Offices hold answers for the kinds of request they actually meet, and principles for the ones nobody listed, so what reaches head office is the truly new rather than the merely unlisted.', ch: 'variety' },
     { title: 'Pilots that can be stopped', text: 'Where nobody can tell in advance what will work, several small pilots go first, each cheap to stop, and the money follows the one that works.', ch: 'tinkering' },
     { title: 'Checks that stand still are learned', text: 'Against someone who tests every link, a check keeps running long after the attempts have moved round it; a check nobody can predict keeps more of what it catches.', ch: 'redqueen' },
@@ -70,6 +70,7 @@
     ['Andrew Haldane', '2009', '“Rethinking the financial network”, speech, Amsterdam', 'The financial system as robust yet fragile.'],
     ['Andrew Haldane and Robert May', '2011', '“Systemic risk in banking ecosystems”, Nature', 'A central banker and an ecologist on banks as an ecosystem.'],
     ['Albert-László Barabási and Réka Albert', '1999', '“Emergence of scaling in random networks”, Science', 'Preferential attachment: how hubs grow.'],
+    ['Réka Albert, Hawoong Jeong and Albert-László Barabási', '2000', '“Error and attack tolerance of complex networks”, Nature', 'Hub networks shrug off random failures and collapse when a hub fails.'],
     ['Basel Committee on Banking Supervision', '2011', '“Global systemically important banks: assessment methodology and the additional loss absorbency requirement”', 'Capital surcharges of 1 to 3.5 percentage points for the most systemic banks.'],
     ['Basel Committee on Banking Supervision', '2012', '“A framework for dealing with domestic systemically important banks”', 'National surcharges for banks that matter at home.'],
     ['Bertrand Russell', '1912', 'The Problems of Philosophy, chapter 6, “On Induction”', 'The chicken fed every day of its life, until the day its neck is wrung.'],
@@ -80,19 +81,19 @@
     ['Robert H. MacArthur and Edward O. Wilson', '1967', 'The Theory of Island Biogeography', 'How an island’s area and isolation set the number of species it holds.'],
     ['Michael L. McKinney and Julie L. Lockwood', '1999', '“Biotic homogenization: a few winners replacing many losers in the next mass extinction”, Trends in Ecology & Evolution', 'Where people join up separate places, a few widespread species replace many local ones.'],
     ['Nassim Nicholas Taleb', '2010', '“On Robustness and Fragility”, in The Black Swan, second edition', 'Species density: the larger and more connected the space, the more a few winners spread at the expense of the rest.'],
+    ['Frederick P. Brooks', '1975', 'The Mythical Man-Month', 'Adding people to a late project makes it later.'],
     ['Richard M. Karp', '1990', '“The transitive closure of a random digraph”, Random Structures & Algorithms', 'Below one link each, loops stay small; above it, one giant loop forms.'],
     ['Tomasz Łuczak', '1990', '“The phase transition in the evolution of random digraphs”, Journal of Graph Theory', 'The same threshold, from the other side.'],
     ['Edward G. Coffman, Michael J. Elphick and Arie Shoshani', '1971', '“System deadlocks”, ACM Computing Surveys', 'A circular wait: the condition under which nothing can move first.'],
     ['Stuart Kauffman and Simon Levin', '1987', '“Towards a general theory of adaptive walks on rugged landscapes”, Journal of Theoretical Biology', 'The complexity catastrophe: interlocking parts stop improvement one step at a time.'],
-    ['Daniel A. Levinthal', '1997', '“Adaptation on rugged landscapes”, Management Science', 'Kauffman’s landscapes applied to organisations.'],
+    ['Daniel A. Levinthal', '1997', '“Adaptation on rugged landscapes”, Management Science', 'Kauffman’s landscapes applied to organizations.'],
     ['Herbert A. Simon', '1962', '“The Architecture of Complexity”, Proceedings of the American Philosophical Society', 'The watchmakers Hora and Tempus, and why modular systems survive.'],
     ['John Gall', '1975', 'General Systemantics', 'A complex system that works has evolved from a simple system that worked.'],
-    ['Frederick P. Brooks', '1975', 'The Mythical Man-Month', 'Adding people to a late project makes it later.'],
     ['Thomas Bayes', '1763', '“An essay towards solving a problem in the doctrine of chances”, Philosophical Transactions of the Royal Society', 'Prior, evidence, updated belief: the arithmetic behind what a breach means. Published after his death by Richard Price.'],
     ['William of Ockham', '14th century', 'Ockham’s razor', '“Plurality should never be posited without necessity”; the familiar wording, “entities must not be multiplied beyond necessity”, is John Punch’s, from 1639.'],
     ['Ilia D. Dichev and Douglas J. Skinner', '2002', '“Large-sample evidence on the debt covenant hypothesis”, Journal of Accounting Research', 'Private lenders set covenants tightly, as tripwires; a breach is not necessarily a sign of distress.'],
     ['Lisanne Bainbridge', '1983', '“Ironies of automation”, Automatica', 'Automation leaves people the hardest tasks and the least practice.'],
-    ['Bureau d’Enquêtes et d’Analyses', '2012', 'Final report on the accident of 1 June 2009 to the Airbus A330-203, flight AF 447', 'Pilots who rarely flew by hand, on the night the automation handed back control.'],
+    ['Bureau d’Enquêtes et d’Analyses', '2012', 'Final report on the accident of 1 June 2009 over the Atlantic', 'Pilots who rarely flew by hand, on the night the automation handed back control.'],
     ['Basel Committee on Banking Supervision', '2021', 'Principles for operational resilience', 'Delivering critical operations through severe but plausible disruption.'],
     ['W. Ross Ashby', '1956', 'An Introduction to Cybernetics, chapter 11, “Requisite variety”', 'Only variety can destroy variety: a regulator copes only with as many kinds of disturbance as it has kinds of response.'],
     ['W. Ross Ashby', '1952', 'Design for a Brain', 'The homeostat, a machine that searched for its own stability.'],
@@ -100,8 +101,6 @@
     ['Lewis Carroll', '1871', 'Through the Looking-Glass, and What Alice Found There', 'The Red Queen: “it takes all the running you can do, to keep in the same place”.'],
     ['Leigh Van Valen', '1973', '“A new evolutionary law”, Evolutionary Theory', 'The Red Queen hypothesis: each species must keep evolving to keep up with its rivals.'],
     ['Jack M. Guttentag and Richard J. Herring', '1986', '“Disaster myopia in international banking”, Essays in International Finance 164, Princeton University', 'The longer since the last shock, the less likely the next one seems, and the thinner the cushion held against it.'],
-    ['Luís Bettencourt and colleagues', '2007', '“Growth, innovation, scaling, and the pace of life in cities”, PNAS', 'Why bigger cities produce more per person.'],
-    ['Réka Albert, Hawoong Jeong and Albert-László Barabási', '2000', '“Error and attack tolerance of complex networks”, Nature', 'Hub networks shrug off random failures and collapse when a hub fails.'],
   ];
 </script>
 
@@ -150,7 +149,7 @@
           <li>
             <span class="move-title">{move.title}</span>
             <span class="move-text">{move.text}</span>
-            <button type="button" class="see" onclick={() => go(move.ch)}>See chapter {numberOf(move.ch)}</button>
+            <button type="button" class="see" onclick={() => go(move.ch)}>See “{CHAPTERS[numberOf(move.ch)].short}”</button>
           </li>
         {/each}
       </ol>
@@ -163,7 +162,7 @@
       conditions. Scale multiplies whichever you have.
     </p>
     <p class="tkc-lede">
-      A bank needs its checks. Simplicity is not fewer controls; it is fewer conditions.
+      The pencil’s chain is long and strong because each of its links has another way round. A bank needs its checks. Simplicity is not fewer controls; it is fewer conditions.
     </p>
   </section>
 

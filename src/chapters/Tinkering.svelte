@@ -291,7 +291,7 @@
       and one in six by about 200%.
     </p>
     <p>
-      In the language of this story, one big programme is a long chain of <span class="tkc-and">ANDs</span>: its one
+      One big programme is a long chain of <span class="tkc-and">ANDs</span>: its one
       design has to be right for every client, partner and country at once. A set of pilots is an
       <span class="tkc-or">OR</span>: the programme needs only one approach to work. The OR holds only while a pilot can
       be stopped. A pilot with its own team, targets and reputation is a link that cannot be dropped.

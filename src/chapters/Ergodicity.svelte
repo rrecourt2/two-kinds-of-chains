@@ -82,7 +82,7 @@
       { label: `Typical player grows at least 2.5% a round (now ${signedPct(growthMine)})`, ok: growthMine >= 1.025 },
     ],
     hints: ['Staking less stops the slide. But how fast can a player on their own grow?', 'Players can also share their results.'],
-    found: 'Pool with others: five players who share every result and stake 80% grow about 2.7% a round, against 0.6% at best alone.',
+    found: 'Pooling: five players who share every result and stake 80% grow about 2.7% a round, against 0.6% at best alone.',
   });
 </script>
 
@@ -206,8 +206,8 @@
       not cancel out; they compound, and the longer the chain, the further the typical player falls.
     </p>
     <p>
-      Two remedies follow: <strong>stake less</strong>, so that smaller swings give up some of the paper return but stop
-      the slide; or <strong>pool</strong>, so that players whose coins are independent share their luck, as insurance and
+      Two remedies follow: <strong>staking less</strong>, so that smaller swings give up some of the paper return but stop
+      the slide; or <strong>pooling</strong>, so that players whose coins are independent share their luck, as insurance and
       a portfolio spread over many countries do. Pooling is interdependence of the good kind, but a shock that hits
       everyone at once cannot be pooled away, as the stress test shows next.
     </p>

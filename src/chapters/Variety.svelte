@@ -247,7 +247,7 @@
       The escalations were never a verdict on the offices. With {word(MENU.start)} answers, one request in five fitted
       none of them: a menu with less variety than the world sends the difference up the chain. The cybernetician
       W.&nbsp;Ross Ashby called this the law of requisite variety: “only variety can destroy variety”
-      (<em>An Introduction to Cybernetics</em>, 1956). A regulator needs a response for each kind of disturbance it is
+      (1956). Whatever keeps a system steady needs a response for each kind of disturbance it is
       to absorb.
     </p>
     <p>

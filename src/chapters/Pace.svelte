@@ -176,10 +176,10 @@
   puzzle="pace"
 >
   {#snippet setup()}
-    <p>Some systems come out of a shock stronger. The immune system remembers an infection for years, and still meets new ones.</p>
+    <p>Some systems come out of a shock stronger. After an infection the body lets most of the cells that fought it go and keeps a few for years: enough to remember, with room left for the next one.</p>
     <p>
-      A lender learns from losses the same way. It keeps a cushion because, like the coin game’s player, it lives one
-      year after another. After a bad year in a country, it adds links to its chain: a bigger cushion, a lower limit, a
+      A lender learns from losses the same way. After a bad year in a country, it adds links to its chain: a bigger
+      cushion, a lower limit, a
       second look at each new loan. Each calm year it takes a little back, because an idle cushion is lending the
       country does not get.
     </p>
@@ -315,11 +315,11 @@
       <p>
         In between, at about {word(T.some)} years, the two costs together are lowest: the cushion comes down in the calm,
         but not so far that the next crisis finds it bare. Biologists know the pattern as hormesis: a small dose of stress
-        makes an organism stronger, and a large one harms it. Here too the dose decides.
+        makes an organism stronger, and a large one harms it. Antifragility is a matter of dose: enough change to adapt, not so fast that the lesson is forgotten.
       </p>
       <h3>What sets the pace</h3>
       <p>
-        The best pace depends on what an idle cushion costs, which the new control above the chart sets. Where it costs little, about {word(T.little)} years of memory
+        The best pace depends on what an idle cushion costs. Where it costs little, about {word(T.little)} years of memory
         is best; where it costs a lot, about {word(T.lot)}. How fast the world drifts hardly matters: with no drift at all,
         or five times as much, the best stays at five or six years.
       </p>

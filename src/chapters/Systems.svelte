@@ -227,7 +227,7 @@
       problem that enters late meets few checks.
     </p>
     <p>
-      Copying data from system to system is the party game of telephone: a message whispered down a line arrives
+      Copying data from system to system is the party game of passing a whispered message down a line: it arrives
       changed, and nobody can say where it changed. Each copy is a chance for a field to drift, and each fix has to be
       made and approved again, system by system.
     </p>

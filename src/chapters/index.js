@@ -39,7 +39,7 @@ export const CHAPTERS = [
   { id: 'contagion', short: 'The stress test', title: 'When links become conditions', component: Contagion, part: 3 },
   { id: 'black-swans', short: 'Black swans', title: 'How to find a black swan', component: BlackSwans, part: 3 },
   { id: 'extinction', short: 'Extinction', title: 'Why species go extinct', component: Extinction, part: 3 },
-  { id: 'gate', short: 'A gate worth keeping', title: 'The gate worth keeping', component: Gate, part: 4 },
+  { id: 'gate', short: 'The gate worth keeping', title: 'The gate worth keeping', component: Gate, part: 4 },
   { id: 'graph', short: 'Networks', title: 'The shape of the network', component: Graph, part: 4 },
   { id: 'knot', short: 'Looped chains', title: 'A chain looped back on itself', component: Knot, part: 4 },
   { id: 'modules', short: 'Modules', title: 'Two watchmakers', component: Modules, part: 4 },

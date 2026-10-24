@@ -19,13 +19,13 @@
     riddle: 'Why can a pencil’s chain of thousands beat a loan’s chain of six?',
     specialization: 'When does adding specialists make things cheaper, and not just longer?',
     systems: 'One loan, six linked systems, and a wrong field that travels.',
-    queues: 'Four busy experts and one stream of reviews: where does the waiting come from?',
+    queues: 'Four busy reviewers and one stream of requests: where does the waiting come from?',
     async: 'Five pieces of one client request: what really sets the pace?',
     emergence: 'One committee, five places, and a fast track any deal can take: what happens when every deal takes it?',
     ergodicity: 'A bet that pays 5% a round on paper and leaves most players poorer.',
     contagion: 'Forty-eight banks, one large loss: where does it stop, and where should 48 points of extra capital go?',
     'black-swans': 'A toll road has paid 96 months in a row. Which year would it miss?',
-    extinction: 'Two species, forty islands, and the year the weather turns.',
+    extinction: 'Two species, forty islands, and weather that grows less calm: which one lasts?',
     gate: 'Six hundred account changes a year, one in 200 a fraud: which payments are worth the wait of a check?',
     graph: 'Sixty people who must all work with each other: how much gets done?',
     knot: 'Forty conditions, each waiting for one or two others: how many can ever be met?',
@@ -36,7 +36,7 @@
     automation: 'A screening system that almost never fails: what does the day it fails cost, once nobody does its work any more?',
     variety: 'Sixty kinds of client request, a menu of ten answers and a committee with five places a week: how many answers does it take?',
     tinkering: 'A budget of 100, and nobody can tell which approach will work: one big programme, or pilots first?',
-    redqueen: 'Checks catch three frauds in four in their first month. What do they catch two years later, once the other side has learned?',
+    redqueen: 'Checks catch three frauds in four in their first month. What do they catch in year three, once the other side has learned?',
     pace: 'After a crisis every lender adds links. How fast should the lesson fade?',
     monday: 'The patterns behind the puzzles, and your score.',
   };
@@ -61,7 +61,7 @@
     <p role="listitem"><span class="scale">Scale</span> multiplies whichever you have.</p>
   </div>
   <p class="howto">
-    Each chapter is a short puzzle about one problem: what happens as a chain of conditions grows long and rigid. Solve
+    Each chapter is a short puzzle about one problem: what happens as a chain of conditions grows long and rigid, and what lets it bend and learn. Solve
     it unaided for two points, or after a hint or a wrong try for one. Stuck? Ask for the answer and read on.
   </p>
 

@@ -67,7 +67,7 @@
     <p>Busy people are one source of waiting. The order of the work is another.</p>
     <p>
       Take a client request with five pieces of work: the client data, a credit analysis, an E&amp;S review, the legal
-      documents and the pricing. Each is done by a specialist, and that is good complexity. Every piece is built on the
+      documents and the pricing. Each is done by a specialist. Every piece is built on the
       client data, but none of the others needs another piece’s result.
     </p>
     <p>

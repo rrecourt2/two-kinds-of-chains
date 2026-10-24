@@ -263,7 +263,7 @@
     </p>
     <h3>A check they cannot predict</h3>
     <p>
-      The other side learns what it can predict. Draw one of the three checks at random each month, and the first month
+      The other side learns what it can predict. With one of the three checks drawn at random each month, the first month
       catches less, {N.firstRandom}% instead of {N.first}%; but with yearly reviews, year three catches
       {N.year3Random.yearly}% instead of {N.year3.yearly}%, because no pattern stays safe for long. The body’s defences work
       the same way, making antibodies at random, multiplying the ones that fit and remembering them. When someone tests

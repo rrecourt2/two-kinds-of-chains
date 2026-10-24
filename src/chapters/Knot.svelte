@@ -288,12 +288,11 @@
     <p>
       Below one link each, loops are few and small. Above it, they share conditions and join into one knot that grows
       until it holds most of the programme: 25 of the 40, on average, at two links each. Mathematicians mapped this
-      threshold in random networks in 1990 (Karp; Łuczak). Software engineers call a knot a deadlock (Coffman and others,
-      1971).
+      threshold in random networks in 1990; software engineers call a knot a deadlock.
     </p>
     <p>
       A joint closing unties small knots: here it lets all {oneJoint.metCount} be met at one link each. At two it frees {twoJoint.metCount === two.metCount ? 'none' : twoJoint.metCount - two.metCount}, because a
-      knot of {two.largest} can only be met all at once. An undertaking with a deadline also cuts a loop, by letting one
+      knot that big can only be met all at once. An undertaking with a deadline also cuts a loop, by letting one
       condition follow the money, as in the disbursement chapter.
     </p>
     <h3>The complexity catastrophe</h3>
@@ -302,7 +301,7 @@
       choices, each working well or badly depending on others, and a hundred teams improving it one change at a time.
       With no dependencies, all hundred reach the best design; with three each, 15 do; with every choice tied to every
       other, one does, and the rest stop at one of some 315 dead ends, where any single change makes things worse. He
-      called it a complexity catastrophe (Kauffman and Levin 1987); Levinthal (1997) carried it over to firms. Kept inside modules of four, with each
+      called it a complexity catastrophe; Daniel Levinthal later found the same in firms. Kept inside modules of four, with each
       module’s team trying its choices together, the same dependencies let all hundred reach the best. That is the
       watchmakers’ secret.
     </p>

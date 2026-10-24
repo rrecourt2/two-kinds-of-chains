@@ -228,8 +228,7 @@
     <p>
       {WORDS[ANSWER][0].toUpperCase() + WORDS[ANSWER].slice(1)} covenants catch {shown.caught} of the {shown.trouble} in
       trouble; the other {WORDS[MAX - ANSWER]} add {all.caught - shown.caught}, and {all.alarms - shown.alarms} false alarms.
-      William of Ockham wrote that plurality should never be posited without necessity; the razor’s familiar wording,
-      that entities must not be multiplied beyond necessity, came three centuries later.
+      That is Ockham’s razor at work: plurality, William of Ockham wrote, should never be posited without necessity.
     </p>
     <p>
       The same breach means more when trouble is common. With {WORDS[ANSWER]} covenants, it means real trouble one

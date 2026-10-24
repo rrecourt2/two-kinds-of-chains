@@ -128,7 +128,7 @@
     </p>
     <p>
       A chain of sign-offs is a path, and stand-ins are parallel paths. Linked systems pass problems along their links,
-      and the banks of 2008 passed losses along theirs.
+      and the banks in the stress test passed losses along theirs.
     </p>
     <p>
       Graph theory also explains what happens with scale. If everyone must link to everyone else, the number of links
@@ -233,14 +233,14 @@
       from approving it. From 51 people the approver’s whole day goes on keeping up, and nothing is signed off.
     </p>
     <p>
-      Few organizations set out to build a hub. An approver is added for safety, and each new team is routed through the
+      Few organizations set out to build a hub; as in the stress test, they grow one. An approver is added for safety, and each new team is routed through the
       same desk because that is simplest. Each step looks small, and the approver looks busy rather than overloaded. The
       cost shows as waiting, as on the full calendars of the queues chapter, and as one name that everything stops for
       when it is away, like the named people of the riddle.
     </p>
     <p>
       Small teams with clear interfaces keep growing almost in proportion: sixty people produce {structure('teams', MAX).output.toFixed(0)}
-      people’s worth. They have a second advantage, which the watchmakers show: they survive interruptions.
+      people’s worth. They have a second advantage, which the watchmakers show: they survive interruptions. A network of conditions can fail in a worse way than slowing down: it can lock.
     </p>
   {/snippet}
 

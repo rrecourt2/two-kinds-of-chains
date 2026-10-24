@@ -80,7 +80,7 @@
       'A check costs a reviewer the same day whatever the amount. Which payments carry most of the money?',
       'Watch the worst of the 1,000 years, not the average one: a single bad year breaks the limit.',
     ],
-    found: T ? `Check every payment above $1m: that ${T.half} of the payments carries ${T.money} of the money.` : 'Check every payment above $1m.',
+    found: T ? `Every payment above $1m checked: that ${T.half} of the payments carries ${T.money} of the money.` : 'Every payment above $1m checked.',
   });
   const showAnswer = () => (stop = ANSWER);
 
@@ -148,7 +148,7 @@
   n={11}
   kicker="Gates"
   title="The gate worth keeping"
-  lede="Some checks earn their wait, because the payment after them cannot be undone. The question is which payments."
+  lede="A chain that bends still keeps a few links rigid: the checks before a payment that cannot be undone. The question is which payments."
   puzzle="gate"
 >
   {#snippet setup()}
