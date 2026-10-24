@@ -75,14 +75,14 @@
   }
 
   const puzzle = $derived({
-    goal: 'The coin cannot change, and a risk limit caps any stake at 80% of wealth. Get the typical player growing by at least 2.5% a round.',
+    goal: 'The coin cannot change, and a risk limit caps any stake at 80%. Get the typical player growing at least 2.5% a round.',
     met: stake <= 80 && growthMine >= 1.025,
     checks: [
       { label: 'Stake at most 80% of wealth', ok: stake <= 80 },
       { label: `Typical player grows at least 2.5% a round (now ${signedPct(growthMine)})`, ok: growthMine >= 1.025 },
     ],
     hints: ['Staking less stops the slide. But how fast can a player on their own grow?', 'Players can also share their results.'],
-    found: 'Pool with others. Five players who share every result and stake 80% grow about 2.7% a round; twenty grow about 3.7%. On their own, the best a typical player can manage is about 0.6%.',
+    found: 'Pool with others: five players who share every result and stake 80% grow about 2.7% a round, against 0.6% at best alone.',
   });
 </script>
 
@@ -95,28 +95,30 @@
 >
   {#snippet setup()}
     <p>
-      So far this story has been about speed. The next chapters are about survival, which is why a bank has controls at all.
+      So far this story has been about speed. The next chapters are about what happens when the world pulls on the
+      chain, and about survival, which is why a bank has controls at all.
+    </p>
+    <p>
       Start with a game. Each round, flip a coin. Heads, your wealth grows by 50%. Tails, it shrinks by 40%. On paper
       the bet is worth 5% a round: that is its expected value, the average over every possible outcome. Would you play
       it every round, with everything you own?
     </p>
-    <p>Below, 2,000 players each play 100 rounds.</p>
+    <p>Below, 2,000 players each play 100 rounds: a chain of a hundred flips, each starting from whatever the last one left.</p>
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['Each round a fair coin: heads adds 50% to the stake, tails takes 40% of it.', '2,000 players, 100 rounds, all starting with the same wealth.', 'Pooled players add up their results every round and share the total equally.']} title="The coin game" sub="Wealth after each round, against the start. Each grey line is one player.">
+    <Instrument rules={['A fair coin each round: heads adds 50% to the stake, tails takes 40%.', '2,000 players, 100 rounds, all starting with the same wealth.', 'Pooled players add up their results every round and share the total equally.']} title="The coin game" sub="Wealth after each round, against the start. Each grey line is one player.">
       <Puzzle id="ergodicity" {...puzzle} onshow={() => ((stake = 80), (pool = 5))} />
       <div class="tkc-controls">
-        <Slider id="e-stake" label="Share of wealth staked each round" bind:value={stake} min={10} max={100} step={5} format={(v) => `${v}%`} />
+        <Slider id="e-stake" label="Stake each round" bind:value={stake} min={10} max={100} step={5} format={(v) => `${v}% of wealth`} />
         <Segmented
           name="e-pool"
-          label="Players who pool and share everything"
+          label="Pool size"
           bind:value={pool}
           options={[
             { value: 1, label: 'Alone' },
             { value: 2, label: '2' },
             { value: 5, label: '5' },
-            { value: 20, label: '20' },
           ]}
         />
       </div>
@@ -166,12 +168,11 @@
         </div>
       </div>
 
-      <div class="tkc-stats tkc-stats--3" use:announce>
-        <Stat label="On paper" value={change(mine.expected[ROUNDS])} sub="{perRound(expectedFactor(stake / 100))} a round: the expected value" />
+      <div class="tkc-stats" use:announce>
         {#if changed}
-          <Stat label="Typical player, your settings" value={change(mine.median[ROUNDS])} sub="{perRound(growthMine)} a round" swatch="var(--tkc-options)" line={true} />
+          <Stat label="Typical player, your settings" value={change(mine.median[ROUNDS])} sub="{perRound(growthMine)} a round; on paper {perRound(expectedFactor(stake / 100))}" swatch="var(--tkc-options)" line={true} />
         {:else}
-          <Stat label="Typical player" value={change(base.median[ROUNDS])} sub="after 100 rounds: {perRound(typicalFactor(1, 1))} a round" swatch="var(--tkc-conditions)" line={true} />
+          <Stat label="Typical player" value={change(base.median[ROUNDS])} sub="{perRound(typicalFactor(1, 1))} a round; on paper {perRound(expectedFactor(1))}" swatch="var(--tkc-conditions)" line={true} />
         {/if}
         <Stat label="Poorer than at the start" value={pct(mine.lost[ROUNDS])} sub="of players{changed ? ', your settings' : ''}, after 100 rounds" />
       </div>
@@ -185,60 +186,39 @@
 
   {#snippet after()}
     <p>
-      On paper the game is generous: 5% a round, which compounds to more than 131 times the starting wealth after a
-      hundred rounds. That figure is an average over every possible run of luck, and nobody lives through every possible
-      run of luck. Each player lives through one, a hundred rounds long. On that path one head and one tail multiply
-      wealth by 1.5 × 0.6 = 0.9, a 10% loss every two rounds, and the typical player ends with half a percent of what
-      they started with.
+      On paper the game is generous, but the paper value is an average over every possible run of luck, and each player
+      lives through only one. On that path a head and a tail multiply wealth by 1.5 × 0.6 = 0.9: a tenth lost every two
+      rounds, whatever the order.
     </p>
     <p>
-      The paper value is held up by a few extraordinary runs. About two thirds of it comes from runs of seventy heads or
-      more in a hundred throws, which roughly one player in 25,000 gets. It takes fifty-six heads just to end above the
-      start, and most players do not throw that many. A handful of extreme winners can hold up an average that almost
-      nobody lives through, which is why the average is the wrong guide here.
+      The paper value is held up by a few extraordinary runs: about two thirds of it comes from seventy heads or more in
+      a hundred, which roughly one player in 25,000 gets. Almost nobody lives through the average.
     </p>
     <p>
       Nassim Taleb puts the difference this way: a hundred people going to a casino once is not the same as one person
-      going a hundred times. A casino can count on its average because it plays against many people, each once; their
-      luck is pooled in its accounts. Here the odds even favour the player, and most lose all the same: each lives one
-      path a hundred times in a row, and every round starts from what the last one left. A player down to a tenth of
-      their wealth by round 30 plays round 31 with that tenth.
+      going a hundred times. The casino pools its players’ luck in its accounts; a player lives one path, and every round
+      starts from what the last one left. Physicists call a system <strong>ergodic</strong> when the average across many
+      people matches what happens to one person over time. This game is not, and Ole Peters uses it to show why the
+      expected value misleads when outcomes multiply.
     </p>
     <p>
-      A system is called <strong>ergodic</strong> when the average across many people equals what happens to one person
-      over time. This game is not. The physicist Ole Peters uses it to show why expected value is the wrong guide when
-      outcomes multiply.
+      Every round is a link in a chain that multiplies, like the riddle’s chain of ANDs. In such a chain the swings do
+      not cancel out; they compound, and the longer the chain, the further the typical player falls.
     </p>
     <p>
-      Every round is a link in a chain that multiplies, like the checks in the opening. In such a chain the swings do not
-      cancel out; they compound. The wider the swings, the harder they pull the typical player down, and the longer the
-      chain, the further it falls.
-    </p>
-    <h3>Two classic remedies</h3>
-    <ul>
-      <li>
-        <strong>Stake less.</strong> At a quarter of their wealth, the typical player grows, slowly. Smaller swings give
-        up some of the paper return and stop the steady slide.
-      </li>
-      <li>
-        <strong>Pool.</strong> Players share everything each round, and it works because their coins are independent;
-        a shock that hits everyone at once cannot be pooled away. A pair is not enough: two players who stake
-        everything still shrink slightly. Staking everything, a pool of five grows the typical player about 3% a round,
-        and a pool of twenty 4.5%, almost as fast as the paper value. This is the logic of insurance, of a portfolio spread over many
-        countries and sectors, and of banks themselves.
-      </li>
-    </ul>
-    <p>
-      Pooling is interdependence too, of the good kind. It shares risk instead of chaining it. The next chapter shows
-      what happens when the links run the other way.
+      Two remedies follow: <strong>stake less</strong>, so that smaller swings give up some of the paper return but stop
+      the slide; or <strong>pool</strong>, so that players whose coins are independent share their luck, as insurance and
+      a portfolio spread over many countries do. Pooling is interdependence of the good kind, but a shock that hits
+      everyone at once cannot be pooled away, as the stress test shows next.
     </p>
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Which of our processes would we design differently if we judged them by their worst month instead of their average month?">
+    <BankNote ask="Which of our processes would look different if judged by their worst month rather than their average?">
       <p>
         A bank lives through one path, so it holds capital and liquidity buffers and caps what rides on any one client,
-        country or sector: staking less and pooling, in banking terms.
+        country or sector: staking less and pooling, in banking terms. The pooling works while countries and sectors have
+        their bad years at different times.
       </p>
     </BankNote>
   {/snippet}

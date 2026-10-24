@@ -48,7 +48,7 @@
           ? `With these two: ${amount(par.total)}. Another pair does better.`
           : `In parallel: ${amount(par.total)}.`,
     hints: ['In parallel, one piece sets the total. Which one?', 'Once the slowest piece is faster, another piece becomes the slowest.'],
-    found: 'Credit analysis and the E&S review: five days instead of seven. Speed up credit alone and the E&S review takes over as the slowest piece; with both, credit and legal documents tie at two days. Faster legal documents or pricing change nothing at all.',
+    found: 'Credit analysis and the E&S review: five days instead of seven, because speeding up credit alone leaves the E&S review as the slowest piece.',
   });
   // Which piece is slowest stays unlabelled until the puzzle is done: finding it is the puzzle.
   const game = getContext('tkc-game');
@@ -60,7 +60,7 @@
   n={5}
   kicker="Asynchronous work"
   title="Don’t wait for each other"
-  lede="Much of the waiting in a long chain is for steps that are not needed yet. Take it out, and a different rule decides how fast the work goes."
+  lede="Much of the waiting in a long chain is for steps not needed yet. Take it out, and a different rule sets the pace."
   puzzle="async"
 >
   {#snippet setup()}
@@ -78,7 +78,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['Five pieces: client data 1 day, credit analysis 4, E&S review 3, legal documents 2, pricing 1.', 'Every handoff waits a day for someone to pick it up.', 'In parallel, the client data comes first; the other four then run side by side.']} title="One client request, two ways" sub="Each bar is one piece of work, in days.">
+    <Instrument rules={['Days of work: client data 1, credit 4, E&S review 3, legal 2, pricing 1.', 'Every handoff waits a day for someone to pick it up.', 'In parallel, the client data comes first; the other four then run side by side.']} title="One client request, two ways" sub="Each bar is one piece of work, in days.">
       <Puzzle id="async" {...puzzle} onshow={showAnswer} />
 
       <div class="speed" role="group" aria-label="Make a piece twice as fast">
@@ -138,7 +138,7 @@
       One after another, the client request takes sixteen days, five of them spent waiting for handoffs, and every
       speed-up helps a little. In parallel, only the slowest piece matters, along with anything every piece waits for,
       such as the client data. Making any other piece faster changes nothing. Improving a part is not the same as
-      improving the whole, which is the subject of the next chapter.
+      improving the whole, as the fast track shows.
     </p>
     <p>
       A Formula 1 pit stop works the parallel way. About twenty people change four tyres in around two seconds, each
@@ -147,9 +147,9 @@
     <h3>What decides the pace</h3>
     <ul>
       <li>
-        <strong>The slowest piece sets the pace.</strong> Andrew Grove, who ran Intel, called it the limiting step.
-        Effort spent anywhere else changes little. And real work varies: the more pieces run side by side, the more
-        likely one of them is late, and that one sets the date.
+        <strong>The slowest piece sets the pace.</strong> Effort spent anywhere else changes little: with credit and
+        the E&amp;S review both twice as fast, credit and the legal documents tie at two days. And real work varies: the
+        more pieces run side by side, the more likely one of them is late, and that one sets the date.
       </li>
       <li>
         <strong>Bad inputs are cheapest to stop at the start.</strong> Quality engineers call this the 1-10-100 rule: a
@@ -161,15 +161,17 @@
     </ul>
     <p>
       Parallel work needs pieces that do not depend on each other. Often a step waits not for another step’s result
-      but for data held in another system, and reading the data where it lives (chapter 3) removes that wait.
+      but for data held in another system, and reading the data where it lives, as in the linked-systems chapter,
+      removes that wait.
     </p>
   {/snippet}
 
   {#snippet bank()}
     <BankNote ask="Which steps wait for a step they do not actually need, and where are bad inputs found late?">
       <p>
-        Often many steps need only the client data, not each other’s results, and could all start on the first
-        day.
+        Often many steps need only the client data, not each other’s results, and could all start on the first day: a
+        credit paper, an E&amp;S screening and the first legal drafts can all begin from the same verified client file.
+        A mistake in that file, found late, comes back to every one of them.
       </p>
     </BankNote>
   {/snippet}

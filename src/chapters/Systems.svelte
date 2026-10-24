@@ -79,27 +79,27 @@
       limits register, operations the loan booking system. Each one is excellent at its job.
     </p>
     <p>
-      Then a client request arrives that needs all of them. Each system has its own form to fill in, its own approval
-      and its own copy of the client’s data, taken from the system before it. Each approval is a gate: the request
-      cannot move on until it has passed. The systems are linked in one long chain.
+      Then a client request arrives that needs all of them. Each system has its own form, its own approval and its own
+      copy of the client’s data, taken from the system before. Each approval is a gate, and the systems are linked in
+      one long chain.
     </p>
     <p>
-      Two things happen in a chain like that. Approvers are sometimes away, so the request waits. And a problem entered
-      early, a wrong date or a missing identifier, travels unseen into every system after it. When someone finally
-      spots it, the request stops, and the problem has to be fixed everywhere it went.
+      Two things happen in a chain like that. Approvers are sometimes away, and the request waits. A problem entered
+      early, a wrong date or a missing identifier, travels unseen into every system after it; once spotted, it stops
+      the request and has to be fixed everywhere it went.
     </p>
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['A request passes through six systems; each step takes a day.', 'Each form has a one-in-ten chance of a hidden problem.', 'Each approver catches half the problems in the data in front of them; one approver at the end catches 90%.', 'Approvers are in 85% of days, and nobody stands in for them.']} title="One request, six linked systems" sub="How long 1,500 simulated requests take, in working days.">
+    <Instrument rules={['Six systems, a day each; each form has a one-in-ten chance of a hidden problem.', 'An approver catches half the problems in front of them; one at the end, 90%.', 'Approvers are in 85% of days, and nobody stands in for them.']} title="One request, six linked systems" sub="How long 1,500 simulated requests take, in working days.">
       <Puzzle id="systems" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls">
         <Segmented
           name="s-info"
-          label="How systems get their data"
+          label="Client data"
           bind:value={info}
           options={[
-            { value: 'copies', label: 'Each copies the last' },
+            { value: 'copies', label: 'Copies the last' },
             { value: 'shared', label: 'One shared record' },
           ]}
         />
@@ -109,20 +109,13 @@
           bind:value={approvals}
           options={[
             { value: 'each', label: 'At every system' },
-            { value: 'end', label: 'Once, at the end' },
+            { value: 'end', label: 'At the end' },
           ]}
         />
       </div>
 
-      <div class="tkc-stats tkc-stats--4" use:announce>
-        <Stat label="Typical request" value="{shortDays(result.median, HORIZON)} days" sub="median, working days" />
-        <Stat label="9 in 10 done within" value="{shortDays(result.p90, HORIZON)} days" swatch="var(--tkc-conditions)" line={true} />
-        <Stat label="Problems that slip through" value={pct(result.slipped, result.slipped < 0.1 ? 1 : 0)} sub="of requests, after every check" />
-        <Stat label="Time actually worked" value={pct(result.workShare)} sub="of the elapsed working hours" />
-      </div>
-
       <div class="tkc-chart" bind:clientWidth={width}>
-        <svg {width} height={H} role="img" aria-label="Distribution of lead times. Median {Math.round(result.median)} days, 90th percentile {Math.round(result.p90)} days.">
+        <svg {width} height={H} role="img" aria-label="Distribution of lead times. Median {Math.round(result.median)} days; the slowest one in ten take {Math.round(result.p90)} days or more.">
           {#each ticks(0, yMax, 3) as t}
             <line class="tkc-grid" x1={m.left} x2={width - m.right} y1={y(t)} y2={y(t)} />
             <text class="tkc-axis-label" x={m.left - 6} y={y(t) + 4} text-anchor="end">{t}</text>
@@ -165,9 +158,14 @@
         {/if}
         <div class="tkc-legend">
           <span><span class="tkc-swatch" style:background="var(--tkc-ink-2)"></span>Requests by lead time</span>
-          <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>At or beyond the 90th-percentile day</span>
+          <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>Slowest one in ten</span>
           {#if !isStart}<span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-muted)"></span>Starting setup</span>{/if}
         </div>
+      </div>
+
+      <div class="tkc-stats" use:announce>
+        <Stat label="Typical request" value="{shortDays(result.median, HORIZON)} days" sub="median, working days" />
+        <Stat label="Problems that slip through" value={pct(result.slipped, result.slipped < 0.1 ? 1 : 0)} sub="of requests, after every check" />
       </div>
 
       <details class="journey">
@@ -179,7 +177,8 @@
               : ', no problems found'}.
           </p>
           <div class="tkc-scroll-x">
-            <svg width={labelW + shownDays * cellW + 44} height={rows.length * (rowH + 3) + 22} role="img" aria-label="Day-by-day journey of one typical request through the systems: {journey.length} working days.">
+            <svg width={labelW + shownDays * cellW + 44} height={rows.length * (rowH + 3) + 25} role="img" aria-label="Day-by-day journey of one typical request through the systems: {journey.length} working days.">
+              <g transform="translate(0 3)">
               {#each rows as label, r}
                 <text class="tkc-axis-label" x="0" y={r * (rowH + 3) + rowH - 2}>{label}</text>
               {/each}
@@ -198,6 +197,7 @@
                   <text class="tkc-axis-label" x={labelW + t * cellW} y={rows.length * (rowH + 3) + 14}>Day {t + 1}</text>
                 {/if}
               {/each}
+              </g>
             </svg>
           </div>
           {#if journey.length > MAX}
@@ -214,8 +214,8 @@
       </details>
 
       {#snippet model()}
-        <p>Filling in a system takes two hours of work, and each step takes a day because the next person picks it up the next day. The request passes through six systems. Each form has a 10% chance of a hidden problem, such as a wrong date or a missing identifier.</p>
-        <p>An approver at a system sees only that system’s data and spots each hidden problem in it half the time. With copies, that data includes every problem copied in from earlier systems. With one shared record, every approver sees the whole record and spots each problem half the time, independently of the others, so six together miss a problem about 1 time in 64. If approvers tend to miss the same problems, parallel reviews catch far fewer. One approver at the end sees the whole request and spots 90%. A spotted problem stops the request. With copies, it is corrected in the system where it started and in every later system it reached, and approved again, at each of those systems or once at the end; none is filled in again. With one shared record, it is corrected once. Approvers are in 85% of days, absences last four days on average, and nobody stands in for them.</p>
+        <p>Filling in a system takes two hours of work; the next person picks it up the next day. Each form has a 10% chance of a hidden problem.</p>
+        <p>An approver sees only their own system’s data (with copies, that includes every problem copied in from earlier systems) and spots each problem in it half the time. On one shared record every approver sees the whole record, independently, so six together miss a problem about 1 time in 64; approvers who miss the same problems would catch far fewer. One approver at the end spots 90%. A spotted problem stops the request. With copies it is corrected where it started and in every later system it reached, and approved again; with a shared record, once. Approvers are in 85% of days, absences last four days on average, and nobody stands in for them.</p>
       {/snippet}
     </Instrument>
   {/snippet}
@@ -238,28 +238,25 @@
       safer.
     </p>
     <p>
-      One approval at the end, on a shared record, is the fastest design. It lets more problems through: about 4
-      requests in 100, with copies or a shared record alike, against fewer than 1 in 100 when six approvers review the
-      shared record side by side. It is a trade-off between speed and safety, and the right balance differs between
-      decisions that can be undone and those that cannot.
+      One approval at the end, on a shared record, is the fastest design, but it lets about 4 requests in 100 through,
+      against fewer than 1 in 100 when six approvers review the shared record side by side. Which matters more depends
+      on whether the decision can be undone.
     </p>
     <p>
       Shared does not have to mean central. A single database that every request must pass through is itself a hub:
-      when it is slow, everyone is slow, and people start keeping their own copies to get their work done, the very
-      copies a shared record was meant to replace. A record works best when each piece of data has one home, close to
-      the people who create it, and everyone else reads it from there instead of copying it.
-    </p>
-    <p>
-      Every new tool brings its own form, its own approval and its own copy of the data. Each makes sense to the team
-      that built it. Together they make the chain longer, and every extra link makes the next problem costlier to fix.
+      when it is slow, everyone is slow, and people start keeping their own copies again. A record works best when each
+      piece of data has one home, close to the people who create it, and everyone else reads it from there. Every new
+      tool that brings its own form, approval and copy of the data makes sense to the team that built it, and makes the
+      chain one link longer.
     </p>
   {/snippet}
 
   {#snippet bank()}
     <BankNote ask="Which of our systems ask for data that already exists in another system?">
       <p>
-        Each time the same client data is typed in again, there is one more copy that can drift, and one more place where
-        a fix must be repeated.
+        A client’s owners, accounts and address can sit in the onboarding, credit, booking and monitoring systems at once.
+        Each time the same data is typed in again, there is one more copy that can drift, and one more place where a fix
+        must be repeated.
       </p>
     </BankNote>
   {/snippet}

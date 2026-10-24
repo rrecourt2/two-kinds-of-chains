@@ -21,11 +21,22 @@
 
   const now = $derived(structure(kind, nodes));
   const spof = $derived(singlePoints(kind, nodes));
-  const COLORS = { mesh: 'var(--tkc-conditions)', hub: 'var(--tkc-ink-2)', teams: 'var(--tkc-options)' };
-  const curves = STRUCTURES.map((s) => ({ ...s, values: outputCurve(s.id, MAX) }));
+  // Ink and grey for the two shapes that stall, blue for the one that keeps growing; orange only where
+  // a shape fails: past its peak, each newcomer makes the group produce less.
+  const COLORS = { mesh: 'var(--tkc-ink-2)', hub: 'var(--tkc-muted)', teams: 'var(--tkc-options)' };
+  const LABELS = { mesh: 'Everyone', hub: 'One approver', teams: 'Small teams' };
+  const curves = STRUCTURES.map((s) => {
+    const values = outputCurve(s.id, MAX);
+    const top = Math.max(...values);
+    // Past the last size at the peak (within rounding), output only falls.
+    const peak = values.findLastIndex((v) => v >= top - 1e-9) + 1;
+    return { ...s, values, peak };
+  });
+  const peakOf = Object.fromEntries(curves.map((c) => [c.id, c.peak]));
+  const failing = $derived(nodes > peakOf[kind] && kind !== 'teams');
 
   // Diagram of required links for the structure on show.
-  const size = $derived(Math.min(340, diagramW));
+  const size = $derived(Math.min(300, diagramW));
   const graph = $derived.by(() => {
     const c = size / 2;
     const R = size / 2 - 14;
@@ -71,7 +82,14 @@
   const m = { top: 16, right: 18, bottom: 38, left: 40 };
   const x = $derived(linear(1, MAX, m.left, width - m.right));
   const y = linear(0, 55, H - m.bottom, m.top);
-  const paths = $derived(curves.map((c) => ({ ...c, d: line(c.values.slice(0, reach).map((v, i) => [x(i + 1), y(v)])) })));
+  const paths = $derived(
+    curves.map((c) => {
+      const pts = c.values.slice(0, reach).map((v, i) => [x(i + 1), y(v)]);
+      // The falling part, past the peak, is drawn in orange.
+      const falls = c.id !== 'teams' && pts.length > c.peak;
+      return { ...c, d: line(pts), fall: falls ? line(pts.slice(c.peak - 1)) : '' };
+    }),
+  );
 
   function onMove(e) {
     const box = e.currentTarget.getBoundingClientRect();
@@ -79,7 +97,7 @@
   }
 
   const puzzle = {
-    goal: 'Sixty people must each work closely with all the others, and each of those links takes 2% of both people’s time. How much useful work do the sixty produce?',
+    goal: 'Sixty people must each work closely with all the others. How much useful work do the sixty produce between them?',
     choices: [
       { value: '48', label: 'About 48 people’s worth: each link costs only 2%' },
       { value: '25', label: 'About 25 people’s worth' },
@@ -89,7 +107,7 @@
     answer: '0',
     wrong: () => 'Count the links each person has, and what they cost. The figure can check it: everyone linked, 60 people.',
     hints: ['Each person keeps up a link with every one of the other 59.', 'What share of one person’s time goes on keeping up with 59 colleagues?'],
-    found: 'Nothing at all. Each person has 59 colleagues to keep up with, and at 2% each that is more than all of their time.',
+    found: 'Nothing at all: each person has 59 colleagues to keep up with, and at 2% each that is more than all their time.',
   };
   // A prediction: the controls open, and the curves run to 60, after the first answer or a hint.
   const game = getContext('tkc-game');
@@ -119,29 +137,37 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['Every required working link costs both people 2% of their time.', 'Three shapes: everyone linked to everyone; everyone linked to one approver; teams joined by one person each.', 'Useful work is the time left once the links are kept up.', 'With a whole day free, the approver can sign off the work of 12 people; their own links come out of that day first.']} title="Grow the network" sub="The links each way of working requires, and the useful work left once they are kept up.">
+    <Instrument rules={['Every required working link costs both people 2% of their time.', 'Three shapes: everyone linked; everyone linked to one approver; teams joined by one person.', 'With a free day the approver signs off 12 people’s work; their links come first.']} title="Grow the network" sub="The links each way of working requires, and the useful work left once they are kept up.">
       <Puzzle id="graph" {...puzzle} predict onshow={() => ((kind = 'mesh'), (nodes = 60))} />
-      <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
+      <div class="tkc-controls g-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
         <Slider id="g-nodes" label="Number of people" bind:value={nodes} min={2} max={MAX} />
-        <Segmented name="g-kind" label="Who must work with whom" bind:value={kind} options={STRUCTURES.map((s) => ({ value: s.id, label: s.label }))} />
+        <Segmented name="g-kind" label="Network shape" bind:value={kind} options={STRUCTURES.map((s) => ({ value: s.id, label: LABELS[s.id] }))} />
       </div>
 
       <div class="split">
         <div class="diagram" bind:clientWidth={diagramW}>
           <svg width={size} height={size} role="img" aria-label="{int(now.links)} required links among {nodes} people.">
             {#each graph.edges as [a, b]}
-              <line x1={graph.pts[a].x} y1={graph.pts[a].y} x2={graph.pts[b].x} y2={graph.pts[b].y} class="rel" style:stroke={COLORS[kind]} style:opacity={kind === 'mesh' ? Math.max(0.08, 0.6 - nodes / 110) : 0.55} />
+              <line x1={graph.pts[a].x} y1={graph.pts[a].y} x2={graph.pts[b].x} y2={graph.pts[b].y} class="rel" style:stroke={failing && kind === 'mesh' ? 'var(--tkc-conditions)' : COLORS[kind]} style:opacity={kind === 'mesh' ? Math.max(0.08, 0.6 - nodes / 110) : kind === 'hub' ? 0.8 : 0.55} />
             {/each}
             {#each graph.pts as p}
-              <circle cx={p.x} cy={p.y} r={p.key ? 6 : 4} class="node" class:key={p.key} />
+              <circle cx={p.x} cy={p.y} r={p.key ? 6 : 4} class="node" class:key={p.key} class:fails={p.key && kind === 'hub' && failing} />
             {/each}
           </svg>
         </div>
-        <div class="tkc-stats tkc-stats--4 side-stats" use:announce>
-          <Stat label="Required relationships" value={int(now.links)} sub={kind === 'mesh' ? 'every pair' : kind === 'hub' ? 'everyone to the approver' : `inside teams of about ${TEAM_SIZE}, plus between them`} />
-          <Stat label="Time keeping up relationships" value={pct(now.overhead)} sub="average per person" />
-          <Stat label="Useful output" value={now.output.toFixed(1)} sub={kind === 'hub' && now.approvalTime === 0 ? 'no time left to approve' : now.overloaded ? 'the approver is the limit' : 'people’s worth'} swatch={COLORS[kind]} />
-          <Stat label="Single points of failure" value={spof} sub={spof === 0 ? 'nobody’s absence splits the group' : spof === 1 ? 'the approver' : 'one link person per team'} />
+        <div class="tkc-stats side-stats" use:announce>
+          <Stat
+            label="Required links"
+            value={int(now.links)}
+            sub="{pct(now.overhead)} of everyone’s time; {spof === 0 ? 'no single point of failure' : spof === 1 ? 'one single point of failure, the approver' : `${spof} single points of failure, one per team`}"
+          />
+          <Stat
+            label="Useful output"
+            value={now.output.toFixed(1)}
+            sub={kind === 'hub' && now.approvalTime === 0 ? 'no time left to approve' : now.overloaded ? 'people’s worth; the approver is the limit' : failing && now.overhead >= 1 ? 'keeping up takes all their time' : failing ? 'people’s worth, and falling' : 'people’s worth'}
+            swatch={failing ? 'var(--tkc-conditions)' : COLORS[kind]}
+            line={true}
+          />
         </div>
       </div>
 
@@ -155,7 +181,8 @@
             <text class="tkc-axis-label" x={x(t)} y={H - m.bottom + 16} text-anchor="middle">{t}</text>
           {/each}
           {#each paths as p (p.id)}
-            <path d={p.d} class="cv" style:stroke={COLORS[p.id]} style:opacity={p.id === kind ? 1 : 0.55} />
+            <path d={p.d} class="cv" class:dashed={p.id === 'hub'} style:stroke={COLORS[p.id]} style:opacity={p.id === kind ? 1 : 0.55} />
+            {#if p.fall}<path d={p.fall} class="cv fall" class:dashed={p.id === 'hub'} style:opacity={p.id === kind ? 1 : 0.55} />{/if}
           {/each}
           <line class="now" x1={x(nodes)} x2={x(nodes)} y1={m.top} y2={y(0)} />
           {#each paths as p (p.id)}
@@ -170,14 +197,15 @@
           <div class="tkc-tip" style:left="{Math.min(width - 240, Math.max(0, x(hover) + 10))}px" style:top="24px">
             <div>{hover} people</div>
             {#each paths as p (p.id)}
-              <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background={COLORS[p.id]}></span><strong>{p.values[hover - 1].toFixed(1)}</strong> {p.label.toLowerCase()}</div>
+              <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background={COLORS[p.id]}></span><strong>{p.values[hover - 1].toFixed(1)}</strong> {LABELS[p.id].toLowerCase()}</div>
             {/each}
           </div>
         {/if}
         <div class="tkc-legend">
           {#each STRUCTURES as s (s.id)}
-            <span><span class="tkc-swatch tkc-swatch--line" style:background={COLORS[s.id]}></span>{s.label}</span>
+            <span><span class="tkc-swatch tkc-swatch--line" class:dash-key={s.id === 'hub'} style:background={s.id === 'hub' ? null : COLORS[s.id]} aria-hidden="true"></span>{LABELS[s.id]}</span>
           {/each}
+          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)" aria-hidden="true"></span>Output falling</span>
         </div>
       </div>
 
@@ -191,29 +219,37 @@
   {#snippet after()}
     <p>
       When everyone depends on everyone, output peaks at around 25 people and then falls: each newcomer adds more
-      coordination than work. When every pair must keep in touch, the cost of keeping in touch grows with the square of
-      the group. Fred Brooks saw it in software in 1975: adding people to a late project makes
-      it later. The same holds for systems, where every new point-to-point link is one more thing to maintain and one
-      more path for a problem to travel.
+      coordination than work, because the cost of keeping in touch grows with the square of the group. Fred Brooks saw
+      it in software in 1975: adding people to a late project makes it later. The same holds for systems, where every
+      new point-to-point link is one more thing to maintain and one more path for a problem to travel.
     </p>
     <p>
-      Cities show the other side of scale: a city twice as big produces roughly 2.2 times as much. In a city you can work with almost anyone and have to coordinate with
-      almost no one. Possible links are options. Required links are conditions.
+      Not every link costs this much. A colleague you may call on is an option; one you must keep up with, whether or
+      not there is work between you, is a condition.
     </p>
     <p>
       A single central hub keeps links few, but every one of them ends at the approver. Output peaks at about ten
-      people’s worth, with eleven people, and then falls: each newcomer brings more work to approve and takes time
-      away from approving it. From 51 people the approver’s whole day goes on keeping up, and nothing is signed off.
-      The centre is also a single point of failure. Small modules with clear interfaces keep growing almost in
-      proportion. They have a second advantage, which the next chapter is about: they survive interruptions.
+      people’s worth, with eleven people, and then falls: each newcomer brings more work to approve and takes time away
+      from approving it. From 51 people the approver’s whole day goes on keeping up, and nothing is signed off.
+    </p>
+    <p>
+      Few organizations set out to build a hub. An approver is added for safety, and each new team is routed through the
+      same desk because that is simplest. Each step looks small, and the approver looks busy rather than overloaded. The
+      cost shows as waiting, as on the full calendars of the queues chapter, and as one name that everything stops for
+      when it is away, like the named people of the riddle.
+    </p>
+    <p>
+      Small teams with clear interfaces keep growing almost in proportion: sixty people produce {structure('teams', MAX).output.toFixed(0)}
+      people’s worth. They have a second advantage, which the watchmakers show: they survive interruptions.
     </p>
   {/snippet}
 
   {#snippet bank()}
     <BankNote ask="Who and what must link to whom in one of our processes, and where are its single points of failure?">
       <p>
-        Every new role, committee, system or interface changes the graph. What matters is whether it adds an option or a
-        required link.
+        Every new role, committee, system or interface changes the graph. An organization chart shows who reports to
+        whom; it rarely shows who must work with whom, the graph that decides how much of each day goes on keeping up.
+        What matters is whether a change adds an option or a required link.
       </p>
     </BankNote>
   {/snippet}
@@ -226,12 +262,29 @@
     gap: 16px;
     align-items: center;
   }
+  .side-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
   @container fig (min-width: 600px) {
     .split {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
     }
     .side-stats {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .tkc-chart svg {
+    display: block;
+    overflow: visible;
+  }
+  /* Room for the three shapes on one line: a wider column for them, and tighter options. */
+  .g-controls :global(.seg label) {
+    padding: 4px 7px;
+  }
+  @container fig (min-width: 520px) {
+    .g-controls {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
     }
   }
   .diagram {
@@ -248,8 +301,20 @@
     stroke-width: 1.5;
   }
   .node.key {
-    fill: var(--tkc-conditions);
+    fill: var(--tkc-ink-2);
     stroke: var(--tkc-surface);
+  }
+  .node.key.fails {
+    fill: var(--tkc-conditions);
+  }
+  .cv.dashed {
+    stroke-dasharray: 6 4;
+  }
+  .cv.fall {
+    stroke: var(--tkc-conditions);
+  }
+  .dash-key {
+    background: repeating-linear-gradient(90deg, var(--tkc-muted) 0 5px, transparent 5px 8px);
   }
   .cv {
     fill: none;

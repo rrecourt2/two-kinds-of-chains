@@ -114,11 +114,10 @@
     <p>
       So far, variability has mostly done harm in this story. In the coin game, the stress test and on the islands,
       chains broke when the world pulled on them; since then, they have learned to bend. The chains in this last part
-      learn, and some even gain from the swings.
+      learn, and some gain from the swings.
     </p>
     <p>
-      The first is the newest link in many chains: an AI that reads a request, drafts the answer and fills in the
-      systems behind it. With a person in the loop, someone looks at each draft before it moves on, keeps a good one and
+      The first is the newest link in many chains: an AI that reads a request and drafts the answer. With a person in the loop, someone looks at each draft before it moves on, keeps a good one and
       drops a bad one. On autopilot, every draft goes straight on, and a wrong one is redone further down the chain.
     </p>
     <p>Below, the same AI handles the same twenty requests both ways. For now it is steady: rarely wrong.</p>

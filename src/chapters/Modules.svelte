@@ -119,8 +119,9 @@
   const GY = 120;
   const H = $derived(GY + 10 * (cs + gap) + 6);
 
-  // The long run: watches a month at one part a minute, 160 hours.
-  const wx = $derived(linear(0, 10, 92, Math.max(140, width - 60)));
+  // The long run: watches a month at one part a minute, 160 hours. The scale stops short of the
+  // right edge, so that a value label always fits beside its bar ("9.6 a month" at the most).
+  const wx = $derived(linear(0, 10, 76, Math.max(140, width - 84)));
   const every = (perMonth) => {
     if (perMonth >= 1) return `${perMonth.toFixed(1)} a month`;
     const months = 1 / perMonth;
@@ -140,7 +141,7 @@
     answer: 'thousands',
     wrong: (v) => `${v === '100' ? 'More than that.' : 'Far more than that.'} Watch how far Tempus gets before each interruption.`,
     hints: ['Tempus has to place 1,000 parts in a row without an interruption. How often does that happen at one in a hundred?', 'Hora only ever needs ten in a row, which happens nine times in ten.'],
-    found: 'Thousands: about 2,000 in this model, and about 4,000 by Simon’s own rougher arithmetic. Tempus gets through 1,000 parts in a row less than once in 20,000 tries.',
+    found: 'Thousands: about 2,000 here, because Tempus gets through 1,000 parts in a row less than once in 20,000 tries.',
   };
 </script>
 
@@ -153,8 +154,9 @@
 >
   {#snippet setup()}
     <p>
-      Herbert Simon, a Nobel economist and one of the founders of artificial intelligence, told this parable in 1962.
-      Tempus and Hora both make fine watches of 1,000 parts, and both are often interrupted by customers calling.
+      Kauffman’s teams escaped their dead ends by working inside modules. Herbert Simon, a Nobel economist and one of the
+      founders of artificial intelligence, had shown why in a parable of 1962. Tempus and Hora both make fine watches of
+      1,000 parts, and both are often interrupted by customers calling.
     </p>
     <p>
       Tempus builds each watch in one go. When he puts it down to answer the phone, it falls apart and he starts again.
@@ -168,7 +170,7 @@
       <Puzzle id="modules" {...puzzle} predict onshow={() => (interrupt = 10)} />
 
       <div class="tkc-controls tkc-controls--wide" class:tkc-wait={!live} inert={live ? undefined : true}>
-        <Slider id="w-int" label="Chance of an interruption with each part" bind:value={interrupt} min={0} max={20} format={(v) => `${(v / 10).toFixed(1)}%`} ends={['Quiet', 'Busy']} />
+        <Slider id="w-int" label="Interruptions" bind:value={interrupt} min={0} max={20} format={(v) => `${(v / 10).toFixed(1)}% a part`} ends={['Quiet', 'Busy']} />
       </div>
 
       <div class="race" bind:this={panel} bind:clientWidth={width}>
@@ -218,8 +220,9 @@
             {#each [{ name: 'Tempus', v: w.tempus.perMonth }, { name: 'Hora', v: w.hora.perMonth }] as row, i (row.name)}
               {@const yy = 4 + i * 36}
               <text class="tkc-label" x="0" y={yy + 15}>{row.name}</text>
-              <path d={barRight(wx(0), yy + 2, Math.max(2, wx(Math.min(10, row.v)) - wx(0)), 18)} class="wbar" class:win={row.v >= Math.max(w.tempus.perMonth, w.hora.perMonth)} />
-              <text class="tkc-label-2" x={Math.min(wx(Math.min(10, row.v)) + 6, width - 120)} y={yy + 15}>{every(row.v)}</text>
+              {@const ahead = row.v >= Math.max(w.tempus.perMonth, w.hora.perMonth)}
+              <path d={barRight(wx(0), yy + 2, Math.max(2, wx(Math.min(10, row.v)) - wx(0)), 18)} class="wbar" class:win={ahead && row.name === 'Hora'} class:lose={!ahead && row.name === 'Tempus'} />
+              <text class="tkc-label-2" x={wx(Math.min(10, row.v)) + 6} y={yy + 15}>{every(row.v)}</text>
             {/each}
           </svg>
           <p class="tkc-caption">
@@ -241,8 +244,13 @@
     <p>
       Tempus is no worse at making watches than Hora. His work is one chain of a thousand steps, and every interruption
       sends him back to the start. Hora’s is a hundred and eleven short chains, each of which ends in something that
-      holds. The longer and more rigid the chain, the more an interruption costs: at one in a hundred, a thousand steps in
-      a row almost never happen.
+      holds. At one interruption in a hundred, ten steps in a row happen nine times in ten; a thousand in a row almost
+      never happen. Simon’s own, rougher arithmetic gave Hora about 4,000 watches for each of Tempus’s.
+    </p>
+    <p>
+      The links inside Hora’s modules are still <span class="tkc-and">ANDs</span>: every part must be in place. What
+      changes is how far a break travels. At one in a hundred, an interruption costs her at most ten minutes of work, and
+      costs Tempus more than an hour and a half on average.
     </p>
     <p>
       Simon’s point was that complex systems which survive and adapt are almost always built like Hora’s watches, from
@@ -261,7 +269,8 @@
     <BankNote ask="Which of our long processes lose their progress when someone is interrupted?">
       <p>
         A request that has to be finished in one sitting, by one person, is built like Tempus’s watch. One that is saved
-        in finished pieces, each with a clear owner, is built like Hora’s.
+        in finished pieces, each with a clear owner, is built like Hora’s. So is a credit paper whose sections can be
+        reviewed as each is finished, rather than only once the whole is done.
       </p>
     </BankNote>
   {/snippet}
@@ -283,8 +292,9 @@
     fill: var(--tkc-conditions-wash);
     stroke: var(--tkc-conditions);
   }
+  /* Tempus's one long chain, the one that breaks: orange. Hora's finished modules: blue. */
   .tbar {
-    fill: var(--tkc-ink-2);
+    fill: var(--tkc-conditions);
   }
   .best {
     stroke: var(--tkc-ink);
@@ -334,5 +344,8 @@
   }
   .wbar.win {
     fill: var(--tkc-options);
+  }
+  .wbar.lose {
+    fill: var(--tkc-conditions);
   }
 </style>

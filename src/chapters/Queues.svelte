@@ -141,7 +141,7 @@
       { label: `Average wait under an hour (now ${hours(wait)})`, ok: wait < 1 },
     ],
     hints: ['How busy they are is only half of it. Look at how requests reach the reviewers.', 'Can a request wait while a reviewer who could take it is free?'],
-    found: 'One shared line does it. At 80% busy, the same four people cut the average wait from four hours to 45 minutes.',
+    found: 'One shared line: at 80% busy, the same four people cut the average wait from four hours to 45 minutes.',
   });
 </script>
 
@@ -154,25 +154,29 @@
 >
   {#snippet setup()}
     <p>
-      Even when the right people are in, they are busy. Say four credit analysts review every new deal, and each review
-      takes about an hour. Queueing theory, the mathematics of waiting lines, says that how busy they are decides how
-      long everyone else waits.
+      The riddle asked whether the right people are in. Even when they are, they are busy. Say four credit analysts
+      review every new deal, and each review takes about an hour. Each deal goes to the analyst who covers its client,
+      and waits in that analyst’s line.
     </p>
-    <p>The surprise is the shape. Waiting does not grow in step with how busy someone is.</p>
+    <p>
+      Queueing theory, the mathematics of waiting lines, says that how busy the analysts are decides how long every deal
+      waits. Each review is a link in the deal’s chain, and a busy link is a slow one. The surprise is the shape:
+      waiting does not grow in step with how busy someone is.
+    </p>
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['Four reviewers; a review takes an hour on average, sometimes much longer.', 'Requests arrive at random, not on a timetable.', 'Named lines: each request waits for its own reviewer. One shared line: whoever is free next takes it.']} title="Four reviewers, one stream of requests" sub="Requests queueing for four reviewers, live, and below it the average wait at every level of busyness.">
+    <Instrument rules={['Four reviewers; a review takes an hour on average, sometimes much longer.', 'Requests arrive at random, not on a timetable.', 'Named lines: a request waits for its reviewer. Shared line: whoever is free takes it.']} title="Four reviewers, one stream of requests" sub="Requests queueing for four reviewers, live, and below it the average wait at every level of busyness.">
       <Puzzle id="queues" {...puzzle} onshow={() => ((mode = 'pooled'), (busy = 80))} />
       <div class="tkc-controls">
-        <Slider id="q-busy" label="How busy are the reviewers?" bind:value={busy} min={50} max={98} format={(v) => `${v}% of their time`} />
+        <Slider id="q-busy" label="Reviewers busy" bind:value={busy} min={50} max={98} format={(v) => `${v}% of their time`} />
         <Segmented
           name="q-mode"
-          label="How requests are assigned"
+          label="Requests wait in"
           bind:value={mode}
           options={[
-            { value: 'named', label: 'To a named reviewer' },
-            { value: 'pooled', label: 'To whoever is free next' },
+            { value: 'named', label: 'Named lines' },
+            { value: 'pooled', label: 'One shared line' },
           ]}
         />
       </div>
@@ -215,19 +219,20 @@
         </p>
       </div>
 
-      <div class="tkc-stats" class:tkc-stats--3={revealed} use:announce>
+      <!-- Two tiles either way: before solving, the setting and the animation's own count; after, the two lines side by side. -->
+      <div class="tkc-stats" use:announce>
         {#if revealed}
           <Stat label="Average wait, named reviewer" value={hours(named)} sub="before work starts" swatch="var(--tkc-conditions)" line={true} />
           <Stat label="Average wait, shared line" value={hours(pooled)} sub="same people, same workload" swatch="var(--tkc-options)" line={true} />
         {:else}
           <Stat label="Average wait, as set up" value={hours(wait)} sub={mode === 'named' ? 'each request waits for a named reviewer' : 'one shared line for all four'} swatch={mode === 'named' ? 'var(--tkc-conditions)' : 'var(--tkc-options)'} line={true} />
+          <Stat
+            quiet
+            label="In the animation so far"
+            value={snap.samples < 30 ? 'Measuring…' : hours(snap.avg)}
+            sub={snap.samples < 30 ? 'collecting the first requests' : `last ${Math.min(400, snap.samples)} requests, ${mode === 'named' ? 'named' : 'shared'}`}
+          />
         {/if}
-        <Stat
-          quiet
-          label="In the animation so far"
-          value={snap.samples < 30 ? 'Measuring…' : hours(snap.avg)}
-          sub={snap.samples < 30 ? 'collecting the first requests' : `last ${Math.min(400, snap.samples)} requests, ${mode === 'named' ? 'named' : 'shared'}`}
-        />
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
@@ -283,12 +288,15 @@
   {#snippet after()}
     <p>
       At 50% busy, a one-hour review waits about an hour. At 80% it waits four hours, at 90% nine, and at 95% nineteen.
-      The last few points of utilization cost the most waiting. Hospitals aim to keep roughly one bed in seven free for
-      the same reason: above about 85% occupancy, emergency patients start to find no bed.
+      Requests come in bunches and some reviews run long; with slack, a reviewer catches up between bunches, and without
+      it every bunch adds to the line. Hospitals aim to keep roughly one bed in seven free for the same reason: above
+      about 85% occupancy, emergency patients start to find no bed.
     </p>
     <p>
-      With one shared line, no request waits while a colleague who could do it sits idle. Bank branches learned this
-      long ago: one line for all the tellers beats a line per teller.
+      A shared line changes the shape, not the workload. In named lines a request can wait behind a colleague’s backlog
+      while another reviewer sits idle; in one shared line that never happens, and the curve turns upward much later.
+      Bank branches learned this long ago: one line for all the tellers beats a line per teller. It is the riddle’s
+      stand-in again: any qualified person may take the work.
     </p>
     <p>
       In a long chain, the waits add up. A request that passes six named reviewers, each 95% busy, waits about nineteen
@@ -302,7 +310,8 @@
     <BankNote ask="Who are the three busiest reviewers in our processes, and could their work go to a shared pool?">
       <p>
         A reviewer at 70–80% has room for the urgent case; one at 95% does not. Spare capacity looks like waste on a
-        utilization report. The waiting it prevents appears on no report at all.
+        utilization report, and the waiting it prevents appears on no report at all. Pooling finds room without hiring:
+        the same people, taking whatever comes next.
       </p>
     </BankNote>
   {/snippet}
