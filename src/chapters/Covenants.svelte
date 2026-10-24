@@ -235,7 +235,7 @@
       time in five in a calm year, two in five in a normal one and about three in four in a crisis.
     </p>
     <p>
-      Thomas Bayes worked out this arithmetic in an essay published in 1763, two years after his death: a belief before
+      Thomas Bayes laid the ground for this arithmetic in an essay published in 1763, two years after his death: a belief before
       the evidence, the evidence, the belief after. A breach read as a reason to look closer is how a lender learns about
       a borrower, and how the chain learns.
     </p>

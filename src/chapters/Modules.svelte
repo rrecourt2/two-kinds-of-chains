@@ -249,7 +249,7 @@
     </p>
     <p>
       The links inside Hora’s modules are still <span class="tkc-and">ANDs</span>: every part must be in place. What
-      changes is how far a break travels. At one in a hundred, an interruption costs her at most ten minutes of work, and
+      changes is how far a break travels. At one in a hundred, an interruption costs Hora at most ten minutes of work, and
       costs Tempus more than an hour and a half on average.
     </p>
     <p>

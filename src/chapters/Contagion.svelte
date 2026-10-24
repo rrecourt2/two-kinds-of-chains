@@ -300,7 +300,7 @@
     <BankNote ask="Which partner, supplier or system in our chain would bring down many others if it failed?">
       <p>
         In 2011 the world’s bank supervisors agreed that the banks whose failure would travel furthest should hold more
-        capital than the rest: 1 to 3.5 extra percentage points, set by how large, interlinked and hard to replace a
+        capital than the rest: 1 to 3.5 extra percentage points, set by how large, interlinked, complex, global and hard to replace a
         bank is. National supervisors now do the same for the banks that matter most at home.
       </p>
     </BankNote>

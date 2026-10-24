@@ -227,7 +227,7 @@
     </p>
     <h3>Why islands</h3>
     <p>
-      A larger area holds more species in all, but fewer in each place; Nassim Taleb reads globalization into that rule,
+      A larger area holds more species in all, but fewer for its size; Nassim Taleb reads globalization into that rule,
       as a few winners spread at the expense of the rest. The islands here never swap animals, so a collapse on one stays
       there: each is a firebreak, as the banks in the stress test were not. Any one island is fragile; what lasts is the
       archipelago.

@@ -147,7 +147,7 @@
       </div>
 
       {#snippet model()}
-        <p>A trained pin-maker working alone makes 10 pins a day. Split the 12 operations among n specialist roles and each specialist works n times faster at their share.</p>
+        <p>A trained pin-maker working alone makes 10 pins a day. Smith’s eighteen operations are grouped here into 12, which divide evenly among 1, 2, 3, 4, 6 or 12 roles; split among n roles, each specialist works n times faster at their share.</p>
         <p>Every role needs at least one whole person, so a small market leaves specialists idle. Worker-minutes per pin = everyone’s working time ÷ pins made. Roughly, the best number of roles grows with the square root of demand, in jumps and not always upwards: because every role needs a whole person, a design with fewer roles sometimes wins for a while. The chain under the chart shows the cheapest design; when designs cost the same, the one with fewer roles is shown. Hovering over a bar shows how that design is staffed.</p>
       {/snippet}
     </Instrument>
@@ -167,7 +167,7 @@
     </p>
     <h3>Chips: one of the longest chains, and one of the most inventive</h3>
     <p>
-      Until 1987 almost every chip company designed and made its own chips, when Morris Chang founded a firm in Taiwan
+      Until 1987 almost every chip company designed and made its own chips. That year Morris Chang founded a firm in Taiwan
       to do one thing only: make chips that others design. Since then each link has specialized, from the blueprints
       and the design software to the machines that print the circuits, and the chain has been one of the most
       innovative in industry.
