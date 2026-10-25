@@ -9,11 +9,12 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { SHOWN, averagePayoff, runDesign, sampleRequests, STEADY, ERRATIC } from '../lib/sim/convexity.js';
+  import { SHOWN, averagePayoff, runDesign, sampleRequests, STEADY, ERRATIC, CHECK_COST } from '../lib/sim/convexity.js';
   import { linear, line } from '../lib/scales.js';
   import { prefersReducedMotion } from '../lib/motion.js';
 
-  // A prediction: the choice of AI opens after the first answer or a hint.
+  // A prediction: the erratic AI (the asked case) opens after the first answer or a hint. Until then the
+  // steady AI can be explored request by request on the chart.
   const game = getContext('tkc-game');
   const live = $derived(game.engaged('tools'));
 
@@ -21,6 +22,7 @@
   const SEED = 1;
   let ai = $state('steady');
   let width = $state(560);
+  let hover = $state(null); // the request pointed at, 1 to N
 
   // Hours saved, added up request by request, for one sample of twenty requests.
   const added = (values) => {
@@ -59,6 +61,25 @@
       .map((v, i) => (i > 0 && rows[1].values[i - 1] < 0 ? { i, d: line([[x(i - 1), y(series[1][i - 1])], [x(i), y(v)]]) } : null))
       .filter(Boolean),
   );
+  // The person's dropped drafts: a wrong draft costs them only the six minutes spent looking.
+  const dropped = $derived(rows[1].values.map((v, i) => (v < 0 ? i + 1 : 0)).filter(Boolean));
+  function onMove(e) {
+    const box = e.currentTarget.getBoundingClientRect();
+    hover = Math.max(1, Math.min(N, Math.round(x.invert(e.clientX - box.left + m.left))));
+  }
+  const short = (v) => (Math.abs(v) < 1 ? mins(v) : `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)} h`);
+  const tip = $derived.by(() => {
+    if (hover === null) return null;
+    const draft = rows[1].values[hover - 1];
+    return {
+      head: draft >= 0 ? `Request ${hover}: the draft saves ${short(draft)}` : `Request ${hover}: the draft is wrong`,
+      person: draft >= 0 ? `kept, after six minutes looking: ${short(rows[0].values[hover - 1])}` : 'dropped: six minutes lost',
+      auto: draft >= 0 ? `used as it is: ${short(draft)}` : `used, then redone further down: ${short(draft)}`,
+    };
+  });
+  // What the person keeps from a draft on average, before the six minutes spent checking.
+  const keptMin = (avg) => Math.round((avg + CHECK_COST) * 60);
+
   // End labels, kept at least a line apart.
   const ends = $derived.by(() => {
     const a = y(series[0][N]);
@@ -124,9 +145,9 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="One AI, twenty requests, two designs" sub="One sample of twenty requests: the hours each design saves, added up request by request." {rules}>
+    <Instrument title="One AI, twenty requests, two designs" sub="One sample of twenty requests: the hours each design saves, added up. Point at a request to see its draft." {rules}>
       <Puzzle id="tools" {...puzzle} predict onshow={() => (ai = 'erratic')} />
-      <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
+      <div class="tkc-controls">
         <div class="ctl">
           <Segmented
             name="t-ai"
@@ -134,8 +155,9 @@
             bind:value={ai}
             options={[
               { value: 'steady', label: 'Steady' },
-              { value: 'erratic', label: 'Erratic' },
+              { value: 'erratic', label: 'Erratic', locked: !live },
             ]}
+            lockNote="The erratic AI opens after your first answer."
           />
           <p class="tkc-caption">Both save half an hour a request on average. The steady AI is rarely wrong; the erratic one is brilliant or wrong.</p>
         </div>
@@ -155,15 +177,26 @@
           <path class="run auto" d={line(pts(series[1]))} />
           {#each falls as f (f.i)}<path class="run fall" d={f.d} />{/each}
           <path class="run person" d={line(pts(series[0]))} />
+          {#each dropped as i (i)}<circle class="drop" cx={x(i)} cy={y(series[0][i])} r="4" />{/each}
+          {#if hover !== null}<line class="cross" x1={x(hover)} x2={x(hover)} y1={m.top} y2={y(Y0)} />{/if}
           {#each series as s, k (k)}
             <circle class="end" class:person={k === 0} cx={x(N)} cy={y(s[N])} r="4" />
             <text class="tkc-label tkc-halo end-label" class:person-label={k === 0} x={x(N) + 8} y={ends[k] + 4}>{hrs(s[N])}</text>
           {/each}
+          <rect x={m.left} y={m.top} width={Math.max(0, x(N) - m.left + 8)} height={H - m.top - m.bottom} fill="transparent" role="presentation" onpointerdown={onMove} onpointermove={onMove} onpointerleave={() => (hover = null)} />
         </svg>
+        {#if tip}
+          <div class="tkc-tip" style:left="{Math.min(width - 240, Math.max(0, x(hover) + 10))}px" style:top="28px">
+            <div>{tip.head}</div>
+            <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-options)"></span>Person: {tip.person}</div>
+            <div class="tkc-tip-row"><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-ink-2)"></span>Autopilot: {tip.auto}</div>
+          </div>
+        {/if}
         <div class="tkc-legend">
           <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-options)" aria-hidden="true"></span>Person in the loop</span>
           <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-ink-2)" aria-hidden="true"></span>On autopilot</span>
-          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)" aria-hidden="true"></span>Wrong draft used: time lost</span>
+          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)" aria-hidden="true"></span>Wrong draft used: redone further down</span>
+          <span><span class="tkc-swatch drop-key" aria-hidden="true"></span>Draft dropped: six minutes lost</span>
         </div>
       </div>
 
@@ -172,7 +205,7 @@
           <Stat
             label="{NAMES[r.id]}, on average"
             value={mins(r.avg)}
-            sub={ai === 'steady' ? 'a request, over many requests' : `a request; with the steady AI, ${mins(steadyAvg[r.id])}`}
+            sub={ai === 'steady' ? (r.id === 'tool' ? `a request: the AI’s ${keptMin(r.avg)}, less 6 spent checking` : 'a request, over many requests') : `a request; with the steady AI, ${mins(steadyAvg[r.id])}`}
             swatch={r.id === 'tool' ? 'var(--tkc-options)' : 'var(--tkc-ink-2)'}
             line={true}
           />
@@ -257,6 +290,22 @@
   .run.fall {
     stroke: var(--tkc-conditions);
     stroke-width: 3;
+  }
+  .drop {
+    fill: var(--tkc-surface);
+    stroke: var(--tkc-options);
+    stroke-width: 2;
+  }
+  .drop-key {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 2px solid var(--tkc-options);
+    background: var(--tkc-surface);
+  }
+  .cross {
+    stroke: var(--tkc-muted);
+    stroke-width: 1;
   }
   .end {
     fill: var(--tkc-ink-2);

@@ -28,7 +28,7 @@
     extinction: 'Two species, forty islands, and weather that grows less calm: which one lasts?',
     gate: 'Six hundred account changes a year, one in 200 a fraud: which payments are worth the wait of a check?',
     graph: 'Sixty people who must all work with each other: how much gets done?',
-    knot: 'Forty conditions, each waiting for one or two others: how many can ever be met?',
+    knot: 'Forty conditions of one power programme, each waiting for one or two others: how many can ever be met?',
     modules: 'Two watchmakers, the same watch, and a phone that keeps ringing.',
     disbursement: 'A three-month promise, twelve conditions: how often is the money on time?',
     covenants: 'Twelve covenants on every loan, and 10 of 200 borrowers in real trouble: what does one breach tell the lender?',
@@ -36,7 +36,7 @@
     automation: 'A system that reads borrowers’ accounts and almost never fails: what does the day it fails cost, once nobody does its work any more?',
     variety: 'Sixty kinds of client request, a menu of ten answers and a committee with five places a week: how many answers does it take?',
     tinkering: 'A budget of 100, and nobody can tell which approach will work: one big programme, or pilots first?',
-    redqueen: 'Checks catch three frauds in four in their first month. What do they catch in year three, once the other side has learned?',
+    redqueen: 'Checks catch three frauds in four in their first month. Reviewed every month, what do they catch in year three, once the other side has learned?',
     pace: 'After a crisis every lender adds links. How fast should the lesson fade?',
     monday: 'The patterns behind the puzzles, and your score.',
   };

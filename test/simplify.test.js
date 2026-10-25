@@ -64,10 +64,11 @@ test('riddle: absences still last three days on average and match the long-run o
 });
 
 test('riddle: the month on show is close to the long run for the puzzle’s settings', () => {
-  const m = (a, b) => simulateMonth({ roles: 6, standIns: b, availability: a, seed: 58 }).possibleDays;
-  assert.equal(m(0.9, 0), 12);
+  // Twenty working days, seed 2984 (Riddle.svelte); test/riddle.test.js checks the rest of that month.
+  const m = (a, b) => simulateMonth({ roles: 6, standIns: b, availability: a, days: 20, seed: 2984 }).possibleDays;
+  assert.equal(m(0.9, 0), 11);
   assert.equal(m(0.97, 0), 17);
-  assert.equal(m(0.9, 1), 21);
+  assert.equal(m(0.9, 1), 19);
 });
 
 test('specialization: twelve roles first win at 794 pins a day on the slider', () => {

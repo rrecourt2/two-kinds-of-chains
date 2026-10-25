@@ -13,6 +13,8 @@
   import { int, pct } from '../lib/format.js';
 
   const MAX = 60;
+  // Before the first answer the slider stops at the opening size; the asked case, sixty, opens after it.
+  const OPEN = 24;
   let nodes = $state(24);
   let kind = $state('mesh');
   let diagramW = $state(320);
@@ -95,6 +97,11 @@
     const box = e.currentTarget.getBoundingClientRect();
     hover = Math.max(1, Math.min(reach, Math.round(x.invert(e.clientX - box.left + m.left))));
   }
+  const linksSub = $derived(
+    kind === 'hub'
+      ? `${pct(now.overhead)} of everyone’s time on average; the approver alone needs ${(nodes - 1) * 2}%`
+      : `${pct(now.overhead)} of everyone’s time; ${spof === 0 ? 'no single point of failure' : `${spof} single points of failure, one per team`}`,
+  );
 
   const puzzle = {
     goal: 'Sixty people must each work closely with all the others. How much useful work do the sixty produce between them?',
@@ -137,10 +144,10 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['Every required working link costs both people 2% of their time.', 'Three shapes: everyone linked; everyone linked to one approver; teams joined by one person.', 'With a free day the approver signs off 12 people’s work; their links come first.']} title="Grow the network" sub="The links each way of working requires, and the useful work left once they are kept up.">
+    <Instrument rules={['Every required working link costs both people 2% of their time.', 'Three shapes: everyone linked; everyone linked to one approver; teams joined by one person.', 'The approver’s spare time goes on approvals: a free day signs off 12 people’s work.']} title="Grow the network" sub="The links each way of working requires, and the useful work left once they are kept up.">
       <Puzzle id="graph" {...puzzle} predict onshow={() => ((kind = 'mesh'), (nodes = 60))} />
-      <div class="tkc-controls g-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
-        <Slider id="g-nodes" label="Number of people" bind:value={nodes} min={2} max={MAX} />
+      <div class="tkc-controls g-controls">
+        <Slider id="g-nodes" label="Number of people" bind:value={nodes} min={2} max={MAX} limit={live ? null : OPEN} limitNote="Above {OPEN} people: opens after your first answer." />
         <Segmented name="g-kind" label="Network shape" bind:value={kind} options={STRUCTURES.map((s) => ({ value: s.id, label: LABELS[s.id] }))} />
       </div>
 
@@ -156,11 +163,7 @@
           </svg>
         </div>
         <div class="tkc-stats side-stats" use:announce>
-          <Stat
-            label="Required links"
-            value={int(now.links)}
-            sub="{pct(now.overhead)} of everyone’s time; {spof === 0 ? 'no single point of failure' : spof === 1 ? 'one single point of failure, the approver' : `${spof} single points of failure, one per team`}"
-          />
+          <Stat label="Required links" value={int(now.links)} sub={linksSub} />
           <Stat
             label="Useful output"
             value={now.output.toFixed(1)}
@@ -177,6 +180,12 @@
             <line class={t === 0 ? 'tkc-base' : 'tkc-grid'} x1={m.left} x2={width - m.right} y1={y(t)} y2={y(t)} />
             <text class="tkc-axis-label" x={m.left - 6} y={y(t) + 4} text-anchor="end">{t}</text>
           {/each}
+          {#if !live}
+            <!-- Sizes past the opening one wait for the first answer. -->
+            <rect class="later" x={x(OPEN + 0.5)} y={m.top} width={Math.max(0, x(MAX) - x(OPEN + 0.5))} height={y(0) - m.top} />
+            <text class="tkc-label-2 tkc-halo" x={(x(OPEN + 0.5) + x(MAX)) / 2} y={m.top + 22} text-anchor="middle">{OPEN + 1}–{MAX} people:</text>
+            <text class="tkc-label-2 tkc-halo" x={(x(OPEN + 0.5) + x(MAX)) / 2} y={m.top + 38} text-anchor="middle">after your answer</text>
+          {/if}
           {#each [1, 10, 20, 30, 40, 50, 60] as t}
             <text class="tkc-axis-label" x={x(t)} y={H - m.bottom + 16} text-anchor="middle">{t}</text>
           {/each}
@@ -205,7 +214,7 @@
           {#each STRUCTURES as s (s.id)}
             <span><span class="tkc-swatch tkc-swatch--line" class:dash-key={s.id === 'hub'} style:background={s.id === 'hub' ? null : COLORS[s.id]} aria-hidden="true"></span>{LABELS[s.id]}</span>
           {/each}
-          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)" aria-hidden="true"></span>Output falling</span>
+          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)" aria-hidden="true"></span>Adding people lowers output</span>
         </div>
       </div>
 
@@ -218,7 +227,7 @@
 
   {#snippet after()}
     <p>
-      When everyone depends on everyone, output peaks at around 25 people and then falls: each newcomer adds more
+      When everyone depends on everyone, output peaks at around 25 people, a tipping point, and then falls: each newcomer adds more
       coordination than work, because the cost of keeping in touch grows with the square of the group. Fred Brooks saw
       it in software in 1975: adding people to a late project makes it later. The same holds for systems, where every
       new point-to-point link is one more thing to maintain and one more path for a problem to travel.
@@ -286,6 +295,10 @@
     .g-controls {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
     }
+  }
+  .later {
+    fill: var(--tkc-sunken);
+    opacity: 0.7;
   }
   .diagram {
     display: flex;

@@ -24,6 +24,15 @@ export function meanWait(c, rho) {
 }
 
 /**
+ * The tipping point of the wait curve: the busyness (in whole percentage points) past which one more point
+ * adds more waiting than the work itself takes. 90% for one named server, 95% for four sharing a line.
+ */
+export function tippingPoint(c) {
+  for (let r = 50; r < 99; r++) if (meanWait(c, (r + 1) / 100) - meanWait(c, r / 100) >= 1) return r / 100;
+  return null;
+}
+
+/**
  * A live queue for the animation: `servers` approvers, Poisson arrivals and
  * exponential work times of mean 1 hour. In "named" mode each request is
  * assigned to one approver at random and waits in that approver's line; in

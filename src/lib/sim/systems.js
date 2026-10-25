@@ -273,6 +273,7 @@ export function simulateSystems(options, { requests = 1500, seed = 13, journeys 
   const params = absenceParams(options.availability, options.meanSpell);
   const days = new Float64Array(requests);
   const logs = [];
+  const logWork = []; // hours of work in each recorded journey
   let work = 0;
   let within = 0;
   let slipped = 0;
@@ -288,7 +289,7 @@ export function simulateSystems(options, { requests = 1500, seed = 13, journeys 
     if (run.stops) stopped++;
     stops += run.stops;
     spread += run.spread;
-    if (run.log) logs.push(run.log);
+    if (run.log) logs.push(run.log), logWork.push(run.workHours);
   }
   const total = days.reduce((a, b) => a + b, 0);
   return {
@@ -302,6 +303,7 @@ export function simulateSystems(options, { requests = 1500, seed = 13, journeys 
     stopped: stopped / requests,
     spreadPerStop: stops ? spread / stops : 0,
     journeys: logs,
+    journeyWork: logWork,
   };
 }
 

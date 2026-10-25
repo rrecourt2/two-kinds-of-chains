@@ -8,7 +8,7 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { LiveQueue, meanWait } from '../lib/sim/queue.js';
+  import { LiveQueue, meanWait, tippingPoint } from '../lib/sim/queue.js';
   import { makeRng } from '../lib/sim/rng.js';
   import { linear, line, ticks } from '../lib/scales.js';
   import { hours } from '../lib/format.js';
@@ -21,6 +21,13 @@
 
   const SERVERS = 4;
   const SPEED = 1.6; // simulated hours per second of animation
+  const REVIEWERS = ['Ana', 'Ben', 'Chloé', 'Dev'];
+  const CHAIN = 6; // six such reviews in a row, as in a deal's chain
+
+  // The tipping point: the busyness past which one more percentage point adds more waiting than the
+  // one-hour review itself takes (90% for a named reviewer, 95% for the shared line; test/queues.test.js).
+  const TIP_NAMED = tippingPoint(1);
+  const TIP_SHARED = tippingPoint(SERVERS);
 
   let busy = $state(80);
   let mode = $state('named');
@@ -85,13 +92,17 @@
     };
   });
 
-  // Live panel geometry.
+  // Live panel geometry: a name for each line on the left, the requests, then the reviewers' desks.
   const laneH = 30;
   const deskW = 64;
   const dot = 9;
   const liveH = SERVERS * laneH + 16;
-  const maxDots = $derived(Math.max(4, Math.floor((liveW - deskW - 70) / (dot + 3))));
+  const nameW = $derived(liveW < 420 ? 50 : 96);
+  const maxDots = $derived(Math.max(4, Math.floor((liveW - nameW - deskW - 40) / (dot + 3))));
   const laneY = (s) => 8 + s * laneH + laneH / 2;
+  const laneName = (s) => (liveW < 420 ? `${REVIEWERS[s]}’s` : `${REVIEWERS[s]}’s clients`);
+  // Requests waiting while a reviewer elsewhere has nothing to do: the cost of named lines, in orange.
+  const stuck = $derived(mode === 'named' && snap.idleNeeded > 0);
 
   // Hockey-stick chart.
   const H = 238;
@@ -185,25 +196,27 @@
         <svg width={liveW} height={liveH} role="img" aria-label="Animated queue: {snap.waiting} requests waiting.">
           {#if mode === 'named'}
             {#each snap.lines as n, s}
-              <line class="lane" x1="10" x2={liveW - deskW - 14} y1={laneY(s)} y2={laneY(s)} />
+              <text class="tkc-label-2 lane-name" x="0" y={laneY(s) + 4}>{laneName(s)}</text>
+              <line class="lane" x1={nameW} x2={liveW - deskW - 14} y1={laneY(s)} y2={laneY(s)} />
               {#each Array(Math.min(n, maxDots)) as _, k}
-                <circle cx={liveW - deskW - 24 - k * (dot + 3)} cy={laneY(s)} r={dot / 2} class="req" />
+                <circle cx={liveW - deskW - 24 - k * (dot + 3)} cy={laneY(s)} r={dot / 2} class="req" class:stuck />
               {/each}
               {#if n > maxDots}
-                <text class="tkc-label-2" x="12" y={laneY(s) - 8}>+{n - maxDots} more</text>
+                <text class="tkc-label-2 tkc-halo" x={nameW + 2} y={laneY(s) - 8}>+{n - maxDots} more</text>
               {/if}
             {/each}
           {:else}
             {@const mid = liveH / 2}
-            <line class="lane" x1="10" x2={liveW - deskW - 30} y1={mid} y2={mid} />
+            <text class="tkc-label-2 lane-name" x="0" y={mid + 4}>{liveW < 420 ? 'Shared' : 'Next free reviewer'}</text>
+            <line class="lane" x1={nameW + (liveW < 420 ? 0 : 24)} x2={liveW - deskW - 30} y1={mid} y2={mid} />
             {#each Array(SERVERS) as _, s}
               <line class="lane" x1={liveW - deskW - 30} x2={liveW - deskW - 6} y1={mid} y2={laneY(s)} />
             {/each}
-            {#each Array(Math.min(snap.shared, maxDots)) as _, k}
+            {#each Array(Math.min(snap.shared, maxDots - 2)) as _, k}
               <circle cx={liveW - deskW - 40 - k * (dot + 3)} cy={mid} r={dot / 2} class="req" />
             {/each}
-            {#if snap.shared > maxDots}
-              <text class="tkc-label-2" x="12" y={mid - 10}>+{snap.shared - maxDots} more</text>
+            {#if snap.shared > maxDots - 2}
+              <text class="tkc-label-2 tkc-halo" x={nameW + 26} y={mid - 10}>+{snap.shared - maxDots + 2} more</text>
             {/if}
           {/if}
           {#each snap.busy as isBusy, s}
@@ -215,24 +228,8 @@
           {/each}
         </svg>
         <p class="tkc-caption">
-          {#if !running && !prefersReducedMotion()}The animation pauses while it is off screen.{:else if snap.idleNeeded > 0}{snap.idleNeeded} reviewer{snap.idleNeeded > 1 ? 's are' : ' is'} idle while requests wait in other lines.{:else}{snap.waiting} request{snap.waiting === 1 ? '' : 's'} waiting.{/if}
+          {#if !running && !prefersReducedMotion()}The animation pauses while it is off screen.{:else if stuck}<span class="stuck-key"></span>{snap.waiting} request{snap.waiting === 1 ? '' : 's'} wait{snap.waiting === 1 ? 's' : ''} while {snap.idleNeeded} reviewer{snap.idleNeeded > 1 ? 's sit' : ' sits'} idle: {snap.waiting === 1 ? 'it belongs' : 'they belong'} to someone else’s line.{:else if mode === 'pooled'}Right now: {snap.waiting === 0 ? 'nobody waiting' : `${snap.waiting} waiting`}, and no reviewer is idle while anyone waits.{:else}Right now: {snap.waiting} request{snap.waiting === 1 ? '' : 's'} waiting, and no reviewer is idle.{/if}
         </p>
-      </div>
-
-      <!-- Two tiles either way: before solving, the setting and the animation's own count; after, the two lines side by side. -->
-      <div class="tkc-stats" use:announce>
-        {#if revealed}
-          <Stat label="Average wait, named reviewer" value={hours(named)} sub="before work starts" swatch="var(--tkc-conditions)" line={true} />
-          <Stat label="Average wait, shared line" value={hours(pooled)} sub="same people, same workload" swatch="var(--tkc-options)" line={true} />
-        {:else}
-          <Stat label="Average wait, as set up" value={hours(wait)} sub={mode === 'named' ? 'each request waits for a named reviewer' : 'one shared line for all four'} swatch={mode === 'named' ? 'var(--tkc-conditions)' : 'var(--tkc-options)'} line={true} />
-          <Stat
-            quiet
-            label="In the animation so far"
-            value={snap.samples < 30 ? 'Measuring…' : hours(snap.avg)}
-            sub={snap.samples < 30 ? 'collecting the first requests' : `last ${Math.min(400, snap.samples)} requests, ${mode === 'named' ? 'named' : 'shared'}`}
-          />
-        {/if}
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
@@ -258,6 +255,16 @@
           {#if showNamed && namedCurve.exit !== null}
             <text class="tkc-label-2 tkc-halo" x={x(namedCurve.exit) - 6} y={m.top + 12} text-anchor="end">Named ↑ {Math.round(meanWait(1, 0.98))}h at 98%</text>
           {/if}
+          <!-- The tipping point on each curve shown: past it, one more point of busyness adds over an hour. -->
+          {#if showNamed && TIP_NAMED}
+            <circle cx={x(TIP_NAMED)} cy={y(meanWait(1, TIP_NAMED))} r="7" class="tip" style:stroke="var(--tkc-conditions)" />
+            {#if width >= 480}<text class="tkc-label-2 tkc-halo" x={x(TIP_NAMED) - 11} y={y(meanWait(1, TIP_NAMED)) - 6} text-anchor="end">Tipping point</text>{/if}
+          {/if}
+          {#if showPooled && TIP_SHARED}
+            <circle cx={x(TIP_SHARED)} cy={y(meanWait(SERVERS, TIP_SHARED))} r="7" class="tip" style:stroke="var(--tkc-options)" />
+            <!-- On a narrow chart the rings are left to the legend. -->
+            {#if width >= 480 && (revealed || !showNamed)}<text class="tkc-label-2 tkc-halo" x={x(TIP_SHARED) + 10} y={y(meanWait(SERVERS, TIP_SHARED)) + 16}>Tipping point</text>{/if}
+          {/if}
           {#if hover !== null}
             <line class="cross" x1={x(hover)} x2={x(hover)} y1={m.top} y2={y(0)} />
           {/if}
@@ -275,7 +282,19 @@
         <div class="tkc-legend">
           {#if showNamed}<span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span>Each request waits for a named reviewer</span>{/if}
           {#if showPooled}<span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-options)"></span>One shared line for all four</span>{/if}
+          <span><span class="tkc-swatch sw-tip"></span>{width >= 480 ? 'Tipping point' : 'Ring: the tipping point'}: past it, each extra point of busyness adds over an hour</span>
         </div>
+      </div>
+
+      <!-- Two tiles either way: before solving, the setting on show and six such reviews in a row; after, both lines side by side. -->
+      <div class="tkc-stats" use:announce>
+        {#if revealed}
+          <Stat label="Average wait, named reviewer" value={hours(named)} sub="six in a row: {hours(CHAIN * named)} of waiting" swatch="var(--tkc-conditions)" line={true} />
+          <Stat label="Average wait, shared line" value={hours(pooled)} sub="six in a row: {hours(CHAIN * pooled)} of waiting" swatch="var(--tkc-options)" line={true} />
+        {:else}
+          <Stat label="Average wait for one review" value={hours(wait)} sub={mode === 'named' ? 'each request waits for a named reviewer' : 'one shared line for all four'} swatch={mode === 'named' ? 'var(--tkc-conditions)' : 'var(--tkc-options)'} line={true} />
+          <Stat label="Six such reviews in a row" value="{hours(CHAIN * wait)}" sub="of waiting, for six hours of work" />
+        {/if}
       </div>
 
       {#snippet model()}
@@ -293,8 +312,14 @@
       about 85% occupancy, emergency patients start to find no bed.
     </p>
     <p>
+      The curve has a tipping point. Below it, a little more work costs a little more waiting. Past it, from about
+      {Math.round(TIP_NAMED * 100)}% busy, each further point adds more waiting than the review itself takes, and the
+      line runs away from the people serving it.
+    </p>
+    <p>
       A shared line changes the shape, not the workload. In named lines a request can wait behind a colleague’s backlog
-      while another reviewer sits idle; in one shared line that never happens, and the curve turns upward much later.
+      while another reviewer sits idle; in one shared line that never happens, and the tipping point moves out to
+      {Math.round(TIP_SHARED * 100)}%.
       Bank branches learned this long ago: one line for all the tellers beats a line per teller. It is the riddle’s
       stand-in again: any qualified person may take the work.
     </p>
@@ -344,8 +369,32 @@
     stroke: var(--tkc-ink-2);
   }
   .desk.idle {
-    stroke: var(--tkc-conditions);
-    stroke-width: 2;
+    stroke: var(--tkc-ink-2);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 2;
+  }
+  .req.stuck {
+    fill: var(--tkc-conditions);
+  }
+  .stuck-key {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-right: 6px;
+    border-radius: 50%;
+    background: var(--tkc-conditions);
+  }
+  .lane-name {
+    font-size: 12px;
+  }
+  .tip {
+    fill: none;
+    stroke-width: 1.5;
+  }
+  .sw-tip {
+    border-radius: 50%;
+    box-sizing: border-box;
+    border: 1.5px solid var(--tkc-ink-2);
   }
   .desk-label {
     font-size: 11px;

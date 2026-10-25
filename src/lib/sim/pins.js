@@ -21,6 +21,11 @@ export function workshop(demand, roles) {
   };
 }
 
+/** Minutes of real work in one pin, split among n roles: a generalist's 48 minutes, each share done n times faster. */
+export function workingMinutes(roles) {
+  return MINUTES_PER_DAY / SOLO_PINS_PER_DAY / roles;
+}
+
 export function bestDesign(demand) {
   return ROLE_OPTIONS.map((r) => workshop(demand, r)).reduce((best, w) =>
     w.minutesPerPin < best.minutesPerPin - 1e-9 ? w : best,

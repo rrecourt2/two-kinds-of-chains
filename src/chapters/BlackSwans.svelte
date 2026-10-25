@@ -3,11 +3,12 @@
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
+  import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { MONTHS, WORST, ALONE, cover, coverLabel, misses, withinRecord, breaksClaim, breakingCurrency, record } from '../lib/sim/tollroad.js';
+  import { MONTHS, WORST, ALONE, RESERVE, cover, coverLabel, misses, withinRecord, breaksClaim, breakingCurrency, record } from '../lib/sim/tollroad.js';
   import { linear, line } from '../lib/scales.js';
 
   // The break region is drawn only once the puzzle is solved or shown.
@@ -28,8 +29,14 @@
   const t = $derived(traffic / 100);
   const c = $derived(currency / 100);
   const now = $derived(cover(t, c));
-  const short = $derived(misses(t, c));
+  // The puzzle asks about the road as it is; the reserve is offered only once it is closed.
+  let reserve = $state('off');
+  const R = $derived(done && reserve === 'on' ? RESERVE : 0);
+  const short = $derived(misses(t, c, R));
+  // Short on tolls alone, paid with the reserve: the OR at work.
+  const carried = $derived(R > 0 && misses(t, c) && !short);
   const inside = $derived(withinRecord(t, c));
+  const shortOnTolls = $derived(misses(t, c));
 
   const fmt = coverLabel;
 
@@ -44,8 +51,8 @@
     }, 600);
     return () => clearTimeout(timer);
   });
-  const passed = $derived(tests.filter((p) => !misses(p.t / 100, p.c / 100)).length);
-  const broke = $derived(tests.filter((p) => breaksClaim(p.t / 100, p.c / 100)).length);
+  const passed = $derived(tests.filter((p) => !misses(p.t / 100, p.c / 100, R)).length);
+  const broke = $derived(tests.filter((p) => breaksClaim(p.t / 100, p.c / 100, R)).length);
 
   function showAnswer() {
     const add = [
@@ -60,12 +67,12 @@
 
   const puzzle = $derived({
     goal: 'Find a year in which the road misses its payment, with neither fall worse than the worst the record has seen.',
-    met: short && inside,
+    met: shortOnTolls && inside,
     checks: [
-      { label: `The road misses its payment (cover now ${fmt(t, c)})`, ok: short },
+      { label: `The road misses its payment (cover now ${fmt(t, c)})`, ok: shortOnTolls },
       { label: `Neither fall beyond the record’s worst (${WT}% and ${WC}%)`, ok: inside },
     ],
-    progress: short && !inside ? 'The road misses, but in a year worse than any on record; the claim covers only what it has seen.' : '',
+    progress: shortOnTolls && !inside ? 'The road misses, but in a year worse than any on record; the claim covers only what it has seen.' : '',
     hints: ['On record, the worst month for traffic and the worst month for the currency came years apart.', `Each fall alone, at its worst, still pays. What about a year in which both fall?`],
     found: 'Both at once: each fall alone was survived, but together they leave the road short, which 96 good months could never show.',
   });
@@ -83,20 +90,25 @@
   const clampC = (v) => Math.min(C1, Math.max(C0, v));
   const pc = (v) => `${Math.round(v * 100)}%`;
 
-  // Where the cover falls below 1.0: above the curve.
+  // Where the road misses: above the curve (cover below 1.0, or below 0.5 with the reserve).
   const SAMPLES = Array.from({ length: 169 }, (_, i) => T0 + (i * (T1 - T0)) / 168);
-  const region = $derived(
-    line([...SAMPLES.map((s) => [x(s), y(clampC(breakingCurrency(s)))]), [x(T1), y(C1)], [x(T0), y(C1)]]) + 'Z',
-  );
-  const edge = $derived(
-    line(SAMPLES.filter((s) => breakingCurrency(s) <= C1 && breakingCurrency(s) >= C0).map((s) => [x(s), y(breakingCurrency(s))])),
-  );
+  const frontier = (r) => SAMPLES.map((s) => [x(s), y(clampC(breakingCurrency(s, r)))]);
+  const region = $derived(line([...frontier(R), [x(T1), y(C1)], [x(T0), y(C1)]]) + 'Z');
+  const edgeOf = (r) => line(SAMPLES.filter((s) => breakingCurrency(s, r) <= C1 && breakingCurrency(s, r) >= C0).map((s) => [x(s), y(breakingCurrency(s, r))]));
+  const edge = $derived(edgeOf(R));
+  // With the reserve: the band it carries, between the two curves, and the old edge (cover 1.0) dashed.
+  const band = $derived(R > 0 ? line([...frontier(0), ...frontier(R).reverse()]) + 'Z' : '');
+  const oldEdge = $derived(R > 0 ? edgeOf(0) : '');
 
   const summary = $derived(
     `Traffic fall across, currency fall up. ${MONTHS} months on record, all paid, lowest cover ${lowest.toFixed(2)}; the record’s worst: traffic down ${WT}%, currency down ${WC}%, in different years. ` +
-      `This test: traffic down ${traffic}%, currency down ${currency}%, cover ${fmt(t, c)}, the road ${short ? 'misses its payment' : 'pays'}. ` +
+      `This test: traffic down ${traffic}%, currency down ${currency}%, cover ${fmt(t, c)}, the road ${short ? 'misses its payment' : carried ? 'pays from its reserve' : 'pays'}. ` +
       `${tests.length} test${tests.length === 1 ? '' : 's'} so far, ${broke} breaking the claim.` +
-      (done ? ` Shaded: the years in which the road misses its payment, including a corner of the record’s box where both fall at least 9%.` : ''),
+      (done && R > 0
+        ? ` With a reserve of six months’ payments, the road misses only at the far top corner; inside the record’s box, every year is paid, some from the reserve.`
+        : done
+          ? ` Shaded: the years in which the road misses its payment, including a corner of the record’s box where both fall at least 9%.`
+          : ''),
   );
 
   const testsSub = $derived(
@@ -127,7 +139,7 @@
   {#snippet figure()}
     <Instrument
       title="Eight years on record, and your test years"
-      sub="Each grey dot is a month on record: how far traffic and the currency had fallen on a year earlier."
+      sub="Each grey dot is a month on record: how far traffic and the currency had fallen against a year earlier."
       rules={[
         'Tolls are paid in local currency; the loan is repaid in dollars.',
         'A normal year earns 1.45 times the debt payment; running costs stay fixed.',
@@ -138,6 +150,17 @@
       <div class="tkc-controls">
         <Slider id="bs-traffic" label="Traffic falls by" bind:value={traffic} min={0} max={30} format={(v) => `${v}%`} />
         <Slider id="bs-currency" label="Currency falls by" bind:value={currency} min={0} max={40} format={(v) => `${v}%`} />
+        {#if done}
+          <Segmented
+            name="bs-reserve"
+            label="Six-month reserve"
+            bind:value={reserve}
+            options={[
+              { value: 'off', label: 'Off' },
+              { value: 'on', label: 'On' },
+            ]}
+          />
+        {/if}
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
@@ -156,6 +179,10 @@
 
           {#if done}
             <path class="region" d={region} />
+            {#if R > 0}
+              <path class="carry" d={band} />
+              <path class="old-edge" d={oldEdge} />
+            {/if}
             <path class="edge" d={edge} />
           {/if}
 
@@ -170,19 +197,22 @@
           <rect class="box" x={x(0)} y={y(WORST.currency)} width={x(WORST.traffic) - x(0)} height={y(0) - y(WORST.currency)} />
           <text class="tkc-label-2 tkc-halo" x={(x(0) + x(WORST.traffic)) / 2} y={y(WORST.currency) - 11} text-anchor="middle">the record’s worst</text>
 
-          {#if done}
-            <text class="miss-label tkc-halo" x={span - m.right - 6} y={y(C1) + 16} text-anchor="end">The road misses its payment</text>
+          {#if done && R > 0}
+            <text class="carry-label tkc-halo" x={span - m.right - 6} y={y(0.27)} text-anchor="end">Paid from the reserve</text>
+          {:else if done}
+            <text class="miss-label tkc-halo" x={span - m.right - 6} y={y(C1) + 16} text-anchor="end">Cover below 1.0: the road misses</text>
           {/if}
 
           {#each tests as p (`${p.t}-${p.c}`)}
-            <circle class="test" class:miss={misses(p.t / 100, p.c / 100)} cx={x(p.t / 100)} cy={y(p.c / 100)} r="5" />
+            {@const miss = misses(p.t / 100, p.c / 100, R)}
+            <circle class="test" class:miss class:carried={!miss && R > 0 && misses(p.t / 100, p.c / 100)} cx={x(p.t / 100)} cy={y(p.c / 100)} r="5" />
           {/each}
 
           {#if traffic || currency}
             <line class="guide" x1={x(t)} x2={x(t)} y1={y(c) + 9} y2={y(C0)} />
             <line class="guide" x1={x(T0)} x2={x(t) - 9} y1={y(c)} y2={y(c)} />
           {/if}
-          <circle class="now" class:miss={short} cx={x(t)} cy={y(c)} r="8" />
+          <circle class="now" class:miss={short} class:carried cx={x(t)} cy={y(c)} r="8" />
 
           {#each [0, 0.1, 0.2, 0.3] as v (v)}
             <text class="tkc-axis-label" x={x(v)} y={H - m.bottom + 16} text-anchor={v === 0.3 ? 'end' : 'middle'} dx={v === 0.3 ? 8 : 0}>{pc(v)}</text>
@@ -197,16 +227,21 @@
           <span><span class="tkc-swatch sw-month"></span>A month on record</span>
           <span><span class="tkc-swatch sw-test"></span>Your test: the road pays</span>
           <span><span class="tkc-swatch sw-miss"></span>The road misses its payment</span>
+          {#if R > 0}<span><span class="tkc-swatch sw-carried"></span>Paid from the reserve</span>{/if}
         </div>
       </div>
 
       <div class="tkc-stats" use:announce>
         <div class="tile" class:miss={short}>
           <Stat
-            label="Cover in this test"
+            label="Debt service cover"
             value={fmt(t, c)}
-            sub={short ? `${Math.max(1, Math.round((1 - now) * 100))}% short of the payment` : 'cash for the loan, per dollar due'}
-            swatch={short ? 'var(--tkc-conditions)' : ''}
+            sub={short
+              ? `${Math.max(1, Math.round((1 - now) * 100))}% short of the payment${R > 0 ? ', beyond the reserve' : ''}`
+              : carried
+                ? `${Math.max(1, Math.round((1 - now) * 100))}% of the payment drawn from the reserve`
+                : 'cash for the loan per dollar due (DSCR)'}
+            swatch={short ? 'var(--tkc-conditions)' : carried ? 'var(--tkc-options)' : ''}
           />
         </div>
         <Stat label="Tests passed" value={String(MONTHS + passed)} sub={testsSub} />
@@ -239,7 +274,8 @@
     </p>
     <p>
       The falls do not add; they multiply. The payment hangs on a chain of two links, cars
-      <span class="tkc-and">AND</span> the currency, and each link scales whatever the other leaves. Fixed running costs
+      <span class="tkc-and">AND</span> the currency, each scaling what the other leaves, and is missed <strong>IF</strong> cover falls
+      below 1.0. Fixed running costs
       sharpen it: a {WT}% fall in traffic takes a quarter off the cash for the loan, and a {WC}% fall in the currency
       then takes a fifth of what is left. Like the rounds of the coin game, the links compound.
     </p>
@@ -286,6 +322,20 @@
     stroke: var(--tkc-conditions);
     stroke-width: 1.5;
   }
+  .carry {
+    fill: var(--tkc-options-wash);
+  }
+  .old-edge {
+    fill: none;
+    stroke: var(--tkc-options);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
+  }
+  .carry-label {
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--tkc-options-ink);
+  }
   .miss-label {
     font-size: 12px;
     font-weight: 600;
@@ -308,6 +358,11 @@
   }
   .test.miss {
     fill: var(--tkc-conditions);
+  }
+  .test.carried,
+  .now.carried {
+    fill: var(--tkc-options);
+    fill-opacity: 1;
   }
   .guide {
     stroke: var(--tkc-rule);
@@ -339,6 +394,10 @@
   }
   .sw-miss {
     background: var(--tkc-conditions);
+  }
+  .sw-carried {
+    border-radius: 50%;
+    background: var(--tkc-options);
   }
   .tile {
     display: grid;

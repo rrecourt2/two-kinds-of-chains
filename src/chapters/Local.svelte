@@ -9,7 +9,8 @@
   import BankNote from '../lib/ui/BankNote.svelte';
   import { agendaViews, MONDAYS, ROOM, LONE_URGENT } from '../lib/sim/fasttrack.js';
 
-  // A prediction: the slider opens after the first answer or a hint.
+  // A prediction: before the first answer (or a hint) the slider goes up to 20%, the first marks, and the
+  // average wait is held back; the rest opens after it.
   const game = getContext('tkc-game');
   const live = $derived(game.engaged('emergence'));
 
@@ -17,7 +18,7 @@
   const VIEWS = agendaViews();
   const NONE = VIEWS[0].long;
 
-  let marked = $state(0);
+  let marked = $state(10); // a fast track already in use: the first state shows an urgent mark and a deferral
   let width = $state(560);
   const view = $derived(VIEWS[Math.round(marked / 10)]);
 
@@ -31,7 +32,7 @@
   const GAP = 4;
   const ROW = $derived(S + 5);
   const HEAD = 24;
-  const LABEL = $derived(wide ? 30 : 22);
+  const LABEL = 58; // room for the row header, Monday
   const placesEnd = $derived(LABEL + ROOM * S + (ROOM - 1) * GAP);
   const dotsX = $derived(placesEnd + (wide ? 22 : 14));
   // The dots keep one spacing across the slider, set by the longest queue at any position.
@@ -64,12 +65,14 @@
   // The tiles: the long run at this position.
   const saves = $derived(view.saving);
   const saveSub = $derived(
-    marked === 0
-      ? `${num(LONE_URGENT)} days if marked, ${num(view.long.ordinary)} if not`
-      : saves === null
-        ? 'every deal is marked; it passes no one'
-        : `${num(view.long.urgent)} days urgent, ${num(view.long.ordinary)} ordinary`,
+    saves === null ? 'every deal is marked; it passes no one' : `${num(view.long.urgent ?? LONE_URGENT)} days if marked, ${num(view.long.ordinary)} if not`,
   );
+
+  // What the orange places cost this quarter, counted from the figure itself.
+  const placesOf = (v, kind) => v.mondays.reduce((a, m) => a + m.places.filter((p) => kind === undefined || p === kind).length, 0);
+  const lost = $derived(placesOf(view, 'deferred'));
+  const used = $derived(placesOf(view));
+  const usedNone = placesOf(VIEWS[0]);
 
   const puzzle = {
     goal: 'Each team marks its deal urgent whenever that is quicker for it. Once every team has chosen, what happens to the average wait?',
@@ -122,12 +125,13 @@
       ]}
     >
       <Puzzle id="emergence" {...puzzle} predict onshow={() => (marked = 100)} />
-      <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
-        <Slider id="ft-urgent" label="Deals marked urgent" bind:value={marked} min={0} max={100} step={10} format={(v) => `${v}%`} ends={['None', 'All']} />
+      <div class="tkc-controls">
+        <Slider id="ft-urgent" label="Deals marked urgent" bind:value={marked} min={0} max={100} step={10} format={(v) => `${v}%`} ends={['None', 'All']} limit={live ? null : 20} limitNote="Above 20%: opens after your first answer." />
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
         <svg {width} height={H} role="img" aria-label={ariaLabel}>
+          <text class="tkc-axis-title" x={LABEL - 8} y="13" text-anchor="end">Monday</text>
           <text class="tkc-axis-title" x={LABEL} y="13">Agenda</text>
           <text class="tkc-axis-title" x={dotsX} y="13">Still waiting</text>
           <line class="tkc-grid" x1={(placesEnd + dotsX) / 2} x2={(placesEnd + dotsX) / 2} y1={HEAD - 2} y2={H} />
@@ -149,12 +153,26 @@
           <span><span class="tkc-swatch sw deferred"></span>Deferred unread</span>
           <span><span class="tkc-swatch sw empty"></span>Empty place</span>
         </div>
+        <p class="tkc-caption ft-caption">
+          Orange: an urgent paper read unprepared and deferred. Its place is used, nothing is decided, and it comes back
+          the next Monday. This quarter: {lost === 0 ? 'no places' : `${lost} place${lost === 1 ? '' : 's'}`} lost to
+          deferrals; {used} of {ROOM * MONDAYS} places used{marked === 0 ? '' : ` (${usedNone} with no marks)`}.
+        </p>
       </div>
 
       <div class="tkc-stats" use:announce>
         <Stat label="Marking urgent saves" value={saves === null ? 'Nothing' : days(saves)} sub={saveSub} />
-        <Stat label="Average wait" value={days(view.long.average)} sub={marked === 0 ? 'with no urgent marks' : `${num(NONE.average)} days with no urgent marks`} />
+        <Stat
+          label="Average wait, every deal"
+          value={live ? days(view.long.average) : '—'}
+          sub={!live ? 'Shown after your first answer' : marked === 0 ? 'with no urgent marks' : `${num(NONE.average)} days with no urgent marks`}
+        />
       </div>
+      <p class="tkc-caption ft-loop">
+        {saves === null
+          ? 'Every deal is marked: nobody passes anybody now, and the loop has nothing left to feed on.'
+          : 'Each mark pushes the unmarked deals back, so the next mark saves more: a loop that feeds itself.'}
+      </p>
 
       {#snippet model()}
         <p>
@@ -179,13 +197,14 @@
     <p>
       That is why the marks spread. The first ones save little: with one deal in ten marked, under a day. But each mark
       pushes the unmarked deals further back, so the next mark saves more: 6.6 days with half the deals marked, 78 with
-      nine in ten. Nobody can afford to be the last deal without one.
+      nine in ten. It is a loop, of the kind that feeds itself: every mark makes the next one more worth having, until
+      nobody can afford to be the last deal without one.
     </p>
     <p>
       Going first, on its own, only reorders the line: one deal’s gain is another’s wait, and the average stays where it
       was. The deferrals are what stretch it. With every deal marked, they take 0.8 places a week, and the agenda goes
-      from 80% to 96% full. The curve from the queues chapter does the rest: the share of deals decided at their first
-      Monday falls from 75% to 17%.
+      from 80% to 96% full, past the tipping point on the queues chapter’s curve. The curve does the rest: the share of
+      deals decided at their first Monday falls from 75% to 17%.
     </p>
     <p>
       A shortcut is judged by its first users, and its cost shows only when every deal takes it. The mathematician
@@ -206,6 +225,13 @@
 </Chapter>
 
 <style>
+  .ft-caption,
+  .ft-loop {
+    text-wrap: pretty;
+  }
+  .ft-caption {
+    margin-top: 6px;
+  }
   .place {
     transition:
       fill 180ms ease,

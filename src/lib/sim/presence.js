@@ -60,16 +60,18 @@ function personMonth(rng, availability, { back, leave }, days) {
 
 /**
  * One month of working days for each role. A role is covered on a day when
- * its named person or any of its stand-ins is in.
+ * its named person or any of its stand-ins is in. The decision can be made on
+ * a day when at least `need` roles are covered: all of them by default (an AND),
+ * fewer for a quorum.
  */
-export function simulateMonth({ roles, standIns, availability, meanSpell = 3, days = 21, seed = 1 }) {
+export function simulateMonth({ roles, standIns, availability, meanSpell = 3, days = 21, seed = 1, need = roles }) {
   const params = absenceParams(availability, meanSpell);
   const grid = [];
   for (let r = 0; r < roles; r++) {
     const people = Array.from({ length: standIns + 1 }, (_, p) => personMonth(makeRng(seed * 1000 + r * 10 + p + 1), availability, params, days));
     grid.push(Array.from({ length: days }, (_, d) => ({ main: people[0][d], covered: people.some((m) => m[d]) })));
   }
-  const allIn = Array.from({ length: days }, (_, d) => grid.every((row) => row[d].covered));
+  const allIn = Array.from({ length: days }, (_, d) => grid.filter((row) => row[d].covered).length >= need);
   // The longest run of working days on which the work had to wait for someone.
   let longestWait = 0;
   let run = 0;
@@ -80,8 +82,23 @@ export function simulateMonth({ roles, standIns, availability, meanSpell = 3, da
   return { grid, allIn, possibleDays: allIn.filter(Boolean).length, longestWait };
 }
 
-/** Long-run share of days on which every role is covered. */
-export function coverageOdds(roles, standIns, availability) {
+/**
+ * Long-run share of days on which every role is covered (`allCovered`), and on which at
+ * least `need` of the roles are (`enough`): a quorum of k of n. All n of n is an AND,
+ * any one of n an OR, and the quorums in between.
+ */
+export function coverageOdds(roles, standIns, availability, need = roles) {
   const roleCovered = 1 - Math.pow(1 - availability, standIns + 1);
-  return { roleCovered, allCovered: Math.pow(roleCovered, roles) };
+  return { roleCovered, allCovered: Math.pow(roleCovered, roles), enough: atLeast(roles, need, roleCovered) };
+}
+
+/** Chance that at least k of n independent links hold, each with chance p. */
+export function atLeast(n, k, p) {
+  let sum = 0;
+  let choose = 1; // n choose j, built up as j runs from 0
+  for (let j = 0; j <= n; j++) {
+    if (j > 0) choose = (choose * (n - j + 1)) / j;
+    if (j >= k) sum += choose * Math.pow(p, j) * Math.pow(1 - p, n - j);
+  }
+  return sum;
 }

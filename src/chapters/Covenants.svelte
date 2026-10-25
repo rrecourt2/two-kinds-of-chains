@@ -69,9 +69,11 @@
   const rules = [
     `${PORTFOLIO} borrowers; in a normal year, ${one.trouble} are in real trouble.`,
     'Each covenant trips for some borrowers in trouble, and for some healthy ones.',
-    'Covenants are added strongest first; a borrower that trips any one is in breach.',
+    'A loan stands while every covenant holds; tripping any one is a breach.',
   ];
-  const addedLast = $derived(n === 1 ? `Only ${lower(COVENANTS[0].name)}.` : `Strongest first; added last: ${lower(COVENANTS[n - 1].name)}.`);
+  // The dozen by name, strongest first: those on the loan in ink, the rest greyed.
+  const SHORT = { esap: 'E&S action plan' };
+  const names = COVENANTS.map((c) => SHORT[c.id] ?? c.name);
 
   // ---- The portfolio: one square per borrower, those in real trouble above the healthy ones ----
   const cols = $derived(width >= 500 ? 25 : 20);
@@ -139,7 +141,9 @@
       <div class="tkc-controls">
         <div class="ctl">
           <Slider id="cv-n" label="Covenants per loan" bind:value={n} min={1} max={MAX} />
-          <p class="tkc-caption">{addedLast}</p>
+          <p class="tkc-caption cov-list">
+            Strongest first: {#each names as name, i (i)}<span class:on={i < n}>{name}</span>{i < names.length - 1 ? ' · ' : ''}{/each}
+          </p>
         </div>
         {#if revealed}
           <div class="ctl">
@@ -188,7 +192,7 @@
           sub={y.missed ? `${y.missed} in real trouble trip nothing` : 'every one in real trouble breaches'}
           swatch="var(--tkc-options)"
         />
-        <Stat label="A breach means trouble" value="{y.caught} of {y.breaches}" sub="{pct(y.means)}, against {pct(y.base)} before the breach" />
+        <Stat label="A breach means trouble" value="{y.caught} of {y.breaches}" sub="{pct(y.means)}; for a borrower picked at random, {pct(y.base)}" />
       </div>
 
       {#snippet model()}
@@ -219,7 +223,7 @@
       that would have come either way.
     </p>
     <p>
-      If every breach is a default acted on as written, each covenant is a link in a chain of
+      Each covenant is an <strong>IF</strong>. If every breach is a default acted on as written, each is a link in a chain of
       <span class="tkc-and">ANDs</span>, and with {WORDS[MAX]}, noise alone breaks the loan for three healthy borrowers in
       five a year; each breach becomes a waiver. If a breach means a closer look, it is an <span class="tkc-or">OR</span>: the loan goes on
       if the covenants hold or the look finds the borrower sound. The chain bends on noise.
@@ -269,6 +273,13 @@
   }
   .tkc-chart svg {
     display: block;
+  }
+  .cov-list span {
+    transition: color 150ms ease;
+  }
+  .cov-list span.on {
+    color: var(--tkc-ink);
+    font-weight: 600;
   }
   .sq {
     transition: fill 200ms ease;

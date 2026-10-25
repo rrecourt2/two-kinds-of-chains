@@ -18,24 +18,24 @@ ships as one file, with no external requests, so it can run inside a locked-down
 | 6 | The fast track | One committee with five places a week and an urgent lane: once every deal is marked urgent, the average wait grows from 3.9 to about 19 days |
 | | **Part 3 · When the world pulls on the chain** | |
 | 7 | When the average lies | Ole Peters' coin game: the paper value against the typical player; staking less and pooling |
-| 8 | When links become conditions | The stress test: 48 banks around a few hubs; land a loss on any bank, then share 48 points of extra capital so no more than five fail |
+| 8 | When links become conditions | The stress test: 48 banks around a few hubs; a capital slider and its cliff, extra capital for the biggest hubs so no landing brings down more than five; then many similar banks |
 | 9 | How to find a black swan | A dollar loan repaid from local-currency tolls, 96 good months: find the year that breaks the claim (both falls at once); Russell's chicken, Popper's swans |
 | 10 | Why species go extinct | Where the generalist overtakes the specialist as the years get more volatile; why islands |
 | | **Part 4 · Chains that bend** | |
 | 11 | The gate worth keeping | A thousand simulated years of payments: check every change of account above an amount, so that no year loses more than $5m and payments stay on time |
 | 12 | The shape of the network | What sixty fully linked people produce; mesh, hub and small teams |
-| 13 | A chain looped back on itself | Forty conditions waiting for each other: how many can be met at two links each (about 8); joint closings; Kauffman's complexity catastrophe |
+| 13 | A chain tied in a knot | Forty named conditions of one power programme waiting for each other: how many can be met at 80 links (about 8); joint closings; Kauffman's complexity catastrophe |
 | 14 | Two watchmakers | Herbert Simon's parable as a live race: one long chain against modules |
 | 15 | Time to disbursement | Twelve conditions precedent, 2,000 loans: keeping a three-month promise for nine clients in ten |
 | 16 | A warning light, not a tripwire | 200 borrowers, 10 in real trouble: two to four strong covenants, not twelve; Bayes in natural frequencies; Occam's razor |
 | | **Part 5 · Chains that learn** | |
 | 17 | A person in the loop | One AI, twenty requests, with a person in the loop or on autopilot; a steady or an erratic AI |
-| 18 | The irony of the reliable machine | A screening system takes 99% of payments; on the day it fails, people out of practice make the mistakes; a day by hand each month |
+| 18 | The irony of the reliable machine | A system reads 99% of borrowers' accounts; on the day it fails, analysts out of practice misread the figures; a day by hand each month |
 | 19 | Only variety absorbs variety | Ashby's law of requisite variety: the smallest menu of answers that keeps exceptions waiting under two weeks; then a more varied world |
 | 20 | Many short chains | Convex tinkering: one big programme or pilots first, in a world nobody can predict |
-| 21 | Running to stand still | Fraud patterns learn round fixed checks: what yearly-reviewed checks catch in year three; one check at random |
+| 21 | Running to stand still | Fraud learns round the checks: what monthly-reviewed checks catch in year three (about one in four); one check at random; never dropping a check |
 | 22 | How fast to forget | A country cushion sized to the worst year remembered: the memory that keeps losses and idle lending in bounds |
-| 23 | What it means on Monday | A pattern for every chapter, and the reader's score |
+| 23 | What it means on Monday | Options and conditions in short and long chains, a pattern for every chapter, and the reader's score |
 
 ### Puzzles and score
 

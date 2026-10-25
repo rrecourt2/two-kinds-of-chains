@@ -21,14 +21,21 @@ export function cover(traffic, currency) {
   return ((REVENUE * (1 - traffic) - COSTS) * (1 - currency)) / PAYMENT;
 }
 
-/** Does the road miss its payment in this year? */
-export const misses = (traffic, currency) => cover(traffic, currency) < 1 - EPS;
+/** A reserve of six months' payments, in years of payments: in a bad year it pays up to half the year's debt. */
+export const RESERVE = 0.5;
+
+/** Does the road miss its payment in this year? With a reserve (in years of payments), it misses only once the
+ *  shortfall is larger than the reserve: the payment comes from the tolls or the reserve. */
+export const misses = (traffic, currency, reserve = 0) => cover(traffic, currency) + reserve < 1 - EPS;
+
+/** A year the reserve carries: the tolls alone fall short, the tolls and the reserve together pay. */
+export const paidFromReserve = (traffic, currency, reserve = RESERVE) => misses(traffic, currency) && !misses(traffic, currency, reserve);
 
 /** Is the year within the record's worst on both counts (neither fall beyond what the record has seen)? */
 export const withinRecord = (traffic, currency) => traffic <= WORST.traffic + EPS && currency <= WORST.currency + EPS;
 
 /** A year that breaks the claim “this road can pay through anything it has seen”. */
-export const breaksClaim = (traffic, currency) => misses(traffic, currency) && withinRecord(traffic, currency);
+export const breaksClaim = (traffic, currency, reserve = 0) => misses(traffic, currency, reserve) && withinRecord(traffic, currency);
 
 /** The cover to two decimals; a year that misses never reads 1.00 (0.9976 reads 0.99). */
 export function coverLabel(traffic, currency) {
@@ -38,8 +45,8 @@ export function coverLabel(traffic, currency) {
 
 /** For a given traffic fall, the currency fall at which the cover is exactly 1.0 (below 0: it misses even if the
  *  currency rises; Infinity is never returned, since costs cannot exceed tolls in the range used here). */
-export function breakingCurrency(traffic) {
-  return 1 - PAYMENT / (REVENUE * (1 - traffic) - COSTS);
+export function breakingCurrency(traffic, reserve = 0) {
+  return 1 - (PAYMENT * (1 - reserve)) / (REVENUE * (1 - traffic) - COSTS);
 }
 
 /** How far each fall must go on its own before the road misses: traffic 18.6%, currency 31.0%. */

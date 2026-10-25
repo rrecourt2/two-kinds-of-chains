@@ -6,7 +6,7 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { simulateSystems, histogram, SYSTEMS, HORIZON, DEADLINE, ENTER, FIX, AWAY, QUEUED, OK, STOP, IDLE } from '../lib/sim/systems.js';
+  import { simulateSystems, histogram, SYSTEMS, HORIZON, DEADLINE, SPOT_END, ENTER, FIX, AWAY, QUEUED, OK, STOP, IDLE } from '../lib/sim/systems.js';
   import { linear, ticks, barUp } from '../lib/scales.js';
   import { pct, shortDays } from '../lib/format.js';
 
@@ -24,9 +24,9 @@
   const baseline = simulateSystems({ ...FIXED, ...START });
   const isStart = $derived(info === START.info && approvals === START.approvals);
 
-  // Histogram of lead times.
+  // Histogram of lead times: the second chart, across all the simulated requests.
   const MAX = 60;
-  const H = 210;
+  const H = 170;
   const m = { top: 24, right: 10, bottom: 36, left: 36 };
   const bins = $derived(histogram(result.days, MAX));
   const baseBins = histogram(baseline.days, MAX);
@@ -36,19 +36,36 @@
   const binW = $derived(Math.max(1, x(1) - x(0) - 2));
   const baseOutline = $derived(baseBins.reduce((d, c, i) => d + `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(c).toFixed(1)}H${x(i + 1).toFixed(1)}`, ''));
 
-  // One typical request's journey, day by day: the recorded journey closest to the median,
-  // preferring one where a problem was found.
+  // The main chart: one typical request's journey through the six systems, day by day. It is the recorded
+  // journey closest to the median, preferring one where a problem was found. The day scale stays at four
+  // working weeks unless the journey is longer, so a faster design shows as a shorter row of days.
   const stopsIn = (j) => j.filter((d) => d.gates.includes(STOP) || d.final === STOP).length;
-  const journey = $derived.by(() => {
+  const pick = $derived.by(() => {
     const off = (j) => Math.abs(j.length - result.median);
-    return result.journeys.reduce((a, j) => (off(j) < off(a) || (off(j) === off(a) && stopsIn(j) > stopsIn(a)) ? j : a), result.journeys[0] ?? []);
+    return result.journeys.reduce((a, j, i) => (off(j) < off(result.journeys[a]) || (off(j) === off(result.journeys[a]) && stopsIn(j) > stopsIn(result.journeys[a])) ? i : a), 0);
   });
+  const journey = $derived(result.journeys[pick] ?? []);
+  const journeyHours = $derived(Math.round(result.journeyWork[pick] ?? 0));
   const shownDays = $derived(Math.min(journey.length, MAX));
+  const scaleDays = $derived(Math.max(20, shownDays));
   const rows = $derived([...SYSTEMS.slice(0, systems), ...(approvals === 'end' ? ['Final approval'] : [])]);
-  const labelW = 112;
-  const cellW = $derived(Math.max(3, Math.min(14, (width - labelW - 44) / Math.max(shownDays, 14))));
-  const rowH = 12;
+  const narrowJ = $derived(width < 420);
+  const labelW = $derived(narrowJ ? 94 : 116);
+  const cellW = $derived(Math.max(3, Math.min(24, (width - labelW - 4) / scaleDays)));
+  const rowH = $derived(narrowJ ? 16 : 20);
+  const rowGap = 4;
   const journeyStops = $derived(stopsIn(journey));
+  const dayTicks = $derived([1, ...Array.from({ length: Math.floor(scaleDays / 5) }, (_, i) => (i + 1) * 5)].filter((d) => d <= scaleDays));
+
+  // Who sees a problem: the rule behind the share that slips through.
+  const PRICING = SYSTEMS.indexOf('Pricing tool');
+  const sees = $derived(
+    approvals === 'end'
+      ? `Every problem meets one approver, at the end, who catches ${Math.round(SPOT_END * 10)} in 10.`
+      : info === 'copies'
+        ? `Each approver sees only their own system’s copy: a problem typed into the Pricing tool meets ${systems - PRICING} of the ${systems} approvers.`
+        : `Every approver reads the one record: a problem anywhere meets all ${systems} approvers, and any one of them can stop it.`,
+  );
   const cellClass = { [ENTER]: 'enter', [FIX]: 'fix', [AWAY]: 'away', [QUEUED]: 'queued', [OK]: 'ok', [STOP]: 'stop' };
 
   const fast = $derived(result.median < 10);
@@ -91,15 +108,15 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['Six systems, a day each; each form has a one-in-ten chance of a hidden problem.', 'An approver catches half the problems in front of them; one at the end, 90%.', 'Approvers are in 85% of days, and nobody stands in for them.']} title="One request, six linked systems" sub="How long 1,500 simulated requests take, in working days.">
+    <Instrument rules={['Six systems, a day each; each form has a one-in-ten chance of a hidden problem.', 'An approver catches half the problems in front of them; one at the end, 90%.', 'Approvers are in 85% of days, and nobody stands in for them.']} title="One request, six linked systems" sub="One typical request through the six systems, day by day; below it, how long 1,500 such requests take.">
       <Puzzle id="systems" {...puzzle} onshow={showAnswer} />
-      <div class="tkc-controls">
+      <div class="tkc-controls tkc-controls--wide">
         <Segmented
           name="s-info"
           label="Client data"
           bind:value={info}
           options={[
-            { value: 'copies', label: 'Copies the last' },
+            { value: 'copies', label: 'Each system copies the one before' },
             { value: 'shared', label: 'One shared record' },
           ]}
         />
@@ -108,13 +125,57 @@
           label="Approvals"
           bind:value={approvals}
           options={[
-            { value: 'each', label: 'At every system' },
-            { value: 'end', label: 'At the end' },
+            { value: 'each', label: 'One approval per system' },
+            { value: 'end', label: 'One approval at the end' },
           ]}
         />
       </div>
+      <p class="tkc-small sees" use:announce>{sees}</p>
 
-      <div class="tkc-chart" bind:clientWidth={width}>
+      <div class="journey">
+        <p class="tkc-label j-title">One request, day by day</p>
+        <p class="tkc-small">
+          A typical request: {journey.length >= HORIZON ? 'more than a year' : `${journey.length} working day${journey.length === 1 ? '' : 's'}`} for
+          {journeyHours} hours of work, the rest waiting;
+          {journeyStops ? `stopped ${journeyStops === 1 ? 'once' : `${journeyStops} times`} by a problem.` : 'no problem found.'}
+        </p>
+        <div class="tkc-scroll-x" bind:clientWidth={width}>
+          <svg width={Math.max(width, labelW + scaleDays * cellW + 4)} height={rows.length * (rowH + rowGap) + 22} role="img" aria-label="Day-by-day journey of one typical request through the systems: {journey.length} working days, {journeyHours} hours of work.">
+            {#each rows as label, r}
+              <text class="tkc-label-2" class:j-small={narrowJ} x="0" y={r * (rowH + rowGap) + rowH / 2 + 4}>{label}</text>
+              <line class="tkc-grid" x1={labelW} x2={labelW + scaleDays * cellW} y1={r * (rowH + rowGap) + rowH + rowGap / 2} y2={r * (rowH + rowGap) + rowH + rowGap / 2} />
+            {/each}
+            {#each journey.slice(0, shownDays) as day, d}
+              {#each [...day.gates] as c, g}
+                {#if c !== IDLE}
+                  <rect x={labelW + d * cellW + 0.5} y={g * (rowH + rowGap)} width={Math.max(1, cellW - 2)} height={rowH} rx="3" class="cell {cellClass[c]}" />
+                {/if}
+              {/each}
+              {#if approvals === 'end' && day.final !== IDLE}
+                <rect x={labelW + d * cellW + 0.5} y={systems * (rowH + rowGap)} width={Math.max(1, cellW - 2)} height={rowH} rx="3" class="cell {cellClass[day.final]}" />
+              {/if}
+            {/each}
+            <line class="j-end" x1={labelW + shownDays * cellW} x2={labelW + shownDays * cellW} y1="-2" y2={rows.length * (rowH + rowGap)} />
+            {#each dayTicks as t}
+              <text class="tkc-axis-label" x={labelW + (t - 0.5) * cellW} y={rows.length * (rowH + rowGap) + 14} text-anchor="middle">{t}</text>
+            {/each}
+            <text class="tkc-axis-label" x={labelW - 8} y={rows.length * (rowH + rowGap) + 14} text-anchor="end">Day</text>
+          </svg>
+        </div>
+        {#if journey.length > MAX}
+          <p class="tkc-caption">Showing the first {MAX} days of {journey.length >= HORIZON ? 'more than 250' : journey.length}.</p>
+        {/if}
+        <div class="tkc-legend">
+          <span><span class="tkc-swatch sw-enter"></span>Filling in</span>
+          <span><span class="tkc-swatch sw-ok"></span>Approved</span>
+          <span><span class="tkc-swatch sw-away"></span>Waiting: approver away</span>
+          <span><span class="tkc-swatch sw-stop"></span>Problem found: stopped</span>
+          <span><span class="tkc-swatch sw-fix"></span>Fixing where it spread</span>
+        </div>
+      </div>
+
+      <div class="tkc-chart">
+        <p class="tkc-label j-title">1,500 such requests</p>
         <svg {width} height={H} role="img" aria-label="Distribution of lead times. Median {Math.round(result.median)} days; the slowest one in ten take {Math.round(result.p90)} days or more.">
           {#each ticks(0, yMax, 3) as t}
             <line class="tkc-grid" x1={m.left} x2={width - m.right} y1={y(t)} y2={y(t)} />
@@ -151,7 +212,7 @@
           />
         </svg>
         {#if hover !== null}
-          <div class="tkc-tip" style:left="{Math.min(width - 170, Math.max(0, x(hover) - 60))}px" style:top="8px">
+          <div class="tkc-tip" style:left="{Math.min(width - 170, Math.max(0, x(hover) - 60))}px" style:top="30px">
             <strong>{bins[hover]} requests</strong>
             <div>took {hover === MAX ? '60 or more' : hover} working day{hover === 1 ? '' : 's'}</div>
           </div>
@@ -165,53 +226,8 @@
 
       <div class="tkc-stats" use:announce>
         <Stat label="Typical request" value="{shortDays(result.median, HORIZON)} days" sub="median, working days" />
-        <Stat label="Problems that slip through" value={pct(result.slipped, result.slipped < 0.1 ? 1 : 0)} sub="of requests, after every check" />
+        <Stat label="Hidden problems that slip through" value={pct(result.slipped, 1)} sub="of requests, after every check" />
       </div>
-
-      <details class="journey">
-        <summary>Follow one request</summary>
-        <div class="journey-body">
-          <p class="tkc-small">
-            A typical request, day by day: {journey.length >= HORIZON ? 'more than a year' : `${journey.length} working day${journey.length === 1 ? '' : 's'}`}{journeyStops
-              ? `, stopped ${journeyStops === 1 ? 'once' : `${journeyStops} times`} by a problem`
-              : ', no problems found'}.
-          </p>
-          <div class="tkc-scroll-x">
-            <svg width={labelW + shownDays * cellW + 44} height={rows.length * (rowH + 3) + 25} role="img" aria-label="Day-by-day journey of one typical request through the systems: {journey.length} working days.">
-              <g transform="translate(0 3)">
-              {#each rows as label, r}
-                <text class="tkc-axis-label" x="0" y={r * (rowH + 3) + rowH - 2}>{label}</text>
-              {/each}
-              {#each journey.slice(0, shownDays) as day, d}
-                {#each [...day.gates] as c, g}
-                  {#if c !== IDLE}
-                    <rect x={labelW + d * cellW} y={g * (rowH + 3)} width={Math.max(1, cellW - 1)} height={rowH} rx="2" class="cell {cellClass[c]}" />
-                  {/if}
-                {/each}
-                {#if approvals === 'end' && day.final !== IDLE}
-                  <rect x={labelW + d * cellW} y={systems * (rowH + 3)} width={Math.max(1, cellW - 1)} height={rowH} rx="2" class="cell {cellClass[day.final]}" />
-                {/if}
-              {/each}
-              {#each [0, 10, 20, 30, 40, 50] as t}
-                {#if t < shownDays}
-                  <text class="tkc-axis-label" x={labelW + t * cellW} y={rows.length * (rowH + 3) + 14}>Day {t + 1}</text>
-                {/if}
-              {/each}
-              </g>
-            </svg>
-          </div>
-          {#if journey.length > MAX}
-            <p class="tkc-caption">Showing the first {MAX} days of {journey.length >= HORIZON ? 'more than 250' : journey.length}.</p>
-          {/if}
-          <div class="tkc-legend">
-            <span><span class="tkc-swatch sw-enter"></span>Filling in</span>
-            <span><span class="tkc-swatch sw-ok"></span>Approved</span>
-            <span><span class="tkc-swatch sw-away"></span>Waiting: approver away</span>
-            <span><span class="tkc-swatch sw-stop"></span>Problem found: stopped</span>
-            <span><span class="tkc-swatch sw-fix"></span>Fixing where it spread</span>
-          </div>
-        </div>
-      </details>
 
       {#snippet model()}
         <p>Filling in a system takes two hours of work; the next person picks it up the next day. Each form has a 10% chance of a hidden problem.</p>
@@ -289,23 +305,30 @@
     stroke-width: 1.5;
   }
   .journey {
-    min-width: 0;
-    padding-top: 12px;
-    border-top: 1px solid var(--tkc-hair);
-  }
-  .journey-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     min-width: 0;
-    gap: 8px;
-    padding-top: 8px;
+    gap: 6px;
   }
-  .journey summary {
-    cursor: pointer;
+  .j-title {
     font-size: 0.875rem;
-    font-weight: 600;
+    color: var(--tkc-ink);
+  }
+  .tkc-chart .j-title {
+    margin-bottom: 4px;
+  }
+  .j-small {
+    font-size: 11px;
+  }
+  .j-end {
+    stroke: var(--tkc-ink);
+    stroke-width: 1.5;
+  }
+  .sees {
+    padding: 8px 12px;
+    border-left: 3px solid var(--tkc-rule);
     color: var(--tkc-ink-2);
-    padding-block: 3px;
+    text-wrap: pretty;
   }
   .cell.enter,
   .sw-enter {

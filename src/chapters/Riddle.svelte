@@ -3,6 +3,7 @@
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
+  import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
@@ -10,16 +11,20 @@
   import { simulateMonth, coverageOdds, ROLES } from '../lib/sim/presence.js';
   import { pct } from '../lib/format.js';
 
-  const DAYS = 21;
-  const COUNT = 6; // six roles must all be in for the decision
-  const SEED = 58; // a month close to the long-run odds for the settings in the puzzle
+  const DAYS = 20; // four working weeks
+  const COUNT = 6; // six roles
+  // A month close to the long-run odds for the puzzle's settings (test/riddle.test.js), with absences of
+  // three or four days, and one day on which a named person and their stand-in are both away.
+  const SEED = 2984;
+  const WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six'];
 
   let availability = $state(90);
   let backups = $state(0);
+  let need = $state(COUNT); // how many of the six roles a decision needs: all six, or a quorum
   let width = $state(600);
 
-  const month = $derived(simulateMonth({ roles: COUNT, standIns: backups, availability: availability / 100, days: DAYS, seed: SEED }));
-  const odds = $derived(coverageOdds(COUNT, backups, availability / 100));
+  const month = $derived(simulateMonth({ roles: COUNT, standIns: backups, availability: availability / 100, days: DAYS, seed: SEED, need }));
+  const odds = $derived(coverageOdds(COUNT, backups, availability / 100, need));
 
   // Calendar geometry: 21 working days in 4+ weeks. Labels sit left of each row,
   // or above it on narrow screens so the days keep their size.
@@ -30,6 +35,7 @@
   const weekGap = $derived(narrow ? 5 : 8);
   const cell = $derived(Math.max(6, Math.min(24, (width - labelW - 4 * weekGap - DAYS * gap) / DAYS)));
   const dayX = (d) => labelW + d * (cell + gap) + Math.floor(d / 5) * weekGap;
+  const stripY = $derived(stacked ? 36 : 18);
   const rowY = (r) => (stacked ? 64 : 34) + r * (cell + gap + (stacked ? 18 : 4));
   const labelY = (r) => (stacked ? rowY(r) - 5 : rowY(r) + cell / 2 + 4);
   const height = $derived(stacked ? rowY(COUNT) - 12 : rowY(COUNT) + 8);
@@ -37,9 +43,16 @@
 
   const formula = $derived.by(() => {
     const a = (availability / 100).toFixed(2);
-    if (backups === 0) return `${a} multiplied ${COUNT} times = ${pct(odds.allCovered)}`;
-    return `each role is covered ${pct(odds.roleCovered, 1)} of the time; ${pct(odds.roleCovered, 1)} multiplied ${COUNT} times = ${pct(odds.allCovered)}`;
+    const each = backups === 0 ? '' : `each role is covered ${pct(odds.roleCovered, 1)} of the time; `;
+    const p = backups === 0 ? a : pct(odds.roleCovered, 1);
+    if (need === COUNT) return `${each}${p} multiplied ${COUNT} times = ${pct(odds.enough)}`;
+    return `${each}at least ${WORDS[need]} of six roles covered, the binomial sum = ${pct(odds.enough)}`;
   });
+  const sub = $derived(
+    need === COUNT
+      ? 'One month for six people. A decision needs all six in on the same day: the top strip is dark only when every role below is covered.'
+      : `One month for six people. A decision needs any ${WORDS[need]} of the six: the top strip is dark on days with at most ${WORDS[COUNT - need]} gap${COUNT - need > 1 ? 's' : ''} below.`,
+  );
 
   const puzzle = {
     goal: 'Which of these changes gives the most days on which the decision can be made?',
@@ -56,7 +69,9 @@
   // A prediction: the controls open after the first answer or a hint.
   const game = getContext('tkc-game');
   const live = $derived(game.engaged('riddle'));
-  const showAnswer = () => ((availability = 90), (backups = 1));
+  // After solving, a third control: how many of the six a decision needs.
+  const revealed = $derived(!game.isOpen('riddle'));
+  const showAnswer = () => ((availability = 90), (backups = 1), (need = COUNT));
 </script>
 
 <Chapter
@@ -83,11 +98,28 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['A decision needs all six roles covered on the same day.', 'Each person is in on 90% of days; absences last about three days.', 'A qualified stand-in can cover a role; nobody’s absences depend on another’s.']} title="Who is in this month?" sub="One month for six people. Each square is a working day; the top strip marks days a decision is possible.">
+    <Instrument rules={['A decision needs all six roles covered on the same day.', 'Each person is in on 90% of days; absences last about three days.', 'A qualified stand-in can cover a role; nobody’s absences depend on another’s.']} title="Who is in this month?" {sub}>
       <Puzzle id="riddle" {...puzzle} predict onshow={showAnswer} />
-      <div class="tkc-controls" class:tkc-wait={!live} inert={live ? undefined : true}>
-        <Slider id="r-avail" label="Attendance" bind:value={availability} min={70} max={99} format={(v) => `${v}% of days`} />
-        <Slider id="r-backup" label="Stand-ins per role" bind:value={backups} min={0} max={3} format={(v) => (v === 0 ? 'None' : String(v))} />
+      <!-- Before the first answer, lower attendance can be tried; better attendance and the stand-ins wait. -->
+      <div class="tkc-controls">
+        <Slider id="r-avail" label="Attendance" bind:value={availability} min={70} max={99} format={(v) => `${v}% of days`} limit={live ? null : 90} limitNote="Above 90%: after your first answer." />
+        <div class:tkc-wait={!live} inert={live ? undefined : true} data-lock="Opens after your first answer.">
+          <Slider id="r-backup" label="Stand-ins per role" bind:value={backups} min={0} max={3} format={(v) => (v === 0 ? 'None' : String(v))} />
+        </div>
+        {#if revealed}
+          <div class="quorum">
+            <Segmented
+              name="r-need"
+              label="Decision needs"
+              bind:value={need}
+              options={[
+                { value: 6, label: 'All six' },
+                { value: 5, label: 'Any five' },
+                { value: 4, label: 'Any four' },
+              ]}
+            />
+          </div>
+        {/if}
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
@@ -95,10 +127,11 @@
           {#each [0, 1, 2, 3] as wk}
             <text class="tkc-axis-label" x={dayX(wk * 5)} y="12">Week {wk + 1}</text>
           {/each}
-          {#if stacked}<text class="tkc-axis-label" x="0" y="42">Decision possible</text>
-          {:else}<text class="tkc-axis-label" x="0" y="26">{narrow ? 'Decision' : 'Decision possible'}</text>{/if}
+          <!-- On a phone every label sits above its row, the strip's too. -->
+          {#if stacked}<text class="tkc-axis-label" x="0" y={stripY - 6}>Decision possible</text>
+          {:else}<text class="tkc-axis-label" x="0" y={stripY + 8}>{narrow ? 'Decision' : 'Decision possible'}</text>{/if}
           {#each month.allIn as ok, d}
-            <rect x={dayX(d)} y="18" width={cell} height="8" rx="2" class="day" class:blocked={!ok} />
+            <rect x={dayX(d)} y={stripY} width={cell} height="8" rx="2" class="day" class:blocked={!ok} />
           {/each}
           {#each month.grid as row, r}
             <text class="tkc-label-2" x="0" y={labelY(r)}>{label(r)}</text>
@@ -110,24 +143,24 @@
         <div class="tkc-legend">
           <span><span class="tkc-swatch sw-in"></span>Named person in</span>
           {#if backups > 0}<span><span class="tkc-swatch sw-cover"></span>Stand-in covers</span>{/if}
-          <span><span class="tkc-swatch sw-gap"></span>Nobody in for this role</span>
+          <span><span class="tkc-swatch sw-gap"></span>{backups > 0 ? 'Named person and stand-in both away' : 'Nobody in for this role'}</span>
           <span><span class="tkc-swatch sw-blocked"></span>Decision blocked</span>
         </div>
       </div>
 
       <div class="tkc-stats" use:announce>
-        <Stat label="Days this month the decision could be made" value="{month.possibleDays} of {DAYS}" sub="In the long run: {pct(odds.allCovered)} of days" />
+        <Stat label="Days this month the decision could be made" value="{month.possibleDays} of {DAYS}" sub="In the long run: {pct(odds.enough)} of days" />
         <Stat
-          label="Longest wait for everyone to be in"
+          label={need === COUNT ? 'Longest wait for everyone to be in' : `Longest wait for any ${WORDS[need]} to be in`}
           value={month.longestWait === 0 ? 'No wait' : `${month.longestWait} working day${month.longestWait === 1 ? '' : 's'}`}
-          sub={month.longestWait > 0 ? 'in a row with someone missing' : 'the decision never had to wait'}
+          sub={month.longestWait === 0 ? 'the decision never had to wait' : need === COUNT ? 'in a row with someone missing' : 'in a row with too few in'}
           swatch="var(--tkc-conditions)"
         />
       </div>
 
       {#snippet model()}
         <p>Each person is in on {availability}% of days in the long run. Absences last three days on average, so they cluster the way holidays and training do.</p>
-        <p>A role is covered on a day when its named person or any stand-in is in. The decision needs all six roles covered on the same day. Over many months that happens on {pct(odds.allCovered)} of days: {formula}.</p>
+        <p>A role is covered on a day when its named person or any stand-in is in. The decision needs {need === COUNT ? 'all six roles' : `any ${WORDS[need]} of the six roles`} covered on the same day. Over many months that happens on {pct(odds.enough)} of days: {formula}.</p>
         <p>Each person’s absences are independent of everyone else’s. Stand-ins who take the same holidays as the people they cover would help less.</p>
       {/snippet}
     </Instrument>
@@ -154,19 +187,30 @@
       people and single systems, each link is an <span class="tkc-and">AND</span>. ORs let a chain grow long and stay
       strong. ANDs weaken it with every link, and past a point it is blocked more often than it is open.
     </p>
+    <p>
+      Between the two sits the quorum. All six of six is an AND; any one of two, a person or their stand-in, is an
+      OR; any four of six lies in between. The same six people, each in on nine days in ten, are all in together on
+      {pct(coverageOdds(COUNT, 0, 0.9).enough)} of days; any five on {pct(coverageOdds(COUNT, 0, 0.9, 5).enough)}, any
+      four on {pct(coverageOdds(COUNT, 0, 0.9, 4).enough)}. A quorum keeps several judgements without waiting for every
+      one of them.
+    </p>
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Which decisions wait for everyone to be present, when a quorum of qualified people would do?">
+    <BankNote ask="Which of our approvals wait for one named person, where a standing deputy or a pool would do?">
       <p>
-        A committee that needs all six members present is a chain of ANDs: with each member in 90% of the time, it can
-        meet on about half of all days. One that can decide with any four of the six can meet on almost every day.
+        Many approvals name a person: the head of credit, the chief risk officer. When that person is travelling, the
+        deal waits, or a delegation is drafted for the occasion. A standing delegation to a named deputy, or to any of
+        several qualified colleagues, keeps the same control and takes the waiting out.
       </p>
     </BankNote>
   {/snippet}
 </Chapter>
 
 <style>
+  .quorum {
+    grid-column: 1 / -1;
+  }
   .cell {
     fill: var(--tkc-sunken);
     stroke: none;

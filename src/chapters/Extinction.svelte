@@ -31,8 +31,8 @@
   // Small multiples of island populations, on a shared log scale.
   const sideBySide = $derived(width >= 560);
   const panelW = $derived(sideBySide ? (width - 16) / 2 : width);
-  const PH = $derived(sideBySide ? 204 : 180);
-  const pm = { top: 30, right: 10, bottom: 30, left: 44 };
+  const PH = $derived(sideBySide ? 216 : 192);
+  const pm = { top: 44, right: 10, bottom: 30, left: 44 };
   const px = $derived(linear(0, YEARS, pm.left, panelW - pm.right));
   const py = $derived(log10(1, CAPACITY, PH - pm.bottom, pm.top));
   const path = (p) => {
@@ -76,6 +76,7 @@
   const puzzle = $derived({
     goal: 'The specialist grows faster in a calm world. Make the years more variable: at what swing does the generalist start to grow faster?',
     met: swing === firstAhead,
+    checks: [{ label: `Generalist grows faster (now specialist ${signedPct(gs)}, generalist ${signedPct(gg)})`, ok: gg > gs }],
     progress: gg > gs && swing > firstAhead ? 'The generalist is ahead here. Is it already ahead in a calmer world?' : '',
     hints: ['Start from a calm world and make the years more variable, one step at a time.', 'Watch the two growth rates above the islands as you go. The lead changes hands once.'],
     found: `At about ±${crossing}%: beyond it the generalist grows faster, and the specialist begins to vanish from island after island.`,
@@ -112,7 +113,7 @@
       rules={[
         `${ISLANDS === 40 ? 'Forty' : ISLANDS} islands; each species starts at ${START} animals, with room for ${CAPACITY.toLocaleString('en-US')} on each.`,
         'The specialist eats one plant, the generalist four; each plant’s food swings each year.',
-        `In an average year, before crowding, the specialist grows ${Math.round((SPECIALIST_RATE - 1) * 100)}% and the generalist ${Math.round((GENERALIST_RATE - 1) * 100)}%.`,
+        `While there is room, the specialist grows ${Math.round((SPECIALIST_RATE - 1) * 100)}% in an average year, the generalist ${Math.round((GENERALIST_RATE - 1) * 100)}%.`,
       ]}
     >
       <Puzzle id="extinction" {...puzzle} onshow={() => (swing = firstAhead)} />
@@ -126,6 +127,9 @@
             <svg width={panelW} height={PH} role="img" aria-label="{panel.title}. Survives on {panel.alive} of {ISLANDS} islands.">
               <text class="tkc-label" x="0" y="14">{panel.title}</text>
               <text class="tkc-axis-label" x={panelW - pm.right} y="14" text-anchor="end">{panel.alive} of {ISLANDS} survive</text>
+              <!-- The ceiling every island shares: populations flatten here. -->
+              <line class="ceiling" x1={pm.left} x2={panelW - pm.right} y1={py(CAPACITY)} y2={py(CAPACITY)} />
+              <text class="tkc-axis-label" x={pm.left} y={py(CAPACITY) - 5}>room for {CAPACITY.toLocaleString('en-US')}</text>
               {#each [1, 10, 100, 1000] as t}
                 <line class={t === 1 ? 'tkc-base' : 'tkc-grid'} x1={pm.left} x2={panelW - pm.right} y1={py(t)} y2={py(t)} />
                 <text class="tkc-axis-label" x={pm.left - 6} y={py(t) + 4} text-anchor="end">{t === 1 ? 'gone' : t.toLocaleString('en-US')}</text>
@@ -149,16 +153,17 @@
           <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-options)" aria-hidden="true"></span>Generalist</span>
           <span><span class="tkc-swatch round" style:background="var(--tkc-conditions)" aria-hidden="true"></span>Died out on an island</span>
         </div>
+        <p class="tkc-caption">Read the specialist as a borrower that sells one crop; the generalist sells four.</p>
       </div>
 
       <div class="tkc-stats two" use:announce>
-        <Stat label="Specialist survives on" value="{sim.survivors.specialist} of {ISLANDS}" sub="islands · {signedPct(gs)} a year before crowding" swatch="var(--tkc-ink-2)" line={true} />
-        <Stat label="Generalist survives on" value="{sim.survivors.generalist} of {ISLANDS}" sub="islands · {signedPct(gg)} a year before crowding" swatch="var(--tkc-options)" line={true} />
+        <Stat label="Specialist survives on" value="{sim.survivors.specialist} of {ISLANDS}" sub="islands · {signedPct(gs)} a year while there is room" swatch="var(--tkc-ink-2)" line={true} />
+        <Stat label="Generalist survives on" value="{sim.survivors.generalist} of {ISLANDS}" sub="islands · {signedPct(gg)} a year while there is room" swatch="var(--tkc-options)" line={true} />
       </div>
 
       <div class="tkc-chart curve" bind:clientWidth={curveW}>
-        <div class="tkc-fig-title small">Who grows faster before crowding?</div>
-        <svg width={curveW} height={CH} role="img" aria-label="Growth of each species before crowding, year after year, against how variable the years are{done ? `. The generalist overtakes the specialist at about ±${crossing}% food` : `, drawn up to ±${swing}% food`}.">
+        <div class="tkc-fig-title small">Who grows faster while there is room?</div>
+        <svg width={curveW} height={CH} role="img" aria-label="Growth of each species while there is room, year after year, against how variable the years are{done ? `. The generalist overtakes the specialist at about ±${crossing}% food` : `, drawn up to ±${swing}% food`}.">
           <text class="tkc-axis-title" x="0" y="11">Growth a year</text>
           {#each [-0.2, -0.1, 0, 0.1] as t}
             <line class={t === 0 ? 'tkc-base' : 'tkc-grid'} x1={cm.left} x2={curveW - cm.right} y1={cy(t)} y2={cy(t)} />
@@ -198,7 +203,7 @@
       {#snippet model()}
         <p>Each year, each of four plants independently has a good year (food × (1 + swing)) or a bad one (food × (1 − swing)). The specialist eats only the first plant and grows 10% in an average year; the generalist eats all four and grows 6%.</p>
         <p>Each island starts with {START} animals of each species. The two never compete: each species has its own ceiling of {CAPACITY.toLocaleString('en-US')} animals per island, and they share only the weather. Births and deaths are random (Poisson), so small populations can die out by chance.</p>
-        <p>The growth rates in the figures are before crowding: the geometric mean, the rate at which a single population compounds year after year until it nears its ceiling, leaving chance births and deaths aside.</p>
+        <p>The growth rates in the figures hold while there is room: the geometric mean, the rate at which a single population compounds year after year until it nears its ceiling, leaving chance births and deaths aside.</p>
       {/snippet}
     </Instrument>
   {/snippet}
@@ -207,8 +212,8 @@
     <p>
       In a calm world the specialist wins: it grows faster and fills its islands first. As the years get more variable,
       its one plant fails it again and again, and it disappears from island after island. The generalist is not better
-      at anything; it just never depends on a single plant. Nor is the change gradual: past the crossing, each extra bit
-      of variability costs the specialist more than the last.
+      at anything; it just never depends on a single plant. Nor is the change gradual: past the crossing, a tipping
+      point, each extra bit of variability costs the specialist more than the last.
     </p>
     <p>
       This is not Adam Smith’s specialist: its trouble is not its skill but its single source of food. A chain of named
@@ -230,7 +235,7 @@
       A larger area holds more species in all, but fewer for its size; Nassim Taleb reads globalization into that rule,
       as a few winners spread at the expense of the rest. The islands here never swap animals, so a collapse on one stays
       there: each is a firebreak, as the banks in the stress test were not. Any one island is fragile; what lasts is the
-      archipelago.
+      archipelago: a quorum of one in forty.
     </p>
   {/snippet}
 
@@ -261,6 +266,11 @@
     stroke-width: 1.25;
     opacity: 0.45;
     stroke-linejoin: round;
+  }
+  .ceiling {
+    stroke: var(--tkc-rule);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
   }
   .gone {
     fill: var(--tkc-conditions);

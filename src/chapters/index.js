@@ -24,7 +24,7 @@ import Pace from './Pace.svelte';
 import Monday from './Monday.svelte';
 
 // `id` doubles as the URL anchor for deep links (#systems, #black-swans …).
-// The story in four parts; `part` groups the chapters on the opening page.
+// The story in five parts; `part` groups the chapters on the opening page.
 export const PARTS = ['Two kinds of chains', 'How a chain grows rigid', 'When the world pulls on the chain', 'Chains that bend', 'Chains that learn'];
 
 export const CHAPTERS = [
@@ -41,7 +41,7 @@ export const CHAPTERS = [
   { id: 'extinction', short: 'Extinction', title: 'Why species go extinct', component: Extinction, part: 3 },
   { id: 'gate', short: 'The gate worth keeping', title: 'The gate worth keeping', component: Gate, part: 4 },
   { id: 'graph', short: 'Networks', title: 'The shape of the network', component: Graph, part: 4 },
-  { id: 'knot', short: 'Looped chains', title: 'A chain looped back on itself', component: Knot, part: 4 },
+  { id: 'knot', short: 'Knotted chains', title: 'A chain tied in a knot', component: Knot, part: 4 },
   { id: 'modules', short: 'Modules', title: 'Two watchmakers', component: Modules, part: 4 },
   { id: 'disbursement', short: 'Disbursement', title: 'Time to disbursement', component: Disbursement, part: 4 },
   { id: 'covenants', short: 'Covenants', title: 'A warning light, not a tripwire', component: Covenants, part: 4 },

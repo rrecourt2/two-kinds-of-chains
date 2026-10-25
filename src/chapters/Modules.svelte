@@ -17,6 +17,8 @@
   const live = $derived(game.engaged('modules'));
 
   let interrupt = $state(10); // tenths of a percent per part
+  // Before the first answer the slider runs from quiet up to the asked case, 1.0%; busier settings open after it.
+  const ASKED = 10;
   const p = $derived(interrupt / 1000);
   const w = $derived(watchmakers(p));
 
@@ -116,7 +118,7 @@
   const gap = 3;
   const gridW = $derived(10 * cs + 9 * gap);
   const TY = 40;
-  const GY = 120;
+  const GY = 128;
   const H = $derived(GY + 10 * (cs + gap) + 6);
 
   // The long run: watches a month at one part a minute, 160 hours. The scale stops short of the
@@ -167,10 +169,20 @@
 
   {#snippet figure()}
     <Instrument rules={['A watch has 1,000 parts; each minute a watchmaker places one, unless interrupted.', 'An interruption undoes all of Tempus’s unfinished watch.', 'Hora builds in modules of ten; an interruption undoes only the module in hand.']} title="The two workshops" sub="Both watchmakers at work, one part a minute.">
-      <Puzzle id="modules" {...puzzle} predict onshow={() => (interrupt = 10)} />
+      <Puzzle id="modules" {...puzzle} predict onshow={() => (interrupt = ASKED)} />
 
-      <div class="tkc-controls tkc-controls--wide" class:tkc-wait={!live} inert={live ? undefined : true}>
-        <Slider id="w-int" label="Interruptions" bind:value={interrupt} min={0} max={20} format={(v) => `${(v / 10).toFixed(1)}% a part`} ends={['Quiet', 'Busy']} />
+      <div class="tkc-controls tkc-controls--wide">
+        <Slider
+          id="w-int"
+          label="Interruptions"
+          bind:value={interrupt}
+          min={0}
+          max={20}
+          format={(v) => `${(v / 10).toFixed(1)}% a part`}
+          ends={['Quiet', 'Busy']}
+          limit={live ? null : ASKED}
+          limitNote="Busier workshops, and the long-run totals, open after your first answer."
+        />
       </div>
 
       <div class="race" bind:this={panel} bind:clientWidth={width}>
@@ -182,12 +194,14 @@
           <rect x="0" y={TY} width={width} height="14" rx="7" class="track" class:flash={tFlash} />
           <path d={barRight(0, TY, (tempus.parts / PARTS) * width, 14, 7)} class="tbar" />
           {#if tempus.best > 0}
-            <line x1={(tempus.best / PARTS) * width} x2={(tempus.best / PARTS) * width} y1={TY - 4} y2={TY + 18} class="best" />
+            {@const bx = (tempus.best / PARTS) * width}
+            <line x1={bx} x2={bx} y1={TY - 4} y2={TY + 18} class="best" />
+            <text class="tkc-axis-label" x={bx} y={TY + 31} text-anchor={bx < 40 ? 'start' : bx > width - 40 ? 'end' : 'middle'}>longest run</text>
           {/if}
 
-          <text class="tkc-label" x="0" y="88">Hora</text>
-          <text class="tkc-axis-label" x="0" y="104">modules of ten, ten of those, then the watch</text>
-          <text class="tkc-label" x={width} y="88" text-anchor="end">{hora.watches} {hora.watches === 1 ? 'watch' : 'watches'}</text>
+          <text class="tkc-label" x="0" y="96">Hora</text>
+          <text class="tkc-axis-label" x="0" y="112">each square is a module of ten parts</text>
+          <text class="tkc-label" x={width} y="96" text-anchor="end">{hora.watches} {hora.watches === 1 ? 'watch' : 'watches'}</text>
           {#each cells as f, i (i)}
             {@const x = (i % 10) * (cs + gap)}
             {@const y = GY + Math.floor(i / 10) * (cs + gap)}
@@ -203,6 +217,7 @@
             <rect x="-5" y={GY - 5} width={(gridW + 10) * final} height={10 * (cs + gap) + 7} rx="6" class="whole" />
           {/if}
         </svg>
+        <p class="tkc-caption">A row of ten modules is a larger module; ten rows make the watch.</p>
         <p class="tkc-caption">
           {#if still}
             The animation is off because this device asks for reduced motion.

@@ -1,7 +1,7 @@
 // The toll road (chapter “How to find a black swan”): every number the chapter quotes, from the model.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { REVENUE, COSTS, PAYMENT, MONTHS, WORST, ALONE, cover, coverLabel, misses, withinRecord, breaksClaim, breakingCurrency, record, boxGrid } from '../src/lib/sim/tollroad.js';
+import { REVENUE, COSTS, PAYMENT, MONTHS, WORST, ALONE, RESERVE, cover, coverLabel, misses, paidFromReserve, withinRecord, breaksClaim, breakingCurrency, record, boxGrid } from '../src/lib/sim/tollroad.js';
 
 const near = (a, b, tol = 0.005) => assert.ok(Math.abs(a - b) <= tol, `${a} is not within ${tol} of ${b}`);
 const pct = (v) => v / 100;
@@ -92,6 +92,21 @@ test('the walk-through and show-answer years solve it', () => {
   assert.equal(coverLabel(pct(12), pct(15)), '0.99');
   near(cover(pct(12), pct(15)), 0.99);
   assert.ok(breaksClaim(pct(15), pct(20)));
+});
+
+test('the six-month reserve (revealed after solving): the payment comes from the tolls or the reserve', () => {
+  assert.equal(RESERVE, 0.5);
+  // The record’s worst pair misses on tolls alone and is paid with the reserve.
+  assert.ok(misses(WORST.traffic, WORST.currency) && !misses(WORST.traffic, WORST.currency, RESERVE));
+  assert.ok(paidFromReserve(WORST.traffic, WORST.currency));
+  // With the reserve, no year inside the record’s box misses: the claim holds.
+  for (let t = 0; t <= 15; t++) for (let c = 0; c <= 20; c++) assert.ok(!breaksClaim(pct(t), pct(c), RESERVE), `${t}/${c}`);
+  // Its frontier (cover 0.5) enters the chart (currency up to 40%) only beyond a 25.5% traffic fall.
+  near(breakingCurrency(0.255, RESERVE), 0.4, 1e-9);
+  near(breakingCurrency(0.3, RESERVE), 0.31, 1e-9);
+  near(cover(0.3, breakingCurrency(0.3, RESERVE)), 0.5, 1e-9);
+  // At the chart’s far corner the road still misses, even with the reserve.
+  assert.ok(misses(0.3, 0.4, RESERVE));
 });
 
 test('the cover label: cash equal to the payment pays; a miss never reads 1.00', () => {

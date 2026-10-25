@@ -75,7 +75,7 @@
   const rules = [
     'One year in twenty is a crisis, with four times a normal year’s losses.',
     'The cushion covers the worst year remembered; memory fades a little each year.',
-    'Cost: losses beyond the cushion, plus lending held back.',
+    'Each year the cushion holds back lending worth a tenth of it.',
   ];
 
   // ---- Puzzle: judged on the averages, at the whole percent the tiles show ----
@@ -166,6 +166,9 @@
   );
   const bestCol = $derived(top ? cols[at(top.memory)] : null);
   const costWord = $derived(cost === 'little' ? 'little' : cost === 'lot' ? 'a lot' : 'some');
+  // How lending held back is worked out, on its tile: the share of the cushion, each year, for 60 years.
+  const SHARE = { little: 'a twentieth', some: 'a tenth', lot: 'three twentieths' };
+  const share = $derived(SHARE[revealed ? cost : 'some']);
 </script>
 
 <Chapter
@@ -250,7 +253,7 @@
         <Stat
           label="Lending held back"
           value={avg ? pc(avg.held) : '…'}
-          sub={avg ? `of the book over 60 years; average cushion ${(rows[stop].cushion / YEARS).toFixed(1)}%` : 'averaging 3,000 histories'}
+          sub={avg ? `of the book: ${YEARS} years of ${share} of a ${(rows[stop].cushion / YEARS).toFixed(1)}% cushion` : 'averaging 3,000 histories'}
           swatch="var(--pace-held-key)"
         />
       </div>
@@ -313,8 +316,8 @@
         and, like the chain of <span class="tkc-and">ANDs</span> in the riddle, each one holds a little more back.
       </p>
       <p>
-        In between, at about {word(T.some)} years, the two costs together are lowest: the cushion comes down in the calm,
-        but not so far that the next crisis finds it bare. Biologists know the pattern as hormesis: a small dose of stress
+        In between, at about {word(T.some)} years, the two costs together are lowest. Losses raise the cushion and calm
+        lowers it, but not so far that the next crisis finds it bare: a loop that steadies itself, like a thermostat. Biologists know the pattern as hormesis: a small dose of stress
         makes an organism stronger, and a large one harms it. Antifragility is a matter of dose: enough change to adapt, not so fast that the lesson is forgotten.
       </p>
       <h3>What sets the pace</h3>
@@ -325,8 +328,7 @@
       </p>
       <p>
         A chain that learns adds links after a shock, and does not take them off as soon as the weather clears. Nor does
-        it keep them all for ever. That is the last of the puzzles; what follows gathers what the chains in this story
-        have shown, one pattern at a time.
+        it keep them all for ever. That is the last of the puzzles; what follows gathers what the chains have shown.
       </p>
     {:else}
       <p class="tkc-small">Averaging {int(HISTORIES)} histories…</p>

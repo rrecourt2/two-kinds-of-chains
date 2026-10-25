@@ -61,7 +61,7 @@
   });
 
   const rules = [
-    'About 600 account changes a year, $50,000 to $80m each; one in 200 is fraud.',
+    'About 600 payments a year to a new account, $50,000–$80m; one in 200 is fraud.',
     'A check catches every fraud; any of three qualified reviewers does one a day.',
     'Each reviewer is in nine days in ten; payment is promised within three working days.',
   ];
@@ -117,8 +117,13 @@
     const placed = [];
     const fits = (b) => b.x0 >= m.left && b.x1 <= span - m.right + 2 && b.y0 >= 0 && placed.every((p) => !clash(p, b));
     const place = (cls, options) => placed.push({ ...(options.find(fits) ?? options[0]), cls });
-    const nothing = run.lossless === YEARS ? 'No year loses anything' : `${run.lossless.toLocaleString('en-US')} years lose nothing`;
-    if (run.lossless) place('zero', [box(nothing, right, ZERO - 6, 'end')]);
+    // Checking every payment loses nothing; say on the empty chart what it costs instead.
+    const late = share(run.late);
+    const nothing =
+      run.lossless === YEARS
+        ? [`Every payment checked: nothing lost, but ${late} of payments are late`, `Nothing lost, but ${late} of payments are late`, `Nothing lost; ${late} paid late`]
+        : [`${run.lossless.toLocaleString('en-US')} years lose nothing`];
+    if (run.lossless) place('zero', nothing.map((t) => box(t, right, ZERO - 6, 'end')));
     if (run.worst > 0) {
       const cx = x(run.worstYear + 1);
       const cy = yOf(run.worst);
@@ -172,7 +177,7 @@
     <Instrument title="A thousand years of payments" sub="Each dot is one simulated year and what fraud took from it; each gridline is ten times the one below." {rules}>
       <Puzzle id="gate" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls">
-        <Slider id="g-check" label="Check payments above" bind:value={stop} min={0} max={STOPS.length - 1} format={(i) => STOPS[i].label} />
+        <Slider id="g-check" label="Check payments above" bind:value={stop} min={0} max={STOPS.length - 1} format={(i) => STOPS[i].label} ends={['Check all: slow', 'Check none: exposed']} />
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
@@ -224,7 +229,11 @@
           sub={run ? (run.worst === 0 ? 'no year loses anything' : `average ${money(run.mean)}, typical year ${money(run.median)}`) : 'simulating'}
           swatch={run && run.worst > LIMIT ? 'var(--tkc-conditions)' : ''}
         />
-        <Stat label="Payments late" value={run ? share(run.late) : '…'} sub={run ? `${whole(run.checkedShare)} of payments checked` : 'simulating'} />
+        <Stat
+          label="Payments late"
+          value={run ? share(run.late) : '…'}
+          sub={run ? (run.checkedShare === 0 ? 'no payment checked' : `${whole(run.checkedShare)} checked; any of three reviewers, busy ${whole(run.busy)} of their days`) : 'simulating'}
+        />
       </div>
 
       {#snippet model()}
@@ -265,8 +274,9 @@
         is a queue everywhere.
       </p>
       <p>
-        The gate itself is an <span class="tkc-and">AND</span>: no large payment goes out unchecked. Inside it sits an
-        <span class="tkc-or">OR</span>, taken as given here: any of three qualified reviewers may make the call. If each
+        The gate itself is an <span class="tkc-and">AND</span> with an <strong>IF</strong> in front: if a payment is above $1m, it does not
+        go out unchecked. Inside it sits an <span class="tkc-or">OR</span>, taken as given here: any one of three qualified
+        reviewers may make the call, a quorum of one. If each
         payment waited for its own named reviewer instead, the same gate would make payments late again.
       </p>
       <p>
@@ -284,7 +294,7 @@
       <p>
         Bank capital rules for operational risk long asked for enough to survive the worst year in a thousand, not the
         average year. Payment controls often grow with the amount, with more checks, and more senior ones, for larger
-        sums. Dual control, the four-eyes rule, asks for two qualified people, not two named ones.
+        sums. Dual control, the four-eyes rule, is a quorum as well: any two qualified people, not two named ones.
       </p>
     </BankNote>
   {/snippet}

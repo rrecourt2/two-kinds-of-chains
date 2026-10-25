@@ -72,6 +72,9 @@
   const slowestTypical = Math.max(...CONDITIONS.map((c) => c.median));
   const registeredShare = dateSetters(F.start.s)[CONDITIONS.findIndex((c) => c.id === 'registered')];
   const altCount = CONDITIONS.filter((c) => c.alt).length;
+  // Once security registered follows the money, its filing evidence stays before it: one row more than the count.
+  const REG = CONDITIONS.findIndex((c) => c.safeguard);
+  const beforeLabel = (v) => `${v} of ${TOTAL}${v <= REG ? ' + filing' : ''}`;
   const weeks = (d) => words[Math.round(d / 5)];
   const fastest = Math.min(...CONDITIONS.map((c) => c.median));
 
@@ -193,6 +196,9 @@
           for (const b of lay) if (a !== b && b.x >= a.l - 2 && b.x <= a.r + 2 && b.y + 4 < a.y + 3) cost += 100;
         }
         lay.forEach((d) => (cost += Math.abs(LEVELS.indexOf(d.y) - rank.indexOf(d.key))));
+        // Two lines closer than 12 px: their labels face away from each other, so each reads with its own line.
+        for (const a of lay)
+          for (const b of lay) if (a.x < b.x && b.x - a.x < 12 && (a.right || !b.right)) cost += 50;
         if (!best || cost < best.cost) best = { cost, lay };
       }
     }
@@ -263,14 +269,10 @@
     <Instrument title="Twelve conditions, {PARAMS.loans.toLocaleString('en-US')} loans" sub="Each loan has the same twelve conditions and its own luck." {rules}>
       <Puzzle id="disbursement" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls">
-        <Slider
-          id="d-before"
-          label="Conditions first"
-          bind:value={before}
-          min={MIN_BEFORE}
-          max={TOTAL}
-          format={(v) => `${v} of ${TOTAL}`}
-        />
+        <div class="ctl">
+          <Slider id="d-before" label="Conditions first" bind:value={before} min={MIN_BEFORE} max={TOTAL} format={beforeLabel} />
+          <p class="tkc-caption">From the bottom of the list up, conditions move after the money as undertakings.</p>
+        </div>
         <div class="ctl">
           <Segmented
             name="d-late"
@@ -284,15 +286,18 @@
           <p class="tkc-caption">{words[altCount][0].toUpperCase() + words[altCount].slice(1)} conditions have one, asked for after {weeks(PARAMS.wait)} weeks.</p>
         </div>
         {#if revealed}
-          <Segmented
-            name="d-parties"
-            label="The parties are"
-            bind:value={parties}
-            options={[
-              { value: 'predictable', label: 'Predictable' },
-              { value: 'unpredictable', label: 'Unpredictable' },
-            ]}
-          />
+          <div class="ctl">
+            <Segmented
+              name="d-parties"
+              label="The parties are"
+              bind:value={parties}
+              options={[
+                { value: 'predictable', label: 'Predictable' },
+                { value: 'unpredictable', label: 'Unpredictable' },
+              ]}
+            />
+            <p class="tkc-caption">You played the puzzle with unpredictable parties.</p>
+          </div>
         {/if}
       </div>
 
@@ -436,7 +441,7 @@
   {#snippet after()}
     <p>
       Each condition alone is usually in time: every one is met in time for at least {worstEach} clients in 100. All twelve together keep the promise for only {allTogether}. That is the riddle’s arithmetic: a
-      chain of <span class="tkc-and">ANDs</span> holds only when every link holds at once. And the slowest sets the date,
+      chain of <span class="tkc-and">ANDs</span> holds only when every link holds at once. Side by side, the slowest sets the date,
       a different one each time: no condition typically takes more than {slowestTypical} working days, yet the typical
       loan waits {F.start.mid}.
     </p>

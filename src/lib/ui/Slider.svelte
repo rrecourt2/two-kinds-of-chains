@@ -10,11 +10,26 @@
     step = 1,
     format = (v) => String(v),
     ends = null,
+    // Before a prediction puzzle's first answer, a chapter can keep the slider playable up to `limit`
+    // (the range that does not give the answer away). The rest of the track is drawn dashed and locked,
+    // and a line says what opens it: `limitNote`, or "Above … : opens after your first answer."
+    limit = null,
+    limitNote = '',
   } = $props();
 
   const prefix = getContext('tkc-id') ?? 'tkc';
   const inputId = $derived(`${prefix}-${id}`);
-  const pct = $derived(((value - min) / (max - min)) * 100);
+  const limited = $derived(limit !== null && limit < max);
+  const top = $derived(limited ? Math.max(limit, min + step) : max);
+  const pct = $derived(Math.max(0, Math.min(100, ((value - min) / (top - min)) * 100)));
+  // The open part of the track keeps the scale of the whole: the thumb (18px) sits where it would on the full slider.
+  const share = $derived((top - min) / (max - min));
+  const note = $derived(limitNote || `Above ${format(limit)}: opens after your first answer.`);
+  let nudged = $state(false);
+  function nudge() {
+    nudged = false;
+    requestAnimationFrame(() => (nudged = true));
+  }
 </script>
 
 <div class="ctl">
@@ -22,9 +37,28 @@
     <label for={inputId}>{label}</label>
     <output for={inputId} class="tkc-num" aria-hidden="true">{format(value)}</output>
   </div>
-  <input id={inputId} type="range" {min} {max} {step} bind:value aria-valuetext={format(value)} style:--pct="{pct}%" />
+  <div class="track">
+    <input
+      id={inputId}
+      type="range"
+      {min}
+      max={top}
+      {step}
+      bind:value
+      aria-valuetext={format(value)}
+      aria-describedby={limited ? `${inputId}-lock` : undefined}
+      style:--pct="{pct}%"
+      style:width={limited ? `calc(18px + (100% - 18px) * ${share})` : null}
+    />
+    {#if limited}
+      <span class="rest" title={note} aria-hidden="true" onpointerdown={nudge}></span>
+    {/if}
+  </div>
   {#if ends}
     <div class="ends" aria-hidden="true"><span>{ends[0]}</span><span>{ends[1]}</span></div>
+  {/if}
+  {#if limited}
+    <p class="tkc-lock-note" id="{inputId}-lock" data-tkc-nudge={nudged || undefined} onanimationend={() => (nudged = false)}>{note}</p>
   {/if}
 </div>
 
@@ -59,9 +93,28 @@
     color: var(--tkc-muted);
     margin-top: -2px;
   }
+  .track {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+  /* The locked part of the track: dashed, ending in a padlock, and not for pressing. */
+  .rest {
+    flex: 1;
+    align-self: stretch;
+    min-width: 12px;
+    margin-left: -9px;
+    background:
+      var(--tkc-lock-icon) right center / 10px 12px no-repeat,
+      repeating-linear-gradient(to right, var(--tkc-rule) 0 5px, transparent 5px 9px) left center / calc(100% - 16px) 2px no-repeat;
+    cursor: not-allowed;
+  }
   input[type='range'] {
     -webkit-appearance: none;
     appearance: none;
+    flex: none;
+    position: relative;
+    z-index: 1;
     width: 100%;
     height: 24px;
     margin: 0;

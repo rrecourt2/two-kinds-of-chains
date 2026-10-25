@@ -1,5 +1,4 @@
 <script>
-  import { getContext } from 'svelte';
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Stat from '../lib/ui/Stat.svelte';
@@ -13,27 +12,33 @@
   let width = $state(560);
 
   const pieces = REQUEST.pieces;
+  const BUDGET = 2; // pieces that can be made twice as fast
   const seq = $derived(schedule(REQUEST, { mode: 'sequence', faster }));
   const par = $derived(schedule(REQUEST, { mode: 'parallel', faster }));
-  const toggleFaster = (id) => (faster = faster.includes(id) ? faster.filter((f) => f !== id) : [...faster, id]);
+  const seq0 = schedule(REQUEST, { mode: 'sequence' });
+  const par0 = schedule(REQUEST, { mode: 'parallel' });
+  const toggleFaster = (id) => (faster = faster.includes(id) ? faster.filter((f) => f !== id) : faster.length < BUDGET ? [...faster, id] : faster);
 
   const num = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
+  const lower = (l) => (l.startsWith('E&S') ? `the ${l}` : l[0].toLowerCase() + l.slice(1));
   const amount = (v) => `${num(v)} day${v === 1 ? '' : 's'}`;
   const detail = (r) => (r.waiting ? `${num(r.waiting)} of them waiting for handoffs` : 'no waiting');
 
-  // Two Gantt panels on one time scale.
+  // Two Gantt panels on one fixed time scale, so a speed-up shows as the end line moving left; the
+  // starting end stays as a faint dashed line. Each panel says the rule that sets its total.
   const narrow = $derived(width < 460);
+  const oneLine = $derived(width >= 540); // the rule fits beside the title
   const labelW = $derived(narrow ? 92 : 124);
   const rowH = 22;
-  const panelH = pieces.length * rowH + 30;
-  const H = 2 * panelH + 30;
-  const tMax = $derived(Math.max(seq.total, par.total) * 1.06);
-  const x = $derived(linear(0, tMax, labelW, width - 10));
-  const step = $derived(tMax > 10 ? 2 : 1);
-  const tickVals = $derived(Array.from({ length: Math.floor(tMax / step) + 1 }, (_, i) => i * step));
+  const headH = $derived(oneLine ? 22 : 36);
+  const panelH = $derived(headH + pieces.length * rowH + 22);
+  const H = $derived(2 * panelH + 18);
+  const T_MAX = 17;
+  const x = $derived(linear(0, T_MAX, labelW, width - 10));
+  const tickVals = $derived(Array.from({ length: narrow ? 5 : 9 }, (_, i) => i * (narrow ? 4 : 2)));
   const panels = $derived([
-    { id: 'sequence', title: 'One after another', run: seq, y0: 0 },
-    { id: 'parallel', title: 'In parallel, meeting at the end', run: par, y0: panelH },
+    { id: 'sequence', title: 'One after another', rule: 'the times add up', run: seq, was: seq0.total, y0: 0 },
+    { id: 'parallel', title: 'In parallel', rule: 'done when the last piece is done', run: par, was: par0.total, y0: panelH },
   ]);
   const label = (p) => (narrow ? p.label.replace('Credit analysis', 'Credit').replace('Legal documents', 'Legal docs') : p.label);
 
@@ -50,9 +55,7 @@
     hints: ['In parallel, one piece sets the total. Which one?', 'Once the slowest piece is faster, another piece becomes the slowest.'],
     found: 'Credit analysis and the E&S review: five days instead of seven, because speeding up credit alone leaves the E&S review as the slowest piece.',
   });
-  // Which piece is slowest stays unlabelled until the puzzle is done: finding it is the puzzle.
-  const game = getContext('tkc-game');
-  const revealed = $derived(!game.isOpen('async'));
+  // The piece that sets the pace is labelled from the start: the puzzle is that it moves.
   const showAnswer = () => (faster = ['credit', 'es']);
 </script>
 
@@ -81,19 +84,23 @@
     <Instrument rules={['Days of work: client data 1, credit 4, E&S review 3, legal 2, pricing 1.', 'Every handoff waits a day for someone to pick it up.', 'In parallel, the client data comes first; the other four then run side by side.']} title="One client request, two ways" sub="Each bar is one piece of work, in days.">
       <Puzzle id="async" {...puzzle} onshow={showAnswer} />
 
-      <div class="speed" role="group" aria-label="Make a piece twice as fast">
-        <span class="speed-label">Make a piece twice as fast:</span>
+      <div class="speed" role="group" aria-label="Make two pieces twice as fast">
+        <span class="speed-label">Make two pieces twice as fast <span class="speed-count">({faster.length} of {BUDGET} chosen)</span>:</span>
         {#each pieces as p (p.id)}
-          <button type="button" class="chip" aria-pressed={faster.includes(p.id)} onclick={() => toggleFaster(p.id)}>{p.label}</button>
+          {@const full = faster.length >= BUDGET && !faster.includes(p.id)}
+          <button type="button" class="chip" aria-pressed={faster.includes(p.id)} disabled={full} title={full ? 'The budget covers two pieces: press a chosen one to swap it' : undefined} onclick={() => toggleFaster(p.id)}>{p.label}</button>
         {/each}
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
         <svg {width} height={H} role="img" aria-label="One after another: {amount(seq.total)}. In parallel: {amount(par.total)}. Pieces: {pieces.map((p) => `${p.label}, ${amount(faster.includes(p.id) ? p.time / 2 : p.time)}`).join('; ')}.">
           {#each panels as panel (panel.id)}
-            {@const top = panel.y0 + 22}
-            <text class="tkc-label" x="0" y={panel.y0 + 14}>{panel.title}</text>
-            <text class="tkc-label total" x={width - 10} y={panel.y0 + 14} text-anchor="end">{amount(panel.run.total)}</text>
+            {@const top = panel.y0 + headH}
+            {@const end = top + pieces.length * rowH}
+            {@const moved = panel.run.total !== panel.was}
+            <text class="tkc-label" x="0" y={panel.y0 + 14}>{panel.title}{#if oneLine}<tspan class="rule">: {panel.rule}</tspan>{/if}</text>
+            {#if !oneLine}<text class="tkc-axis-label rule-2" x="0" y={panel.y0 + 29}>{panel.rule[0].toUpperCase() + panel.rule.slice(1)}.</text>{/if}
+            <text class="tkc-label total" x={width - 10} y={panel.y0 + 14} text-anchor="end">{amount(panel.run.total)}{#if moved}<tspan class="was">{'\u00a0'}(was {num(panel.was)})</tspan>{/if}</text>
             {#each pieces as p, r (p.id)}
               <text class="tkc-label-2" x="0" y={top + r * rowH + 15}>{label(p)}</text>
               <line class="tkc-grid" x1={labelW} x2={width - 10} y1={top + r * rowH + rowH - 1} y2={top + r * rowH + rowH - 1} />
@@ -101,29 +108,32 @@
             {#each panel.run.bars as b, i (i)}
               <path d={barRight(x(b.start), top + b.row * rowH + 4, Math.max(1.5, x(b.end) - x(b.start) - 1), rowH - 8, 3)} class="bar {b.kind}" />
             {/each}
-            <line class="end" x1={x(panel.run.total)} x2={x(panel.run.total)} y1={top - 2} y2={top + pieces.length * rowH} />
-            {#if panel.id === 'parallel' && !narrow && revealed}
+            {#if moved}<line class="end-was" x1={x(panel.was)} x2={x(panel.was)} y1={top - 2} y2={end} />{/if}
+            <line class="end" x1={x(panel.run.total)} x2={x(panel.run.total)} y1={top - 2} y2={end} />
+            <!-- The last hatched box is the handover of the finished request. -->
+            <text class="tkc-axis-label" x={x(panel.run.total)} y={end + 12} text-anchor="end">handover</text>
+            {#if panel.id === 'parallel'}
               {#each panel.run.slowestAll as id (id)}
                 {@const sp = pieces.findIndex((p) => p.id === id)}
-                {@const sb = panel.run.bars.filter((b) => b.row === sp).reduce((a, b) => (b.end > a.end ? b : a), { end: 0 })}
-                {#if sb.end > 0 && x(sb.end) + 150 < width}<text class="tkc-axis-label tkc-halo" x={x(sb.end) + 6} y={top + sp * rowH + 15}>{panel.run.slowestAll.length > 1 ? 'tied slowest' : 'slowest: sets the pace'}</text>{/if}
+                {@const sb = panel.run.bars.filter((b) => b.row === sp && b.kind === 'work').reduce((a, b) => (b.end > a.end ? b : a), { end: 0 })}
+                {#if sb.end > 0}<text class="tkc-label pace tkc-halo" x={x(panel.run.total) + 5} y={top + sp * rowH + 15}>{panel.run.slowestAll.length > 1 ? 'tied: set the pace' : 'sets the pace'}</text>{/if}
               {/each}
             {/if}
           {/each}
           {#each tickVals as t}
-            <text class="tkc-axis-label" x={x(t)} y={H - 6} text-anchor="middle">{t}</text>
+            <text class="tkc-axis-label" x={x(t)} y={H - 4} text-anchor="middle">{t}</text>
           {/each}
-          <text class="tkc-axis-label" x="0" y={H - 6}>days</text>
+          <text class="tkc-axis-label" x="0" y={H - 4}>days</text>
         </svg>
         <div class="tkc-legend">
           <span><span class="tkc-swatch sw-work"></span>Work</span>
-          <span><span class="tkc-swatch sw-wait"></span>Waiting for a handoff</span>
+          <span><span class="tkc-swatch sw-wait"></span>Waiting for a handoff, or the handover</span>
         </div>
       </div>
 
       <div class="tkc-stats" use:announce>
         <Stat label="One after another" value={amount(seq.total)} sub={detail(seq)} />
-        <Stat label="In parallel" value={amount(par.total)} sub={revealed ? `${detail(par)}; ${par.slowestAll.length > 1 ? 'tied slowest' : 'slowest piece'}: ${par.slowestAll.map((id) => pieces.find((p) => p.id === id)?.label.toLowerCase()).join(' and ')}` : detail(par)} />
+        <Stat label="In parallel" value={amount(par.total)} sub="{detail(par)}; the pace is set by {par.slowestAll.map((id) => lower(pieces.find((p) => p.id === id)?.label ?? '')).join(' and ')}" />
       </div>
 
       {#snippet model()}
@@ -135,10 +145,10 @@
 
   {#snippet after()}
     <p>
-      One after another, the client request takes sixteen days, five of them spent waiting for handoffs, and every
-      speed-up helps a little. In parallel, only the slowest piece matters, along with anything every piece waits for,
-      such as the client data. Making any other piece faster changes nothing. Improving a part is not the same as
-      improving the whole, as the fast track shows.
+      Links can be joined in two ways. One after another, the times add up: sixteen days, five of them spent waiting
+      for handoffs, and every speed-up helps a little. Side by side, the last piece to finish sets the date, along with
+      anything every piece waits for, such as the client data; making any other piece faster changes nothing.
+      Improving a part is not the same as improving the whole.
     </p>
     <p>
       A Formula 1 pit stop works the parallel way. About twenty people change four tyres in around two seconds, each
@@ -147,8 +157,8 @@
     <h3>What decides the pace</h3>
     <ul>
       <li>
-        <strong>The slowest piece sets the pace.</strong> Effort spent anywhere else changes little: with credit and
-        the E&amp;S review both twice as fast, credit and the legal documents tie at two days. And real work varies: the
+        <strong>The slowest piece sets the pace.</strong> With credit and the E&amp;S review both twice as fast, credit
+        and the legal documents tie at two days. And real work varies: the
         more pieces run side by side, the more likely one of them is late, and that one sets the date.
       </li>
       <li>
@@ -231,6 +241,31 @@
   .end {
     stroke: var(--tkc-ink);
     stroke-width: 1.5;
+  }
+  .end-was {
+    stroke: var(--tkc-muted);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+  }
+  .rule,
+  .was {
+    font-weight: 400;
+    fill: var(--tkc-ink-2);
+  }
+  .rule-2 {
+    fill: var(--tkc-ink-2);
+  }
+  .pace {
+    font-size: 11px;
+  }
+  .speed-count {
+    font-weight: 400;
+    color: var(--tkc-ink-2);
+  }
+  .chip:disabled {
+    color: var(--tkc-muted);
+    border-style: dashed;
+    cursor: not-allowed;
   }
   .sw-work {
     background: var(--tkc-ink-2);

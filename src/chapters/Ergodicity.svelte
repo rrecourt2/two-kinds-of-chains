@@ -57,16 +57,30 @@
   const basePath = $derived(series(base.median));
   const minePath = $derived(series(mine.median));
 
-  // Direct labels at the right edge, nudged apart if they collide.
+  // Direct labels at the right edge, nudged apart if they collide. The two typical players are named
+  // apart (all in, alone; your settings), so neither reads as the other.
+  const LINE = 14;
   const labels = $derived.by(() => {
     const items = [
-      { id: 'avg', text: `On paper ${change(mine.expected[ROUNDS])}`, y: y(cap(mine.expected[ROUNDS])) },
-      { id: 'base', text: `Typical ${change(base.median[ROUNDS])}`, y: y(cap(base.median[ROUNDS])) },
+      { id: 'avg', lines: [`On paper ${change(mine.expected[ROUNDS])}`], y: y(cap(mine.expected[ROUNDS])) },
+      { id: 'base', lines: ['All in, alone', change(base.median[ROUNDS])], y: y(cap(base.median[ROUNDS])) },
     ];
-    if (changed) items.push({ id: 'mine', text: `Yours ${change(mine.median[ROUNDS])}`, y: y(cap(mine.median[ROUNDS])) });
+    if (changed) items.push({ id: 'mine', lines: ['Your settings', change(mine.median[ROUNDS])], y: y(cap(mine.median[ROUNDS])) });
     items.sort((a, b) => a.y - b.y);
-    for (let i = 1; i < items.length; i++) if (items[i].y - items[i - 1].y < 15) items[i].y = items[i - 1].y + 15;
+    for (let i = 1; i < items.length; i++) {
+      const room = items[i - 1].lines.length * LINE + 2;
+      if (items[i].y - items[i - 1].y < room) items[i].y = items[i - 1].y + room;
+    }
     return items;
+  });
+
+  // What one head and one tail do to a player alone, at the stake chosen.
+  const trim = (v) => String(+v.toFixed(3));
+  const pair = $derived.by(() => {
+    const s = stake / 100;
+    const up = 1 + 0.5 * s;
+    const down = 1 - 0.4 * s;
+    return { up: trim(up), down: trim(down), both: trim(up * down) };
   });
 
   function onMove(e) {
@@ -113,12 +127,12 @@
         <Slider id="e-stake" label="Stake each round" bind:value={stake} min={10} max={100} step={5} format={(v) => `${v}% of wealth`} />
         <Segmented
           name="e-pool"
-          label="Pool size"
+          label="Share results with"
           bind:value={pool}
           options={[
-            { value: 1, label: 'Alone' },
-            { value: 2, label: '2' },
-            { value: 5, label: '5' },
+            { value: 1, label: 'No one' },
+            { value: 2, label: '1 other' },
+            { value: 5, label: '4 others' },
           ]}
         />
       </div>
@@ -144,7 +158,9 @@
             <path d={avgPath} class="ln avg" />
           </g>
           {#each labels as l (l.id)}
-            <text class="tkc-label" x={width - m.right + 8} y={l.y + 4}>{l.text}</text>
+            <text class="tkc-label" class:lab-base={l.id === 'base'} class:lab-mine={l.id === 'mine'} x={width - m.right + 8} y={l.y + 4}
+              >{#each l.lines as t, i (i)}<tspan x={width - m.right + 8} dy={i ? LINE : 0}>{t}</tspan>{/each}</text
+            >
           {/each}
           {#if hover !== null}
             <line class="cross" x1={x(hover)} x2={x(hover)} y1={m.top} y2={H - m.bottom} />
@@ -166,6 +182,9 @@
           {#if changed}<span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-options)"></span>Typical player, your settings</span>{/if}
           <span><span class="tkc-swatch tkc-swatch--line sw-player"></span>One player</span>
         </div>
+        <p class="tkc-caption">
+          {stake === 100 ? '' : `Staking ${stake}%, alone: `}{stake === 100 ? 'One' : 'one'} head and one tail: ×{pair.up} then ×{pair.down} = ×{pair.both}, in either order.
+        </p>
       </div>
 
       <div class="tkc-stats" use:announce>
@@ -252,5 +271,11 @@
   .cross {
     stroke: var(--tkc-muted);
     stroke-width: 1;
+  }
+  .lab-base {
+    fill: var(--tkc-conditions-ink);
+  }
+  .lab-mine {
+    fill: var(--tkc-options-ink);
   }
 </style>

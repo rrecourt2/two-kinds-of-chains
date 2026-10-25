@@ -79,6 +79,8 @@
     const swap = async () => {
       index = i;
       visited[i] = true;
+      clickedInFigure = false;
+      lockedFigure = null;
       if (syncHash && !fromHistory) {
         try {
           history.pushState(null, '', `#${CHAPTERS[i].id}`);
@@ -159,6 +161,42 @@
     await resetView();
   }
 
+  // A control that waits for the reader's first answer is `inert` (class `tkc-wait`): it cannot take focus,
+  // and the pointer passes through it to the figure. So a click on it leaves focus on the page, and the
+  // next arrow key would page to another chapter; and its own cursor never shows. The story remembers
+  // where the last click landed, and shows a "not allowed" pointer over a locked control.
+  let clickedInFigure = false;
+  let lockedFigure = null; // the figure whose pointer currently shows "not allowed"
+  const FIGURE = '.tkc-fig, .puzzle';
+  function lockUnder(fig, e) {
+    for (const el of fig.querySelectorAll('.tkc-wait[inert]')) {
+      const r = el.getBoundingClientRect();
+      if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return el;
+    }
+    return null;
+  }
+  function onPointerDown(e) {
+    const fig = e.target?.closest?.(FIGURE);
+    clickedInFigure = !!fig;
+    // A click on a locked control draws the eye to the line that says what opens it.
+    const lock = fig && lockUnder(fig, e);
+    if (lock) {
+      lock.removeAttribute('data-tkc-nudge');
+      void lock.offsetWidth; // restart the animation
+      lock.setAttribute('data-tkc-nudge', '');
+      setTimeout(() => lock.removeAttribute('data-tkc-nudge'), 900);
+    }
+  }
+  function onPointerMove(e) {
+    if (e.pointerType === 'touch') return;
+    const fig = e.target?.closest?.('.tkc-fig');
+    const over = fig && fig.querySelector('.tkc-wait[inert]') && lockUnder(fig, e) ? fig : null;
+    if (over === lockedFigure) return;
+    lockedFigure?.removeAttribute('data-tkc-locked');
+    over?.setAttribute('data-tkc-locked', '');
+    lockedFigure = over;
+  }
+
   function onKey(event) {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
     const el = event.target;
@@ -169,6 +207,9 @@
     if (el?.closest?.('[role="radiogroup"]')) return;
     // Inside a figure or a puzzle, the arrow keys belong to its controls, not to the chapter pager.
     if (el?.closest?.('.tkc-fig, .puzzle, [role="group"]')) return;
+    // Nothing has focus, and the last click was in a figure (on a locked control, say): stay in the chapter.
+    const onPage = !el || el === document.body || el === document.documentElement || el === root;
+    if (onPage && clickedInFigure) return;
     if (menuEl?.open) return;
     if (event.key === 'ArrowRight' && next) go(index + 1);
     if (event.key === 'ArrowLeft' && prev) go(index - 1);
@@ -184,6 +225,8 @@
 
 <svelte:window
   onkeydown={onKey}
+  onpointerdowncapture={onPointerDown}
+  onpointermove={onPointerMove}
   onhashchange={onHistory}
   onpopstate={onHistory}
   onclick={(e) => {
@@ -587,6 +630,62 @@
   .nogates {
     text-align: center;
     margin-top: -24px;
+  }
+
+  /* ---------- Controls that wait for a first answer ----------
+     A chapter marks them `class:tkc-wait={!live} inert={live ? undefined : true}`, around a whole
+     controls panel or one control. Locked, they are faded, the pointer shows "not allowed" (see
+     onPointerMove), and a line says what opens them: by default the text below, or the element's own
+     `data-lock="…"` (`data-lock=""` for none). A click on them nudges that line. */
+  .tkc :global(.tkc-wait[inert]) {
+    opacity: 1;
+  }
+  .tkc :global(.tkc-wait[inert] > *) {
+    opacity: 0.42;
+  }
+  .tkc :global(.tkc-wait[inert]::after) {
+    content: 'Locked until your first answer to the puzzle above.';
+  }
+  .tkc :global(.tkc-wait[inert]::after),
+  .tkc :global(.tkc-lock-note) {
+    grid-column: 1 / -1;
+    display: block;
+    margin: 0;
+    padding-left: 17px;
+    background: var(--tkc-lock-icon) left 0.2em / 10px 12px no-repeat;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--tkc-muted);
+  }
+  .tkc :global(.tkc-wait[inert][data-lock]::after) {
+    content: attr(data-lock);
+  }
+  .tkc :global(.tkc-wait[inert][data-lock='']::after) {
+    display: none;
+  }
+  .tkc :global(.tkc-wait[data-tkc-nudge]::after),
+  .tkc :global(.tkc-lock-note[data-tkc-nudge]) {
+    color: var(--tkc-ink);
+    animation: -global-tkc-nudge 520ms ease-out;
+  }
+  .tkc :global(.tkc-fig[data-tkc-locked]) {
+    cursor: not-allowed;
+  }
+  .tkc {
+    /* A small padlock in the muted grey, legible on the light and dark pages alike. */
+    --tkc-lock-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 12'%3E%3Cpath d='M2.6 5.2V3.6a2.4 2.4 0 0 1 4.8 0v1.6' fill='none' stroke='%238995a5' stroke-width='1.4'/%3E%3Crect x='0.6' y='5' width='8.8' height='6.4' rx='1.4' fill='%238995a5'/%3E%3C/svg%3E");
+  }
+  @keyframes -global-tkc-nudge {
+    20% {
+      transform: translateX(-3px);
+    }
+    45% {
+      transform: translateX(3px);
+    }
+    70% {
+      transform: translateX(-1px);
+    }
   }
 
   .menu {

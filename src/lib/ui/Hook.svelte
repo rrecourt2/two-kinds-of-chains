@@ -31,20 +31,32 @@
 
   const pass = $derived(backups ? 1 - (1 - RELIABILITY) ** 2 : RELIABILITY);
 
-  // Exact counts at each gate (rounded), so the picture matches the arithmetic.
-  function plan(n, q, s) {
+  // Exact counts at each gate (rounded), so the picture matches the arithmetic. With backups, each check
+  // still trips on about one loan in twenty of those that reach it; its backup saves all but the few
+  // that the rounded arithmetic leaves stuck, and those saves are drawn as they happen.
+  function plan(n, q, s, withBackups = false) {
     const rng = makeRng(s);
     const alive = Array.from({ length: REQUESTS }, (_, i) => i);
     const stuckAt = new Array(REQUESTS).fill(-1);
+    const savedAt = Array.from({ length: REQUESTS }, () => []);
+    const saved = new Array(n).fill(0);
     for (let k = 0; k < n; k++) {
+      const arriving = alive.length;
       const target = Math.round(REQUESTS * q ** (k + 1));
+      let stuck = 0;
       while (alive.length > target) {
         const j = Math.floor(rng() * alive.length);
         stuckAt[alive[j]] = k;
         alive.splice(j, 1);
+        stuck++;
+      }
+      if (withBackups) {
+        saved[k] = Math.max(0, Math.round(arriving * (1 - RELIABILITY)) - stuck);
+        const pool = [...alive];
+        for (let m = 0; m < saved[k] && pool.length; m++) savedAt[pool.splice(Math.floor(rng() * pool.length), 1)[0]].push(k);
       }
     }
-    return { stuckAt, through: alive.length, jitter: Array.from({ length: REQUESTS }, () => rng() * 2 - 1) };
+    return { stuckAt, savedAt, saved, through: alive.length, jitter: Array.from({ length: REQUESTS }, () => rng() * 2 - 1) };
   }
   let flow = $state(plan(6, RELIABILITY, 1));
 
@@ -102,7 +114,12 @@
       const e = ease(Math.min(1, (tt - reach) / FALL));
       return { x: gx + (tx - gx) * e, y: y + (ty - y) * e, state: 'stuck' };
     }
-    if (tt < duration) return { x: laneStart + (tt / duration) * travel, y, state: 'move' };
+    if (tt < duration) {
+      const x = laneStart + (tt / duration) * travel;
+      // A check trips on this loan and its backup clears it: blue while it passes that gate.
+      const rescue = flow.savedAt[i].some((g) => Math.abs(x - gateX(g)) <= gateW / 2 + 5);
+      return { x, y, state: rescue ? 'saved' : 'move' };
+    }
     const slot = pileSlots[i];
     const e = ease(Math.min(1, (tt - duration) / FALL));
     return { x: endX + (pileX(slot) - endX) * e, y: y + (pileY(slot) - y) * e, state: 'through' };
@@ -134,7 +151,7 @@
     duration = runs.length ? 1500 : 2400;
     stagger = runs.length ? 12 : 22;
     seed += 1;
-    flow = plan(gates, pass, seed);
+    flow = plan(gates, pass, seed, backups);
     prepareSlots();
     phase = 'run';
     announce = `Sending 100 loans through ${describe({ gates, backups })}.`;
@@ -203,7 +220,9 @@
 
   const first = $derived(runs[0]);
   const latest = $derived(runs[runs.length - 1]);
-  const describe = (r) => `${r.gates === 6 ? 'six' : r.gates === 12 ? 'twelve' : r.gates} checks${r.backups ? ', each with a backup' : ''}`;
+  const word = (n) => (n === 6 ? 'six' : n === 12 ? 'twelve' : String(n));
+  const describe = (r) => `${word(r.gates)} checks${r.backups ? ', each with a backup' : ''}`;
+  const savedTotal = $derived(flow.saved.reduce((a, b) => a + b, 0));
   const entry = $derived(game?.entry('start'));
   const pointsText = $derived.by(() => {
     if (!entry || entry.status === 'open') return '';
@@ -223,10 +242,19 @@
 <div class="hook tkc-fig">
   <div class="grid">
     <div class="tkc-eyebrow head">Before you start: a quick guess</div>
+    <!-- The question follows the run on show: six checks, twelve, or twelve with a backup each. -->
     <p class="q" id="{prefix}-hook-q">
-      A loan has to pass <strong>six checks</strong> before the money can be paid out. Each check clears it without a hitch
-      <strong>95% of the time</strong>: no missing document, no approver away. Out of 100 loans, how many get through all
-      six the first time?
+      {#if backups}
+        The same {word(gates)} checks, each clearing a loan <strong>95% of the time</strong>, and now <strong>each with
+        a backup</strong>: a second person or a second system. Out of 100 loans, how many get through?
+      {:else if gates !== 6}
+        Now <strong>{word(gates)} checks</strong>, each still clearing a loan without a hitch <strong>95% of the
+        time</strong>. Out of 100 loans, how many get through all {word(gates)}?
+      {:else}
+        A loan has to pass <strong>six checks</strong> before the money can be paid out. Each check clears it without a
+        hitch <strong>95% of the time</strong>: no missing document, no approver away. Out of 100 loans, how many get
+        through all six the first time?
+      {/if}
     </p>
 
     {#if phase === 'ask'}
@@ -257,29 +285,47 @@
           {/if}
           <rect x={x - gateW / 2} y={laneY - 22} width={gateW} height="44" rx={Math.min(6, gateW / 3)} class="gate" />
           <text class="tkc-axis-label" x={x} y={laneY - 32} text-anchor="middle">{showNames ? NAMES[k] : k + 1}</text>
+          {#if phase === 'done' && backups && flow.saved[k] > 0 && showCounts}
+            <text class="tkc-label saved-n" x={x} y={laneY + 38} text-anchor="middle">{showNames ? `${flow.saved[k]} saved` : flow.saved[k]}</text>
+          {/if}
           {#if phase === 'done' && stuckCounts[k] > 0 && showCounts}
             <text class="tkc-label stuck-n" x={x} y={trayY + 22} text-anchor="middle">−{stuckCounts[k]}</text>
             {#if showReasons}<text class="tkc-axis-label" x={x} y={trayY + 36} text-anchor="middle">{REASONS[k]}</text>{/if}
           {/if}
         {/each}
+        <!-- Two trays: the loans stuck at a check, and the loans that get through. -->
         <line x1={gateFrom} x2={endX - 6} y1={trayY + 6} y2={trayY + 6} class="tray" />
         <text class="tkc-axis-label" x={gateFrom} y={H - 4}>{phase === 'done' ? `Stuck: ${REQUESTS - flow.through}` : 'Stuck'}</text>
-        <text class="tkc-axis-label" x={width - 2} y={laneY - 32} text-anchor="end">Through</text>
         <line x1={endX + 4} x2={width - 2} y1={trayY + 6} y2={trayY + 6} class="tray" />
         {#if showGuess}
           {#each Array(guess) as _, slot}
             <circle cx={pileX(slot)} cy={pileY(slot)} r={dotR} class="ghost" />
           {/each}
-          <text class="tkc-axis-label" x={width - 2} y={trayY + 22} text-anchor="end">Guess {guess}</text>
         {/if}
         {#if phase === 'done'}
-          <text class="tkc-label through-n" x={width - 2} y={showGuess ? trayY + 38 : trayY + 22} text-anchor="end">{flow.through} through</text>
+          <text class="tkc-label through-n" x={width - 2} y={trayY + 22} text-anchor="end">{flow.through} through</text>
+        {:else}
+          <text class="tkc-axis-label" x={width - 2} y={trayY + 22} text-anchor="end">Through</text>
+        {/if}
+        {#if showGuess}
+          <!-- Before the run the guess is labelled on top of its pile; once loans arrive, under the tray. -->
+          {#if phase === 'ask'}
+            <text class="tkc-axis-label tkc-halo" x={width - 2} y={Math.max(laneY + 28, pileY(Math.max(0, guess - 1)) - (guess ? 9 : 0))} text-anchor="end">Your guess: {guess}</text>
+          {:else}
+            <text class="tkc-axis-label" x={width - 2} y={trayY + 38} text-anchor="end">Your guess: {guess}</text>
+          {/if}
         {/if}
         {#each Array(REQUESTS) as _, i}
           {@const p = position(i)}
-          <circle cx={p.x} cy={p.y} r={dotR} class="dot {p.state}" />
+          <circle cx={p.x} cy={p.y} r={p.state === 'saved' ? dotR * 1.5 : dotR} class="dot {p.state}" />
         {/each}
       </svg>
+      {#if backups}
+        <div class="tkc-legend backup-key">
+          <span><span class="tkc-swatch sw-twin"></span>Blue outline: a backup, a second person or system. A loan is stuck only when both fail.</span>
+          <span><span class="tkc-swatch sw-saved"></span>{showCounts ? 'Blue loans and figures: loans a backup saved' : 'Blue loans: saved by a backup'}</span>
+        </div>
+      {/if}
     </div>
 
     {#if phase === 'done' && latest}
@@ -303,18 +349,19 @@
           </p>
         {:else if latest.backups}
           <p class="lead">
-            Same {latest.gates === 6 ? 'six' : 'twelve'} checks, same 95%. The only change: each has a backup, a second person or a second system, so a loan
-            is stuck only when both fail. Conditions multiply the risk; alternatives divide it.
+            Same {word(latest.gates)} checks, same 95%. The only change: each has a backup, a second person or a second system, so a loan
+            is stuck only when both fail. The checks still tripped {savedTotal + REQUESTS - latest.through} times; the backups saved
+            {savedTotal} of them. Conditions multiply the risk; alternatives divide it.
           </p>
         {:else}
           <p class="lead">Twice the checks, and almost half the loans get stuck: {arithmetic}. Every new condition multiplies in another 95%.</p>
         {/if}
         <div class="tkc-row">
           {#if !(latest.gates === 12 && !latest.backups)}
-            <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: 12, backups: false })}>Now try twelve checks</button>
+            <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: 12, backups: false })}>Twelve checks, no backups</button>
           {/if}
           {#if !latest.backups}
-            <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: latest.gates, backups: true })}>Give every check a backup</button>
+            <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: latest.gates, backups: true })}>Same {word(latest.gates)}, each with a backup</button>
           {/if}
           <button type="button" class="tkc-btn tkc-btn--small" onclick={again}>Start over</button>
         </div>
@@ -507,8 +554,23 @@
   .dot.stuck {
     fill: var(--tkc-conditions);
   }
-  .dot.through {
+  .dot.through,
+  .dot.saved {
     fill: var(--tkc-options);
+  }
+  .saved-n {
+    fill: var(--tkc-options-ink);
+  }
+  .backup-key {
+    margin-top: 4px;
+  }
+  .sw-twin {
+    background: var(--tkc-surface);
+    box-shadow: inset 0 0 0 1.5px var(--tkc-options);
+  }
+  .sw-saved {
+    border-radius: 50%;
+    background: var(--tkc-options);
   }
   .stuck-n {
     fill: var(--tkc-conditions-ink);

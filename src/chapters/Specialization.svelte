@@ -1,4 +1,5 @@
 <script>
+  import { getContext } from 'svelte';
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
@@ -6,8 +7,8 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { ROLE_OPTIONS, MARKETS, workshop, bestDesign } from '../lib/sim/pins.js';
-  import { linear, ticks, barUp } from '../lib/scales.js';
+  import { ROLE_OPTIONS, MARKETS, workshop, bestDesign, workingMinutes } from '../lib/sim/pins.js';
+  import { linear } from '../lib/scales.js';
   import { int, pct } from '../lib/format.js';
 
   let exponent = $state(2); // pins ordered per day = 10^exponent
@@ -20,15 +21,18 @@
   const best = $derived(bestDesign(demand));
   const solo = $derived(designs[0]);
 
-  // Bar chart geometry.
-  const H = 220;
-  const m = { top: 22, right: 8, bottom: 40, left: 40 };
-  const yMax = $derived(Math.max(...designs.map((d) => d.minutesPerPin)) * 1.08);
-  const y = $derived(linear(0, yMax, H - m.bottom, m.top));
+  // Bar chart geometry. The axis stays at 0–60 minutes whatever the market, so the bars can be compared
+  // as it grows; a taller bar is cut at the top and tagged with its value. Under each bar, its staffing.
+  const prefix = getContext('tkc-id') ?? 'tkc';
+  const H = 252;
+  const m = { top: 24, right: 8, bottom: 58, left: 50 };
+  const Y_MAX = 60;
+  const y = $derived(linear(0, Y_MAX, H - m.bottom, m.top));
   const band = $derived((width - m.left - m.right) / ROLE_OPTIONS.length);
-  const barW = $derived(Math.min(36, band * 0.56));
+  const barW = $derived(Math.min(40, band * 0.6));
   const bx = (i) => m.left + band * i + (band - barW) / 2;
-  const yTicks = $derived(ticks(0, yMax, 4));
+  const yTicks = [0, 20, 40, 60];
+  const rowY = (k) => H - m.bottom + 16 + k * 15;
 
   const fmtMin = (v) => (v >= 100 ? int(v) : v >= 10 ? v.toFixed(0) : v.toFixed(1));
 
@@ -72,7 +76,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['A pin takes twelve operations; one pin-maker doing all twelve makes 10 a day.', 'Split into n roles, each specialist works n times faster at their share.', 'Every role needs at least one whole person, busy or not.']} title="The pin workshop" sub="Worker-minutes per pin for each way of splitting the work; the cheapest is coloured and drawn as a chain below.">
+    <Instrument rules={['A pin takes twelve operations; one pin-maker doing all twelve makes 10 a day.', 'Split into n roles, each specialist works n times faster at their share.', 'Every role needs at least one whole person, busy or not.']} title="The pin workshop" sub="Minutes paid per pin, idle time included. The cheapest design is blue, drawn as a chain below.">
       <Puzzle id="specialization" {...puzzle} onshow={() => (exponent = 2.9)} />
       <div class="tkc-controls tkc-controls--wide">
         <Slider
@@ -88,7 +92,15 @@
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
-        <svg {width} height={H} role="img" aria-label="Worker-minutes per pin for each number of specialist roles: {designs.map((d) => `${d.roles} role${d.roles > 1 ? 's' : ''}, ${fmtMin(d.minutesPerPin)}`).join('; ')}. Cheapest: {best.roles} role{best.roles > 1 ? 's' : ''}.">
+        <svg {width} height={H} role="img" aria-label="Minutes paid per pin for each number of specialist roles, idle time included: {designs.map((d) => `${d.roles} role${d.roles > 1 ? 's' : ''}, ${fmtMin(d.minutesPerPin)} (${fmtMin(workingMinutes(d.roles))} working), ${int(d.workers)} people busy ${pct(d.utilization)}`).join('; ')}. Cheapest: {best.roles} role{best.roles > 1 ? 's' : ''}.">
+          <defs>
+            <pattern id="{prefix}-idle" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="1" y1="0" x2="1" y2="5" class="hatch" />
+            </pattern>
+            <pattern id="{prefix}-idle-best" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="1" y1="0" x2="1" y2="5" class="hatch best" />
+            </pattern>
+          </defs>
           {#each yTicks as t}
             <line class="tkc-grid" x1={m.left} x2={width - m.right} y1={y(t)} y2={y(t)} />
             <text class="tkc-axis-label" x={m.left - 8} y={y(t) + 4} text-anchor="end">{t}</text>
@@ -96,37 +108,44 @@
           <line class="tkc-base" x1={m.left} x2={width - m.right} y1={y(0)} y2={y(0)} />
           {#each designs as d, i (d.roles)}
             {@const isBest = d.roles === best.roles}
+            {@const work = workingMinutes(d.roles)}
+            {@const cut = d.minutesPerPin > Y_MAX}
+            {@const top = y(Math.min(Y_MAX, d.minutesPerPin))}
             <g role="presentation" onpointerenter={() => (hover = i)} onpointerleave={() => (hover = null)}>
               <rect x={m.left + band * i} y={m.top} width={band} height={H - m.top - m.bottom} fill="transparent" />
-              <path
-                d={barUp(bx(i), y(d.minutesPerPin), barW, y(0) - y(d.minutesPerPin))}
-                fill={isBest ? 'var(--tkc-options)' : 'var(--tkc-rule)'}
-                opacity={hover === i ? 0.82 : 1}
-              />
-              <text
-                class={isBest ? 'tkc-label' : 'tkc-label-2'}
-                x={bx(i) + barW / 2}
-                y={y(d.minutesPerPin) - 6}
-                text-anchor="middle">{fmtMin(d.minutesPerPin)}</text
-              >
-              <text class="tkc-axis-label" x={bx(i) + barW / 2} y={H - m.bottom + 18} text-anchor="middle">{d.roles}</text>
+              <!-- Paid but idle: hatched, above the minutes actually worked. -->
+              {#if d.minutesPerPin - work > 0.05}
+                <rect x={bx(i)} y={top} width={barW} height={y(work) - top} class="idle" class:best={isBest} fill="url(#{prefix}-idle{isBest ? '-best' : ''})" opacity={hover === i ? 0.75 : 1} />
+              {/if}
+              <rect x={bx(i)} y={y(work)} width={barW} height={y(0) - y(work)} class="work" class:best={isBest} opacity={hover === i ? 0.82 : 1} />
+              {#if cut}<path d="M{bx(i) - 2} {top + 5} l{barW / 2 + 2} -5 l{barW / 2 + 2} 5" class="cut" />{/if}
+              <text class={isBest ? 'tkc-label tkc-halo' : 'tkc-label-2 tkc-halo'} x={bx(i) + barW / 2} y={top - 7} text-anchor="middle">{cut ? `↑ ${fmtMin(d.minutesPerPin)}` : fmtMin(d.minutesPerPin)}</text>
+              <text class="tkc-axis-label roles-n" x={bx(i) + barW / 2} y={rowY(0)} text-anchor="middle">{d.roles}</text>
+              <text class="tkc-axis-label" x={bx(i) + barW / 2} y={rowY(1)} text-anchor="middle">{int(d.workers)}</text>
+              <text class="tkc-axis-label" class:low={d.utilization < 0.5} x={bx(i) + barW / 2} y={rowY(2)} text-anchor="middle">{pct(d.utilization)}</text>
             </g>
           {/each}
-          <text class="tkc-axis-title" x={m.left + (width - m.left - m.right) / 2} y={H - 4} text-anchor="middle">Specialist roles</text>
-          <text class="tkc-axis-title" x={m.left - 34} y={m.top - 10}>Worker-minutes per pin</text>
+          <text class="tkc-axis-title" x={m.left - 8} y={rowY(0)} text-anchor="end">Roles</text>
+          <text class="tkc-axis-label" x={m.left - 8} y={rowY(1)} text-anchor="end">People</text>
+          <text class="tkc-axis-label" x={m.left - 8} y={rowY(2)} text-anchor="end">Busy</text>
+          <text class="tkc-axis-title" x={m.left - 44} y={m.top - 12}>Minutes paid per pin</text>
         </svg>
         {#if hover !== null}
           {@const d = designs[hover]}
-          <div class="tkc-tip" style:left="{Math.min(width - 200, Math.max(0, bx(hover) - 70))}px" style:top="{Math.max(0, y(d.minutesPerPin) - 92)}px">
-            <strong>{fmtMin(d.minutesPerPin)} min per pin</strong>
-            <div>{d.roles} role{d.roles > 1 ? 's' : ''} × {int(d.perRole)} worker{d.perRole > 1 ? 's' : ''}</div>
-            <div>Each busy {pct(d.utilization)} of the day</div>
+          <div class="tkc-tip" style:left="{Math.min(width - 200, Math.max(0, bx(hover) - 70))}px" style:top="{Math.max(0, y(Math.min(Y_MAX, d.minutesPerPin)) - 92)}px">
+            <strong>{fmtMin(d.minutesPerPin)} min paid per pin</strong>
+            <div>{fmtMin(workingMinutes(d.roles))} working, {fmtMin(d.minutesPerPin - workingMinutes(d.roles))} idle</div>
+            <div>{d.roles} role{d.roles > 1 ? 's' : ''} × {int(d.perRole)} {d.perRole > 1 ? 'people' : 'person'}, each busy {pct(d.utilization)} of the day</div>
           </div>
         {/if}
+        <div class="tkc-legend">
+          <span><span class="tkc-swatch sw-work"></span>Working</span>
+          <span><span class="tkc-swatch sw-idle"></span>Paid but idle: every role needs a whole person</span>
+        </div>
       </div>
 
       <div class="chain" aria-hidden="true">
-        <svg width={chainW} height="54">
+        <svg width={chainW} height="70">
           {#each Array(best.roles) as _, i}
             {@const x0 = i * (linkW + linkGap)}
             {#if i > 0}<line x1={x0 - linkGap - 1} x2={x0 + 1} y1="18" y2="18" class="joint" />{/if}
@@ -138,17 +157,20 @@
           <text class="tkc-caption-svg" x="0" y="50">
             {best.roles === 1 ? 'One link: everyone does all 12 operations' : chainW < 340 ? `${best.roles} links, ${12 / best.roles} of the 12 operations each` : `A ${best.roles}-link chain: each link does ${12 / best.roles} of the 12 operations`}
           </text>
+          <text class="tkc-caption-svg" x="0" y="66">
+            {best.perRole === 1 ? '×1 = one person in each link' : `×${int(best.perRole)} = ${int(best.perRole)} people sharing each link`}
+          </text>
         </svg>
       </div>
 
       <div class="tkc-stats" use:announce>
-        <Stat label="Cheapest design" value="{best.roles} role{best.roles > 1 ? 's' : ''}" sub="{int(best.workers)} worker{best.workers > 1 ? 's' : ''}, busy {pct(best.utilization)} of the day" swatch="var(--tkc-options)" />
-        <Stat label="Worker-minutes per pin" value={fmtMin(best.minutesPerPin)} sub={best.roles === 1 ? 'Everyone does everything' : `${(solo.minutesPerPin / best.minutesPerPin).toFixed(1)}× cheaper than working alone`} />
+        <Stat label="Cheapest design" value="{best.roles} role{best.roles > 1 ? 's' : ''}" sub="{int(best.workers)} {best.workers > 1 ? 'people' : 'person'}, busy {pct(best.utilization)} of the day" swatch="var(--tkc-options)" />
+        <Stat label="Minutes paid per pin" value={fmtMin(best.minutesPerPin)} sub={best.roles === 1 ? 'Everyone does everything' : `${(solo.minutesPerPin / best.minutesPerPin).toFixed(1)}× cheaper than working alone`} />
       </div>
 
       {#snippet model()}
         <p>A trained pin-maker working alone makes 10 pins a day. Smith’s eighteen operations are grouped here into 12, which divide evenly among 1, 2, 3, 4, 6 or 12 roles; split among n roles, each specialist works n times faster at their share.</p>
-        <p>Every role needs at least one whole person, so a small market leaves specialists idle. Worker-minutes per pin = everyone’s working time ÷ pins made. Roughly, the best number of roles grows with the square root of demand, in jumps and not always upwards: because every role needs a whole person, a design with fewer roles sometimes wins for a while. The chain under the chart shows the cheapest design; when designs cost the same, the one with fewer roles is shown. Hovering over a bar shows how that design is staffed.</p>
+        <p>Every role needs at least one whole person, so a small market leaves specialists idle. Minutes paid per pin = everyone’s paid time ÷ pins made; the working part is 48 ÷ n minutes. Roughly, the best number of roles grows with the square root of demand, in jumps and not always upwards: because every role needs a whole person, a design with fewer roles sometimes wins for a while. The chain under the chart shows the cheapest design; when designs cost the same, the one with fewer roles is shown.</p>
       {/snippet}
     </Instrument>
   {/snippet}
@@ -206,5 +228,45 @@
   .tkc-caption-svg {
     fill: var(--tkc-muted);
     font-size: 12px;
+  }
+  .work {
+    fill: color-mix(in srgb, var(--tkc-ink-2) 45%, var(--tkc-surface));
+  }
+  .work.best {
+    fill: var(--tkc-options);
+  }
+  .idle {
+    stroke: color-mix(in srgb, var(--tkc-ink-2) 45%, var(--tkc-surface));
+    stroke-width: 1;
+  }
+  .idle.best {
+    stroke: var(--tkc-options);
+  }
+  .hatch {
+    stroke: color-mix(in srgb, var(--tkc-ink-2) 45%, var(--tkc-surface));
+    stroke-width: 1.4;
+  }
+  .hatch.best {
+    stroke: var(--tkc-options);
+  }
+  .cut {
+    fill: none;
+    stroke: var(--tkc-surface);
+    stroke-width: 3;
+  }
+  .roles-n {
+    fill: var(--tkc-ink);
+    font-weight: 600;
+  }
+  .low {
+    fill: var(--tkc-ink-2);
+  }
+  .sw-work {
+    background: color-mix(in srgb, var(--tkc-ink-2) 45%, var(--tkc-surface));
+  }
+  .sw-idle {
+    box-sizing: border-box;
+    border: 1px solid color-mix(in srgb, var(--tkc-ink-2) 45%, var(--tkc-surface));
+    background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--tkc-ink-2) 45%, var(--tkc-surface)) 0 1.4px, transparent 1.4px 3.5px);
   }
 </style>

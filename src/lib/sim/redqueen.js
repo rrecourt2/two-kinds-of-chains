@@ -8,9 +8,11 @@
 // found in the latest month. The other side copies what works: next month's mix moves towards
 // the patterns that paid (a replicator step), and a small share always tries something new.
 //
-// Variants: the checks reviewed never, every year, quarter or month; one of the three checks drawn
-// at random each month (two follow the review); and the growing chain, where each review adds the
-// worst unchecked pattern and never drops a check.
+// Two loops race: the other side's turns every month, the bank's at each review.
+//
+// Variants: the checks reviewed never, every year, quarter or month (the chapter offers never,
+// yearly and monthly); one of the three checks drawn at random each month (two follow the review);
+// and the growing chain, where each review adds the worst unchecked pattern and never drops a check.
 import { makeRng } from './rng.js';
 
 /** The twelve patterns, the three in use most first. */
@@ -44,20 +46,35 @@ export const EVERY = { never: 0, yearly: 12, quarterly: 3, monthly: 1 };
 export const SEED = 159;
 export const RUNS = 400;
 
+/** What the checks do between reviews: all three follow the review; one of them is drawn at random each month; or
+ *  each review adds a check and none is dropped (the growing chain). */
+export const MODES = ['review', 'random', 'grow'];
+/** The setting's name in CURVES (with no reviews, nothing is ever added, so 'never-grow' is 'never'). */
+export const curveKey = (review = 'yearly', mode = 'review') => (mode === 'review' || (mode === 'grow' && review === 'never') ? review : `${review}-${mode}`);
+
 /**
- * The averages the chapter's text quotes, in whole per cent, over RUNS runs: worked out once by
- * `study()` and checked against it in test/redqueen.test.js, so the page does not rerun 3,600 runs.
+ * The share of the month's attempts caught, in per cent to one decimal, month by month, averaged over RUNS runs of
+ * every setting the chapter offers: worked out once by `average()` and checked against it in test/redqueen.test.js,
+ * so the page does not rerun 3,200 runs. Every number the chapter quotes about the catch comes from these.
  */
+export const CURVES = {
+  never: [72.2, 48.4, 28.5, 16.5, 9.9, 5.9, 4, 2.7, 2, 1.7, 1.6, 1.6, 1.5, 1.5, 1.5, 1.5, 1.4, 1.5, 1.5, 1.4, 1.5, 1.4, 1.5, 1.4, 1.4, 1.5, 1.5, 1.5, 1.4, 1.4, 1.6, 1.5, 1.4, 1.5, 1.4, 1.5],
+  'never-random': [52.4, 34.5, 23.2, 17.7, 15.2, 11.1, 10.8, 9.3, 10, 10.3, 9.8, 11.3, 10.2, 9.9, 10.5, 10.1, 10.4, 9.8, 9.8, 9.8, 10.5, 10.2, 10, 10.3, 10, 9.9, 9.3, 9.5, 10, 10.6, 10.7, 9.9, 9.4, 10, 9.7, 9.6],
+  yearly: [72.2, 48.4, 28.5, 16.5, 9.9, 5.9, 4, 2.7, 2, 1.7, 1.6, 1.6, 29.3, 16.6, 9.8, 6.4, 3.9, 2.9, 2.2, 1.7, 1.6, 1.5, 1.6, 1.4, 39.9, 23.3, 13.4, 8.2, 5.2, 3.4, 2.3, 2.2, 1.7, 1.6, 1.4, 1.5],
+  'yearly-random': [52.4, 34.5, 23.2, 17.7, 15.2, 11.1, 10.8, 9.3, 10, 10.3, 9.8, 11.3, 44.8, 29.9, 21.4, 15.4, 12.7, 11.2, 10.6, 10.7, 10, 10.2, 10, 10.2, 37.2, 25.4, 18, 14.1, 12.4, 11.7, 10.3, 10.3, 10.1, 10.4, 10.1, 10],
+  'yearly-grow': [72.2, 48.4, 28.5, 16.5, 9.9, 5.9, 4, 2.7, 2, 1.7, 1.6, 1.6, 11.1, 7, 4.7, 3.6, 2.7, 2.5, 2.1, 2, 2, 2, 1.9, 1.8, 13.1, 8.1, 5.4, 4.2, 3.2, 2.9, 2.7, 2.6, 2.5, 2.4, 2.4, 2.5],
+  monthly: [72.2, 47.9, 28.6, 18.7, 18.9, 22.4, 24.2, 25.7, 28.9, 30.5, 29.6, 27.3, 26.4, 25.9, 26.6, 26.4, 27.7, 28, 28.3, 27.1, 27.1, 27.5, 26.7, 27.2, 26.8, 27.7, 27.4, 26.9, 27, 26.9, 27.3, 26.9, 27, 27.1, 27.6, 27.6],
+  'monthly-random': [52.4, 36, 47, 36, 28.6, 24.7, 23.1, 25, 25.2, 26.9, 27.4, 28.3, 26.9, 26.7, 26.7, 26.9, 26, 25.8, 27.6, 26.9, 26.3, 27.9, 26.8, 27.4, 26.4, 26.1, 27, 26.7, 26.7, 26.6, 26.6, 26.7, 27.7, 25.9, 26.4, 26.4],
+  'monthly-grow': [72.2, 52.9, 39.3, 33.2, 31.4, 33.3, 37.2, 46, 58.8, 90, 89.6, 89.9, 90, 89.7, 90, 90.1, 90.3, 90, 90.1, 90.4, 90.2, 89.5, 90.1, 89.7, 90.2, 89.8, 90.1, 90.2, 89.9, 89.7, 90.2, 90, 90.1, 89.9, 90.1, 89.8],
+};
+/** The averaged month-by-month catch of one setting, in per cent. */
+export const curveOf = (review, mode) => CURVES[curveKey(review, mode)];
+/** A year's catch (0, 1, 2) from a month-by-month curve: every month has the same fifty attempts, so it is the mean. */
+export const yearOf = (curve, y) => curve.slice(12 * y, 12 * y + 12).reduce((a, b) => a + b, 0) / 12;
+
+/** The other figure the text quotes, in whole per cent over RUNS runs (checked in test/redqueen.test.js). */
 export const NUMBERS = {
-  first: 72, // caught in the first month (no review has happened yet)
-  firstRandom: 52, // the same with one of the three checks drawn at random
-  year3: { never: 1, yearly: 9, quarterly: 24, monthly: 27 },
-  year3Random: { never: 10, yearly: 15, monthly: 27 },
-  grow: 76, // quarterly reviews that add a check and never drop one
-  growChecks: 12, // checks every payment passes by month 36 in the growing chain
-  onFirstThree: { 1: 80, 6: 7, 12: 2 }, // share of attempts on the three patterns checked first, checks never moved
-  yearlyMonth: { 12: 2, 13: 29, 18: 3, 25: 40, 30: 3 }, // caught by month with yearly reviews (reviews open months 13 and 25)
-  monthlyBest: 31, // the best month after the third with monthly reviews
+  onFirstThree: { 1: 80, 6: 7 }, // share of attempts on the three patterns checked first, checks never moved
 };
 
 const startMix = () => Array.from({ length: P }, (_, i) => (i < CHECKS ? PARAMS.start / CHECKS : (1 - PARAMS.start) / (P - CHECKS)));
@@ -182,23 +199,23 @@ export function average(opts = {}, runs = RUNS) {
 /** Share of the month's attempts on the three patterns in use most at the start. */
 export const onFirstThree = (month) => (month.n[0] + month.n[1] + month.n[2]) / ATTEMPTS;
 
-/** Everything the chapter's text quotes, averaged over RUNS runs. */
+/** The month (1–36) from which every pattern is checked in the growing chain, or 0 if that never happens. */
+export function allCheckedFrom(review) {
+  const run = simulate({ review, grow: true });
+  return run.findIndex((m) => m.checked.length === P) + 1;
+}
+
+/** Everything the chapter quotes, averaged over RUNS runs: every setting in CURVES, and where the attempts drift. */
 export function study(runs = RUNS) {
-  const at = (opts) => average(opts, runs);
-  const never = at({ review: 'never' });
-  const yearly = at({ review: 'yearly' });
+  const out = {};
+  for (const review of ['never', 'yearly', 'monthly'])
+    for (const mode of MODES) {
+      const key = curveKey(review, mode);
+      if (!out[key]) out[key] = average({ review, random: mode === 'random', grow: mode === 'grow' }, runs);
+    }
   // Where the attempts sit, month by month, when the checks never move.
   const drift = Array(MONTHS).fill(0);
   for (let s = 1; s <= runs; s++) simulate({ review: 'never', seed: s }).forEach((m, i) => (drift[i] += onFirstThree(m) / runs));
-  return {
-    never,
-    yearly,
-    quarterly: at({ review: 'quarterly' }),
-    monthly: at({ review: 'monthly' }),
-    neverRandom: at({ review: 'never', random: true }),
-    yearlyRandom: at({ review: 'yearly', random: true }),
-    monthlyRandom: at({ review: 'monthly', random: true }),
-    grow: at({ review: 'quarterly', grow: true }),
-    drift,
-  };
+  out.drift = drift;
+  return out;
 }

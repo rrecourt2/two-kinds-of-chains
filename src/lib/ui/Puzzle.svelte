@@ -138,7 +138,7 @@
           {/each}
         </fieldset>
       {/if}
-      {#if waiting}<p class="note">Answer first for 2 points: the figure below opens after your first answer. A hint opens it now, for 1 point.</p>{/if}
+      {#if waiting}<p class="note">Answer first for 2 points: what is locked in the figure below opens after your first answer. A hint opens it now, for 1 point.</p>{/if}
       <div class="row">
         <button type="button" class="tkc-btn tkc-btn--primary tkc-btn--small" onclick={check} disabled={multi ? !picked.length : picked === null}>Check</button>
       </div>
