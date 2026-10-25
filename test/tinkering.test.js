@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { invNorm, futures, results, summarize, scene, scenes, meets, BUDGET, PILOT, FUTURES, MAX_PILOTS, TARGET } from '../src/lib/sim/tinkering.js';
+import { invNorm, futures, results, summarize, scene, scenes, meets, openFuture, sharedFutures, OPENED, WORLDS, BUDGET, PILOT, FUTURES, MAX_PILOTS, TARGET } from '../src/lib/sim/tinkering.js';
 
 const S = scenes();
 const U = S.unpredictable;
@@ -94,6 +94,38 @@ test('the 1,000 futures sit close to a large sample of the same model', () => {
   const s = summarize(Float64Array.from([50, 100, 150, 200]));
   assert.equal(s.below, 0.25);
   assert.equal(s.typical, 125);
+});
+
+test('the opened future is the same future the dots show, at every setting and in every world', () => {
+  const w = sharedFutures();
+  for (const { sigma } of WORLDS) {
+    for (let n = 1; n <= MAX_PILOTS; n++) {
+      const o = openFuture(n, sigma);
+      assert.ok(Math.abs(o.result - results(w, n, sigma)[OPENED]) < 1e-9, `n=${n}, sigma ${sigma}`);
+      assert.equal(o.rest + o.spent, BUDGET);
+      assert.equal(o.pilots.length, n);
+    }
+  }
+});
+
+test('the opened future: twelve pilots pick pilot 10, which read best (×2.5 against ×2.4) but is worth a third of pilot 7', () => {
+  const o = openFuture(12, 0.8);
+  assert.equal(o.pick.n, 10);
+  assert.equal(o.best.n, 7);
+  assert.equal(o.rest, 76);
+  assert.equal(o.spent, 24);
+  assert.equal(o.pick.read.toFixed(1), '2.5');
+  assert.equal(o.pick.worth.toFixed(1), '1.6');
+  assert.equal(o.best.read.toFixed(1), '2.4');
+  assert.equal(o.best.worth.toFixed(1), '4.8');
+  assert.equal(Math.round((o.pick.worth / o.best.worth) * 3), 1, 'about a third');
+  assert.equal(round(o.result), 120);
+  // One big programme in the same future: approach 1, untried, worth 0.73.
+  const big = openFuture(1, 0.8);
+  assert.equal(big.pick.read, null);
+  assert.equal(round(big.result), 73);
+  // From ten pilots on, the pick is never the approach worth most.
+  for (let n = 10; n <= MAX_PILOTS; n++) assert.notEqual(openFuture(n, 0.8).pick.n, openFuture(n, 0.8).best.n, `n=${n}`);
 });
 
 test('every setting is worked out once, quickly', () => {

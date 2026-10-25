@@ -23,7 +23,7 @@
     async: 'Five pieces of one client request: what really sets the pace?',
     emergence: 'One committee, five places, and a fast track any deal can take: what happens when every deal takes it?',
     ergodicity: 'A bet that pays 5% a round on paper and leaves most players poorer.',
-    contagion: 'Forty-eight banks, one large loss: where does it stop, and where should 48 points of extra capital go?',
+    contagion: 'Forty-eight banks, one large loss: where does it stop, and where should 48 percentage points of extra capital go?',
     'black-swans': 'A toll road has paid 96 months in a row. Which year would it miss?',
     extinction: 'Two species, forty islands, and weather that grows less calm: which one lasts?',
     gate: 'Six hundred account changes a year, one in 200 a fraud: which payments are worth the wait of a check?',

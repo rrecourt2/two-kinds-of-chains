@@ -30,6 +30,9 @@ export const WORLDS = [
   { id: 'wild', label: 'Wild', sigma: 1.4 },
 ];
 export const PUZZLE_WORLD = 'unpredictable';
+// The future the card opens: one of the 1,000, the same at every setting. In it, from ten pilots on, a pilot
+// whose approach is worth less than another's reads best.
+export const OPENED = 1;
 
 /** The inverse of the standard normal distribution (Acklam's approximation, error below 1e-9). */
 export function invNorm(p) {
@@ -117,14 +120,38 @@ export function scene(sigma, world = futures()) {
   return { sigma, runs, bestN };
 }
 
+/**
+ * One future opened: what each pilot read of its approach and what the approach is really worth, per unit of
+ * money (1 = returns what it costs); the pilot that read best, the approach truly worth most, what is left to
+ * put behind the pick, and what the budget returns. n = 1 is one big programme on the first approach, untried.
+ */
+export function openFuture(n, sigma, f = OPENED, world = sharedFutures(), { budget = BUDGET, pilot = PILOT, read = READ } = {}) {
+  const big = n <= 1;
+  const pilots = Array.from({ length: big ? 1 : n }, (_, i) => ({
+    n: i + 1,
+    worth: Math.exp(sigma * world.quality[i][f]),
+    read: big ? null : Math.exp(sigma * world.quality[i][f] + read * world.error[i][f]),
+  }));
+  const pick = big ? pilots[0] : pilots.reduce((a, b) => (b.read > a.read ? b : a));
+  const best = pilots.reduce((a, b) => (b.worth > a.worth ? b : a));
+  const rest = big ? budget : budget - pilot * n;
+  return { n: big ? 1 : n, pilots, pick, best, rest, result: rest * pick.worth, spent: big ? 0 : pilot * n };
+}
+
 /** Which settings meet both checks of the puzzle. */
 export const meets = (run) => run.typical >= TARGET.typical && run.worst >= TARGET.worst;
+
+// The 1,000 futures every setting meets, made once.
+let shared = null;
+export function sharedFutures() {
+  return (shared ??= futures());
+}
 
 // The chapter's three worlds, from the same 1,000 futures, computed on first use (a few milliseconds).
 let cache = null;
 export function scenes() {
   if (cache) return cache;
-  const world = futures();
+  const world = sharedFutures();
   cache = Object.fromEntries(WORLDS.map((w) => [w.id, scene(w.sigma, world)]));
   return cache;
 }

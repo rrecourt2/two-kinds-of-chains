@@ -1,38 +1,90 @@
 <script>
-  import { onDestroy, onMount, tick, untrack } from 'svelte';
+  import { getContext, onDestroy, onMount, tick, untrack } from 'svelte';
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
+  import Slider from '../lib/ui/Slider.svelte';
   import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { BANKS as N, CAPITAL, LOSS, EXTRA, INTERBANK_PCT, ALTERNATIVES, HUB_SEED, EXAMPLE, SHARES, hubSystem, byLinks, capitalFor, landing, everywhere, holdsAcross, layout, absorbs } from '../lib/sim/network.js';
+  import {
+    BANKS as N,
+    CAPITAL,
+    CAPITALS,
+    LOSS,
+    EXTRA,
+    LIMIT,
+    INTERBANK_PCT,
+    ALTERNATIVES,
+    SHARES,
+    SYSTEMS,
+    SIMILAR_LINKS,
+    systemOf,
+    byLinks,
+    capitalFor,
+    landing,
+    added,
+    withinBudget,
+    worstCurve,
+    tippingPoint,
+    partnersToFail,
+    holdsAcross,
+    worstAcross,
+    layout,
+  } from '../lib/sim/network.js';
+  import { linear, line } from '../lib/scales.js';
   import { prefersReducedMotion, watchVisibility } from '../lib/motion.js';
 
-  const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
-  const ORDINAL = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth'];
+  const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+  const TIMES = ['', 'once', 'twice', 'three times', 'four times', 'five times', 'six times'];
+  const BIGGEST = ['The biggest bank', 'The second biggest bank', 'The third biggest bank'];
 
-  // The figure's network, its banks from most to least connected, and every way of sharing the extra
-  // capital with its outcome wherever the loss lands, all computed once.
-  const adj = hubSystem();
-  const order = byLinks(adj);
-  const rankOf = new Int32Array(N);
-  order.forEach((b, r) => (rankOf[b] = r));
-  const links = (b) => adj[b].length;
-  const results = Object.fromEntries(SHARES.map((s) => [s.value, { ...s, capital: capitalFor(adj, s.top), ...everywhere(adj, capitalFor(adj, s.top)) }]));
-  const edges = adj.flatMap((nbrs, i) => nbrs.filter((j) => j > i).map((j) => [i, j]));
-  const hub = order[0];
+  // Each banking system's network, its banks from most to least connected, and the worst place to land
+  // at every capital for each choice of extra for the hubs, all computed once.
+  function systemData(value) {
+    const sys = systemOf(value);
+    const adj = sys.network();
+    const order = byLinks(adj);
+    const rankOf = new Int32Array(N);
+    order.forEach((b, r) => (rankOf[b] = r));
+    const edges = adj.flatMap((nbrs, i) => nbrs.filter((j) => j > i).map((j) => [i, j]));
+    const curves = Object.fromEntries(SHARES.map((s) => [s.value, worstCurve(adj, s.top)]));
+    return { adj, order, rankOf, edges, curves, seed: sys.seed, layouts: {} };
+  }
+  const DATA = Object.fromEntries(SYSTEMS.map((s) => [s.value, systemData(s.value)]));
+  const HUBS = DATA.hubs;
+  const hub = HUBS.order[0];
+  const ci = (c) => CAPITALS.indexOf(c);
 
-  // Where the loss lands: one of the least connected banks to begin with, so it stops there.
-  let at = $state(order[N - 1]);
+  // Where the loss lands (the biggest hub to begin with, so the cascade shows at once), the capital
+  // every bank holds, the extra for the hubs, and, once the puzzle is solved, the banking system.
+  let at = $state(hub);
+  let base = $state(CAPITAL);
   let share = $state('none');
+  let system = $state('hubs');
+  const net = $derived(DATA[system]);
+  const links = (b) => net.adj[b].length;
+  const game = getContext('tkc-game');
+  const solved = $derived(!game.isOpen('contagion'));
+  // The loss stays on the bank of the same rank: the biggest bank in one system, the biggest in the other.
+  function switchSystem(value) {
+    if (value === system) return;
+    const r = net.rankOf[at];
+    system = value;
+    at = DATA[value].order[r];
+  }
   let width = $state(560);
+  let chartW = $state(560);
+  let hover = $state(null);
   let diagram;
 
-  const result = $derived(results[share]);
-  const outcome = $derived(landing(adj, result.capital, at));
-  const hasExtra = (b) => result.capital[b] > CAPITAL;
+  const top = $derived(SHARES.find((s) => s.value === share).top);
+  const capital = $derived(capitalFor(net.adj, top, base));
+  const outcome = $derived(landing(net.adj, capital, at));
+  const now = $derived(net.curves[share][ci(base)]);
+  const add = $derived(added(base, top));
+  const hasExtra = (b) => capital[b] > base;
 
   // The outcome, revealed one round of failures at a time.
   let shown = $state({ key: '', waves: [] });
@@ -56,7 +108,7 @@
   }
   $effect(() => {
     const { waves, failed } = outcome;
-    const key = `${at}:${failed.join('')}`;
+    const key = `${system}:${at}:${failed.join('')}`;
     untrack(() => {
       if (key === shown.key) {
         // The same banks fail as before: keep what is on screen.
@@ -88,16 +140,18 @@
   const spreading = $derived(wave < shown.waves.length);
   const rounds = $derived(Math.max(0, shown.waves.length - 1));
 
-  // The drawing: banks laid out for the shape of the frame, so a phone gets a squarer network.
+  // ---- The network: banks laid out for the shape of the frame, so a phone gets a squarer one. ----
   const narrow = $derived(width < 420);
   const H = $derived(Math.round(Math.min(320, Math.max(280, width * 0.6))));
   const ASPECTS = [1, 1.3, 1.65, 2];
-  const layouts = {};
   const aspect = $derived(ASPECTS.reduce((a, b) => (Math.abs(b - width / H) < Math.abs(a - width / H) ? b : a)));
-  const pos = $derived((layouts[aspect] ??= layout(adj, HUB_SEED + EXAMPLE, 320, aspect)));
+  const pos = $derived((net.layouts[aspect] ??= layout(net.adj, net.seed, 320, aspect)));
   const px = (b) => pos[b].x * width;
   const py = (b) => pos[b].y * H;
   const radius = (b) => (narrow ? 3 : 3.5) + (narrow ? 1.4 : 1.6) * Math.sqrt(links(b));
+  // The label on the landing ring sits on the side with more room.
+  const tagLeft = $derived(px(at) > width - 70);
+  const tagBelow = $derived(py(at) < 26);
 
   // Tap or click: the nearest bank within reach of the pointer, so small banks are easy to hit on a phone.
   function onTap(e) {
@@ -114,7 +168,7 @@
   }
   // The arrow keys move the loss from bank to bank, most connected first.
   async function onKey(e) {
-    const r = rankOf[at];
+    const r = net.rankOf[at];
     const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
     let next;
     if (step) next = (r + step + N) % N;
@@ -122,58 +176,110 @@
     else if (e.key === 'End') next = N - 1;
     else return;
     e.preventDefault();
-    at = order[next];
+    at = net.order[next];
     await tick();
     diagram?.querySelector(`[data-bank="${at}"]`)?.focus();
   }
 
-  const describe = (b) => (b === hub ? 'the most connected bank' : `a bank with ${links(b)} links`);
-  const capitalised = (s) => s[0].toUpperCase() + s.slice(1);
+  const who = (b) => BIGGEST[net.rankOf[b]] ?? 'This bank';
+  const describe = (b) => (net.rankOf[b] < 3 ? BIGGEST[net.rankOf[b]].toLowerCase() : `a bank with ${links(b)} partners`);
+  // A bank's rule in words: an IF on its capital, which its loans turn into a quorum of its partners.
+  function quorum(k, n) {
+    if (k === n) return n === 2 ? 'if both its partners fail' : `if all ${n} of its partners fail`;
+    return `if ${k} of its ${n} partners fail${k === 1 ? 's' : ''}`;
+  }
+  const rule = $derived.by(() => {
+    const n = links(at);
+    const c = capital[at];
+    const k = partnersToFail(c, n);
+    if (k === null) return 'never, even if all its partners fail';
+    if (c < LOSS) return `${quorum(k, n)}, or if the ${LOSS}% loss lands on it`;
+    return `${quorum(k, n)}, but not from the ${LOSS}% loss alone`;
+  });
   const failSub = $derived(
     spreading
-      ? 'Spreading…'
-      : `${capitalised(describe(at))}: ${outcome.absorbed ? 'its capital covers the loss' : count === 1 ? 'the loss stops there' : `${rounds} round${rounds === 1 ? '' : 's'} of failures`}`,
+      ? 'Spreading, round by round…'
+      : outcome.absorbed
+        ? `Its ${capital[at]}% capital covers the ${LOSS}% loss`
+        : count === 1
+          ? 'The loss stops there: its partners absorb it'
+          : rounds === 1
+            ? 'Its weakest partners fall with it, in one round'
+            : `${rounds} rounds, each set off by the one before`,
   );
-  // Where the worst place is, in words: "at any of the three most connected", "at a bank with 4 links".
-  function whereWorst(r) {
-    const ranks = r.worstAt.map((b) => rankOf[b]).sort((a, b) => a - b);
-    const m = ranks.length;
-    if (ranks.every((k, i) => k === i)) return m === 1 ? 'At the most connected bank' : m === 2 ? 'At either of the two most connected' : `At any of the ${WORDS[m]} most connected`;
-    if (m === 1) return `At ${describe(r.worstAt[0])}`;
-    if (ranks.every((k) => k < ORDINAL.length - 1)) return `At the ${ranks.map((k) => ORDINAL[k + 1]).join(' or ')} most connected`;
-    return `At ${m} places`;
+  const addValue = $derived(add < 0 ? `−${-add}` : String(add));
+  const addSub = $derived(
+    base < CAPITAL ? `percentage points: every bank below today’s ${CAPITAL}%` : add > EXTRA ? `percentage points, over the ${EXTRA} allowed` : `percentage points, of the ${EXTRA} allowed`,
+  );
+
+  // ---- The curve: the worst place to land, against the capital every bank holds. ----
+  const CH = 216;
+  const cm = { top: 30, right: 14, bottom: 40, left: 34 };
+  const cx = $derived(linear(CAPITALS[0], CAPITALS.at(-1), cm.left, chartW - cm.right));
+  const cy = linear(0, N, CH - cm.bottom, cm.top);
+  const path = (s) => line(net.curves[s].map((p) => [cx(p.capital), cy(p.worst)]));
+  const others = $derived(SHARES.filter((s) => s.value !== share));
+  const xTicks = $derived((chartW - cm.left - cm.right) / (CAPITALS.length - 1) >= 30 ? CAPITALS : CAPITALS.filter((c) => c % 2 === 0));
+  const tip = $derived.by(() => {
+    const curve = net.curves[share];
+    const i = tippingPoint(curve);
+    return { x: (cx(curve[i].capital) + cx(curve[i + 1].capital)) / 2, y: (cy(curve[i].worst) + cy(curve[i + 1].worst)) / 2 };
+  });
+  // The dot's label: beside the dot, below it near the top, and above the limit line near the bottom.
+  const dotLeft = $derived(base >= 9);
+  const dotY = $derived(now.worst > 40 ? cy(now.worst) + 18 : now.worst <= LIMIT + 2 ? Math.min(cy(now.worst), cy(LIMIT)) - 7 : cy(now.worst) - 9);
+  const shareLabel = (s) => SHARES.find((x) => x.value === s).label;
+
+  function onMove(e) {
+    const box = e.currentTarget.ownerSVGElement.getBoundingClientRect();
+    hover = Math.max(CAPITALS[0], Math.min(CAPITALS.at(-1), Math.round(cx.invert(e.clientX - box.left))));
   }
 
-  // The puzzle: a target on the worst place to land.
-  const every = results.every;
-  const top1 = results.top1;
-  const PROGRESS = {
-    none: '',
-    every: `${CAPITAL + 1}% is still less than the ${LOSS}% loss: the bank it lands on falls as before, and ${WORDS[every.worstAt.length]} hubs still bring down all ${N}.`,
-    top12: '',
-    top1: `The biggest hub stands, at ${CAPITAL + EXTRA}%; a loss at the second still brings down ${top1.worst} of the ${N}.`,
-  };
+  // ---- The puzzle: every landing to five failures or fewer, within the budget. ----
+  const answer = HUBS.curves.top12[ci(CAPITAL)];
+  const met = $derived(now.worst <= LIMIT && withinBudget(base, top));
+  function progressFor() {
+    if (met || base < CAPITAL) return '';
+    if (now.worst <= LIMIT)
+      return `${now.worst === 0 ? 'Nothing fails, wherever the loss lands' : `At most ${WORDS[now.worst]} fail`}, but the capital added is ${add}: ${TIMES[add / EXTRA] ?? `${add / EXTRA} times`} the ${EXTRA} allowed.`;
+    const where = describe(now.worstAt.reduce((a, b) => (net.rankOf[b] < net.rankOf[a] ? b : a)));
+    if (share === 'none' && base > CAPITAL) return `${base}% is still less than the ${LOSS}% loss: a loss at ${where} brings down ${now.worst}.`;
+    if (share === 'top3') return `The three biggest stand; a loss at ${where} still brings down ${now.worst}.`;
+    return '';
+  }
   const puzzle = $derived({
-    goal: `Share out the ${EXTRA} points so that, wherever the loss lands, no more than five banks fail.`,
-    met: result.worst <= 5,
-    checks: [{ label: `Wherever the loss lands, five banks or fewer fail (now up to ${result.worst})`, ok: result.worst <= 5 }],
-    progress: PROGRESS[share],
-    hints: ['Put the loss on the biggest hubs first. Which banks carry it furthest?', `Extra capital stops the loss at a bank only once it covers all ${LOSS}%.`],
-    found: 'Four points each for the 12 most connected: they absorb the loss and stop the rest, so never more than four banks fall.',
+    goal: `Raise capital by at most ${EXTRA} percentage points in all, so that wherever the loss lands, ${WORDS[LIMIT]} banks or fewer fail.`,
+    met,
+    checks: [
+      { label: `Wherever the loss lands, ${WORDS[LIMIT]} banks or fewer fail (now ${now.worst ? `up to ${now.worst}` : 'none'})`, ok: now.worst <= LIMIT },
+      base < CAPITAL
+        ? { label: `Capital raised, not cut: every bank at ${CAPITAL}% or more (now ${base}%)`, ok: false }
+        : { label: `At most ${EXTRA} percentage points added (now ${add})`, ok: add <= EXTRA },
+    ],
+    progress: progressFor(),
+    hints: [
+      `A buffer stops the loss only where it covers all ${LOSS}%; raising every bank that far adds ${added(LOSS, 0)}.`,
+      'The loss travels furthest from the biggest banks. On the curve, the grey lines show the other two choices of extra.',
+    ],
+    found: `Capital of ${CAPITAL + EXTRA / 12}% for the 12 biggest: wherever the loss lands, at most ${WORDS[answer.worst]} banks fail, for ${EXTRA} percentage points; ${LOSS}% everywhere would cost ${added(LOSS, 0)}.`,
   });
 
   // Numbers quoted in the explanation, read from the same model.
-  const none = results.none;
-  const onlyHit = none.sizes.filter((s) => s === 1).length;
+  const none = HUBS.curves.none[ci(CAPITAL)];
   const atMostNine = none.sizes.filter((s) => s <= 9).length;
   const allFall = none.sizes.filter((s) => s === N).length;
-  const hubSurvives = absorbs(CAPITAL, links(hub));
-  const smallLoan = INTERBANK_PCT / 2;
-  const top3 = new Set(order.slice(0, 3));
-  const touchTop3 = edges.filter(([i, j]) => top3.has(i) || top3.has(j)).length;
-  // The model note: the same shares on the other hub networks grown the same way.
+  const smallK = partnersToFail(CAPITAL, 2);
+  const hubLinks = HUBS.adj[hub].length;
+  const hubK = partnersToFail(CAPITAL, hubLinks);
+  const evenly = CAPITAL + EXTRA / N;
+  const tipNone = CAPITALS[tippingPoint(HUBS.curves.none) + 1];
+  const tipTop12 = CAPITALS[tippingPoint(HUBS.curves.top12) + 1];
+  // The other system: many similar banks tip lower, with no extra, and absorb a single loss at 5%.
+  const tipSimilar = CAPITALS[tippingPoint(DATA.similar.curves.none) + 1];
+  const similarMost = worstAcross('similar', CAPITAL);
+  // The model note: the same choice on the other hub networks grown the same way.
   const robust = holdsAcross(12);
-  const robustEvery = holdsAcross(N);
+  const robustLower = holdsAcross(12, LIMIT, ALTERNATIVES, tipTop12);
 </script>
 
 <Chapter
@@ -190,44 +296,51 @@
       enough of the banks it lent to stand.
     </p>
     <p>
-      The links are not spread evenly. A few hubs deal with nine or more other banks; more than half deal with only
-      two or three. One of these banks takes a large loss on its own loans. Where it lands decides whether it
-      stops there or runs along the links.
+      The links are not spread evenly: a few hubs deal with nine or more banks, and more than half deal with only two
+      or three. One bank takes a large loss on its own loans. Where it lands decides whether it stops there or runs
+      along the links.
     </p>
     <p>
-      The supervisor can ask for more capital: {EXTRA} extra percentage points in all, shared out as it sees fit. One
-      point for every bank, or more for a few?
+      Today every bank holds capital of {CAPITAL}% of its assets. The supervisor can ask for {EXTRA} percentage points
+      more, in all: one more for every bank, or more for the few hubs.
     </p>
   {/snippet}
 
   {#snippet figure()}
     <Instrument
       title="The stress test"
-      sub="{N} banks, sized by their links. Tap or click any bank to land the loss there; failures spread in rounds."
+      sub="{N} banks; bigger circles have more partners. Tap or click a bank to land an {LOSS}% loss on it."
       rules={[
-        `Each bank lends ${INTERBANK_PCT}% of its assets to its linked banks, in equal parts.`,
-        `Each holds ${CAPITAL}% capital; a bank whose losses exceed it fails and repays nothing.`,
+        `Each bank lends ${INTERBANK_PCT}% of its assets to its partners, in equal parts.`,
+        'A bank fails if its losses exceed its capital, and then repays nothing.',
         `One bank loses ${LOSS}% of its assets on its own loans.`,
       ]}
     >
-      <Puzzle id="contagion" {...puzzle} onshow={() => ((share = 'top12'), (at = hub))} />
+      <Puzzle id="contagion" {...puzzle} onshow={() => ((system = 'hubs'), (base = CAPITAL), (share = 'top12'), (at = hub))} />
       <div class="tkc-controls tkc-controls--wide">
+        <Slider id="c-capital" label="Capital, every bank" bind:value={base} min={CAPITALS[0]} max={CAPITALS.at(-1)} format={(v) => `${v}% of assets`} />
         <div class="ctl">
-          <Segmented name="c-extra" label="Extra capital" bind:value={share} options={SHARES.map(({ value, label }) => ({ value, label }))} />
-          <p class="tkc-small">{EXTRA} points in all: one for every bank, four each for the 12 most connected, or all {EXTRA} for the most connected.</p>
+          <Segmented name="c-extra" label="Extra for the hubs" bind:value={share} options={SHARES.map(({ value, label }) => ({ value, label }))} />
+          <p class="tkc-small">On top, for the banks with the most partners: {EXTRA} percentage points in all.</p>
         </div>
+        {#if solved}
+          <div class="ctl">
+            <Segmented name="c-system" label="The banking system" value={system} onchange={switchSystem} options={SYSTEMS.map(({ value, label }) => ({ value, label }))} />
+            <p class="tkc-small">Many similar banks: the same {N} banks and rules, about {WORDS[SIMILAR_LINKS]} partners each, no hubs.</p>
+          </div>
+        {/if}
       </div>
 
-      <div class="tkc-chart" bind:clientWidth={width} bind:this={diagram}>
+      <div class="tkc-chart net" bind:clientWidth={width} bind:this={diagram}>
         <!-- Each bank is a radio that takes focus and the arrow keys; a tap anywhere picks the nearest bank. -->
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_interactive_supports_focus -->
-        <svg {width} height={H} role="radiogroup" aria-label="Where the loss lands: {N} banks, most connected first. The arrow keys move the loss." onclick={onTap}>
+        <svg {width} height={H} role="radiogroup" aria-label="Where the loss lands: {N} banks ({systemOf(system).label.toLowerCase()}), most connected first. The arrow keys move the loss." onclick={onTap}>
           <g aria-hidden="true">
-            {#each edges as [i, j] (`${i}-${j}`)}
+            {#each net.edges as [i, j] (`${system}-${i}-${j}`)}
               <line x1={px(i)} y1={py(i)} x2={px(j)} y2={py(j)} class="edge" class:hot={failedNow[i] && failedNow[j]} />
             {/each}
           </g>
-          {#each order as b (b)}
+          {#each net.order as b (`${system}-${b}`)}
             <circle
               cx={px(b)}
               cy={py(b)}
@@ -238,50 +351,112 @@
               data-bank={b}
               role="radio"
               aria-checked={b === at}
-              aria-label="{capitalised(describe(b))}{b === hub ? `, ${links(b)} links` : ''}"
+              aria-label="{who(b)}, {links(b)} partners, {capital[b]}% capital"
               tabindex={b === at ? 0 : -1}
               onkeydown={onKey}
             />
           {/each}
           <circle cx={px(at)} cy={py(at)} r={radius(at) + 4} class="ring" aria-hidden="true" />
+          <text
+            class="tkc-label tkc-halo tag"
+            x={px(at) + (tagLeft ? -1 : 1) * (radius(at) + 7)}
+            y={py(at) + (tagBelow ? radius(at) + 16 : -radius(at) - 5)}
+            text-anchor={tagLeft ? 'end' : 'start'}
+            aria-hidden="true">{LOSS}% loss</text
+          >
         </svg>
+        <p class="readout">
+          <strong>{who(at)}</strong>, with {links(at)} partners and {capital[at]}% capital, fails if its losses exceed its
+          capital: here, {rule}.
+        </p>
         <div class="tkc-legend">
-          <span><span class="tkc-swatch sw-bank"></span>Bank, sized by its links</span>
           <span><span class="tkc-swatch sw-ring"></span>Where the loss lands</span>
           <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>Failed</span>
-          <span><span class="tkc-swatch sw-extra"></span>Extra capital</span>
+          <span><span class="tkc-swatch sw-extra"></span>Extra for the hubs</span>
         </div>
       </div>
 
       <div class="tkc-stats two" use:announce>
         <Stat label="Banks that fail" value="{count} of {N}" sub={failSub} swatch="var(--tkc-conditions)" />
-        <Stat label="Worst place to land" value="{result.worst} of {N}" sub={whereWorst(result)} />
+        <Stat label="Capital added" value={addValue} sub={addSub} />
+      </div>
+
+      <div class="tkc-chart curve" bind:clientWidth={chartW}>
+        <div class="tkc-fig-title small">Worst place to land, at every level of capital{system === 'similar' ? ': many similar banks' : ''}</div>
+        <svg
+          width={chartW}
+          height={CH}
+          role="img"
+          aria-label="Banks that fail at the worst place to land, against the capital every bank holds. {systemOf(system).label}, {shareLabel(share)}: {net.curves[share].map((p) => `${p.capital}%, ${p.worst}`).join('; ')}. Limit: {WORDS[LIMIT]}. Grey lines: the other two choices of extra."
+        >
+          {#each [0, 12, 24, 36, 48] as t (t)}
+            <line class={t === 0 ? 'tkc-base' : 'tkc-grid'} x1={cm.left} x2={chartW - cm.right} y1={cy(t)} y2={cy(t)} />
+            <text class="tkc-axis-label" x={cm.left - 6} y={cy(t) + 4} text-anchor="end">{t}</text>
+          {/each}
+          <line class="limit" x1={cm.left} x2={chartW - cm.right} y1={cy(LIMIT)} y2={cy(LIMIT)} />
+          {#each others as s (s.value)}
+            <path d={path(s.value)} class="faint" />
+          {/each}
+          <path d={path(share)} class="bold" />
+          {#each net.curves[share] as p (p.capital)}
+            <circle cx={cx(p.capital)} cy={cy(p.worst)} r="2.75" class="pt-small" />
+          {/each}
+          <line class="now" x1={cx(base)} x2={cx(base)} y1={cm.top} y2={cy(0)} />
+          <text class="tkc-label-2 tkc-halo" x={cm.left + 4} y={cy(LIMIT) - 5}>limit: {WORDS[LIMIT]}</text>
+          <text class="tkc-label-2 tkc-halo" x={tip.x + 7} y={tip.y + 4}>tipping point</text>
+          <circle cx={cx(base)} cy={cy(now.worst)} r="5.5" class="pt" />
+          <text class="tkc-label tkc-halo" x={cx(base) + (dotLeft ? -9 : 9)} y={dotY} text-anchor={dotLeft ? 'end' : 'start'}>{now.worst === 0 ? 'none fail' : `${now.worst} fail`}</text>
+          {#if hover !== null}
+            <line class="cross" x1={cx(hover)} x2={cx(hover)} y1={cm.top} y2={cy(0)} />
+          {/if}
+          {#each xTicks as c (c)}
+            <text class="tkc-axis-label" x={cx(c)} y={CH - cm.bottom + 16} text-anchor="middle">{c}%</text>
+          {/each}
+          <text class="tkc-axis-title" x={cm.left + (chartW - cm.left - cm.right) / 2} y={CH - 4} text-anchor="middle">Capital, every bank</text>
+          <text class="tkc-axis-title" x={4} y={cm.top - 16}>↑ Banks that fail, at the worst place</text>
+          <rect x={cm.left} y={cm.top} width={Math.max(0, chartW - cm.left - cm.right)} height={CH - cm.top - cm.bottom} fill="transparent" role="presentation" onpointermove={onMove} onpointerleave={() => (hover = null)} />
+        </svg>
+        {#if hover !== null}
+          <div class="tkc-tip" style:left="{Math.min(chartW - 190, Math.max(0, cx(hover) + 10))}px" style:top="40px">
+            <div>Every bank at {hover}%</div>
+            {#each [share, ...others.map((s) => s.value)] as s (s)}
+              <div class="tkc-tip-row">
+                <span class="tkc-swatch tkc-swatch--line" style:background={s === share ? 'var(--tkc-conditions)' : 'var(--tkc-rule)'}></span><strong>{net.curves[s][ci(hover)].worst}</strong>
+                {shareLabel(s) === 'None' ? 'no extra' : shareLabel(s)}
+              </div>
+            {/each}
+          </div>
+        {/if}
+        <div class="tkc-legend">
+          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span>Extra for the hubs: {shareLabel(share)}</span>
+          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-rule)"></span>The other two</span>
+        </div>
       </div>
 
       {#snippet model()}
-        <p>Each bank lends {INTERBANK_PCT}% of its assets to the banks it is linked to, split evenly; every link runs both ways. Each holds {CAPITAL}% capital, plus any extra points. The bank where the loss lands loses {LOSS}% of its assets and fails only if that exceeds its capital. A failed bank repays nothing, so a bank with k partners loses {INTERBANK_PCT} ÷ k % for each one that fails, and fails once its losses exceed its capital. Failures spread in rounds until a round adds none.</p>
-        <p>The network grows by preferential attachment: each new bank links to two others, more often to those with many links already. Across {ALTERNATIVES} networks grown this way, four points each for the 12 most connected keep the worst place to five failures or fewer in {robust}; one point for every bank, in {robustEvery === 0 ? 'none' : robustEvery}. After Watts (2002) and Gai and Kapadia (2010).</p>
+        <p>Each bank lends {INTERBANK_PCT}% of its assets to its partners, split evenly; every link runs both ways. A bank with k partners loses {INTERBANK_PCT} ÷ k % for each one that fails, and fails once its losses exceed its capital. Failures spread in rounds until a round adds none. Capital moves in whole percentage points; what is added counts from today’s {CAPITAL}%.</p>
+        <p>As it is, the network grows by preferential attachment: each new bank links to two others, more often to those with many links already. Across {ALTERNATIVES} networks grown this way, {CAPITAL}% with four more for the 12 biggest keeps every landing to {WORDS[LIMIT]} failures or fewer in {robust}; {tipTop12}% with four more, in {robustLower}. Many similar banks: every pair is linked with the same chance; across {ALTERNATIVES} such networks, no landing at {CAPITAL}% brings down more than {WORDS[similarMost]}. After Watts (2002) and Gai and Kapadia (2010).</p>
       {/snippet}
     </Instrument>
   {/snippet}
 
   {#snippet after()}
     <p>
-      With no extra capital the system looks sound from almost everywhere. Of the {N} places the loss can land,
-      {onlyHit} bring down only the bank hit, and {atMostNine} at most nine banks. The other {WORDS[allFall]} are the
-      biggest hubs, and each brings down all {N}: robust yet fragile, as central bankers came to call it.
+      At {CAPITAL}% the system looks sound from almost everywhere: of the {N} places the loss can land, {atMostNine}
+      bring down nine banks or fewer. The {WORDS[allFall]} biggest hubs each bring down all {N}: robust yet
+      fragile, as central bankers came to call it.
     </p>
     <p>
-      The hubs are not the weak links: the biggest can lose {WORDS[hubSurvives]} of its {links(hub)} partners and
-      stand. But when it fails, {links(hub)} banks lose a loan at once. A bank with two partners has lent each
-      {smallLoan}% of its assets, twice its capital, so it falls too, and its lenders may follow. More than a third of all
-      links end at the three biggest hubs.
+      Each bank hangs on an <strong>IF</strong>: it fails if its losses exceed its capital. Through its loans the IF
+      becomes a quorum: a small bank falls if {WORDS[smallK]} of its two partners fails, the biggest if {WORDS[hubK]} of
+      its {WORDS[hubLinks]} do. When the hub falls, each round of failures sets up the next: a loop that feeds itself.
     </p>
     <p>
-      Spread evenly, the {EXTRA} points give every bank {CAPITAL + 1}%, still short of the {LOSS}% loss: a buffer
-      helps only once it covers the loss. All {EXTRA} on the biggest hub make it safe, but the next two still bring
-      down {top1.worst} each. At the twelve most connected, {CAPITAL + 4}% covers the loss where the links meet, and the
-      other banks have too few links to carry it far.
+      So one bank’s IF becomes the system’s tipping point. Raising every bank to {evenly}% spends the {EXTRA} percentage
+      points and changes nothing: a buffer helps only once it covers the {LOSS}% loss. Four more each for the 12
+      biggest puts it where the links meet, and the cliff moves from {tipNone}% to {tipTop12}%. Many similar banks, about
+      {WORDS[SIMILAR_LINKS]} partners each, absorb what the hubs pass on: at {CAPITAL}% no landing brings down more than
+      {WORDS[similarMost]}, and their cliff sits at {tipSimilar}%, unaided. Robust yet fragile belongs to the hubs.
     </p>
     <p>
       September 2008 had this shape. A large investment bank, a hub, was allowed to fail on the 15th. The next day an
@@ -290,7 +465,7 @@
     </p>
     <h3>Hubs inside organizations</h3>
     <p>
-      Organizations grow hubs the same way: work flows to whoever already handles the most, such as the expert everyone
+      Organizations grow hubs the same way. Work flows to whoever already handles the most: the expert everyone
       asks, the committee that sees every deal or the system every other system reads from. On a normal day a hub is
       efficient. On a bad day it is where a loss travels furthest, and where a deputy or a second route counts most.
     </p>
@@ -313,9 +488,30 @@
     gap: 6px;
     min-width: 0;
   }
-  svg {
+  /* The three choices keep to one row on a phone. */
+  @container fig (max-width: 420px) {
+    .ctl :global(.opts label) {
+      padding-inline: 6px;
+    }
+  }
+  .net svg {
     cursor: pointer;
     touch-action: manipulation;
+  }
+  .net {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .readout {
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--tkc-ink-2);
+    text-wrap: pretty;
+  }
+  .readout strong {
+    color: var(--tkc-ink);
+    font-weight: 650;
   }
   .edge {
     stroke: var(--tkc-rule);
@@ -354,10 +550,9 @@
     stroke-width: 2;
     pointer-events: none;
   }
-  .sw-bank {
-    background: var(--tkc-surface);
-    box-shadow: inset 0 0 0 1.5px var(--tkc-ink-2);
-    border-radius: 50%;
+  .tag {
+    font-weight: 650;
+    pointer-events: none;
   }
   .sw-ring {
     width: 12px;
@@ -383,6 +578,52 @@
     .two :global(.tkc-stat-value) {
       font-size: 1.25rem;
     }
+  }
+  .curve {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    border-top: 1px solid var(--tkc-hair);
+    padding-top: 14px;
+  }
+  .small {
+    font-size: 0.9375rem;
+  }
+  .limit {
+    stroke: var(--tkc-ink-2);
+    stroke-width: 1.25;
+    stroke-dasharray: 5 4;
+  }
+  .faint {
+    fill: none;
+    stroke: var(--tkc-rule);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+  .bold {
+    fill: none;
+    stroke: var(--tkc-conditions);
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+  .pt-small {
+    fill: var(--tkc-conditions);
+    stroke: var(--tkc-surface);
+    stroke-width: 1.5;
+  }
+  .pt {
+    fill: var(--tkc-conditions);
+    stroke: var(--tkc-surface);
+    stroke-width: 2;
+  }
+  .now {
+    stroke: var(--tkc-ink);
+    stroke-width: 1;
+  }
+  .cross {
+    stroke: var(--tkc-muted);
+    stroke-width: 1;
   }
   @media (prefers-reduced-motion: reduce) {
     .bank {

@@ -5,6 +5,7 @@ import {
   ROOM,
   WORLDS,
   MENU,
+  KIND_NAMES,
   TARGET_DAYS,
   kindShares,
   weeklyRates,
@@ -72,6 +73,31 @@ test('the puzzle: twenty answers is the smallest menu under two weeks', () => {
   // Every menu from twenty up keeps the wait under two weeks; every menu below it does not.
   for (let m = MENU.min; m <= MENU.max; m++) assert.equal(outcome('today', m).met, m >= 20, `menu ${m}`);
   assert.ok(outcome('today', 20).wait < TARGET_DAYS && outcome('today', 19).wait > TARGET_DAYS);
+});
+
+test('the cases left waiting after a meeting: seventeen at nineteen answers, five at twenty', () => {
+  // The chart stacks these above the committee's five places; the found line and the text quote 17 and 5.
+  assert.equal(Math.round(outcome('today', 19).left), 17);
+  assert.equal(round1(outcome('today', 20).left), 4.9);
+  assert.equal(Math.round(outcome('today', 20).left), 5);
+  assert.equal(round1(outcome('today', 21).left), 2.5);
+  assert.equal(outcome('today', 18).left, Infinity, 'eighteen answers: the queue grows without end');
+  assert.equal(outcome('today', 60).left, 0);
+  // Little's law ties the pile to the wait: half a week, plus the pile over the arrivals, in weeks.
+  for (const m of [19, 20, 25]) {
+    const o = outcome('today', m);
+    close(o.wait, 5 * (0.5 + o.left / o.escalated), 1e-9, `menu ${m}`);
+  }
+});
+
+test('every kind today has a name; the newest answers the reader adds are named as the text says', () => {
+  assert.equal(KIND_NAMES.length, WORLDS.today);
+  assert.equal(new Set(KIND_NAMES).size, WORLDS.today);
+  assert.equal(KIND_NAMES[19], 'Currency switch', 'the twentieth answer');
+  assert.equal(Math.round(weeklyRates('today')[19] * 52), 13, 'about 13 a year');
+  assert.equal(KIND_NAMES[59], 'Cooperative, no audited accounts', 'the rarest, named in the setup');
+  assert.equal(KIND_NAMES[44], 'Grace period after a drought');
+  for (const n of KIND_NAMES) assert.ok(n.length <= 34, n);
 });
 
 test('the long tail: forty rare kinds that together fill the committee', () => {

@@ -1,5 +1,5 @@
 <script>
-  import { getContext } from 'svelte';
+  import { getContext, untrack } from 'svelte';
   import { Tween } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
   import Chapter from '../lib/ui/Chapter.svelte';
@@ -10,7 +10,7 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { REQUESTS, ROOM, WORLDS, MENU, WEEKS_A_YEAR, weeklyRates, outcome, smallestMenu } from '../lib/sim/variety.js';
+  import { REQUESTS, ROOM, WORLDS, MENU, WEEKS_A_YEAR, KIND_NAMES, weeklyRates, outcome, smallestMenu } from '../lib/sim/variety.js';
   import { linear } from '../lib/scales.js';
   import { prefersReducedMotion } from '../lib/motion.js';
 
@@ -40,19 +40,27 @@
   const NEW_KINDS = RATES.varied.slice(WORLDS.today);
   const newTotal = NEW_KINDS.reduce((a, b) => a + b, 0);
   const newMax = Math.max(...NEW_KINDS) * WEEKS_A_YEAR;
-  const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+  const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
   const NUMBERS = { 20: 'twenty', 30: 'thirty', 40: 'forty', 60: 'sixty' };
   const word = (v) => WORDS[v] ?? NUMBERS[v] ?? String(v);
   const one = (v) => v.toFixed(1);
   const cap = (t) => t[0].toUpperCase() + t.slice(1);
 
-  const daysText = (v) => `${one(v)} working days`;
-  const waitNow = (o) => (o.escalated === 0 ? 'nothing waits' : o.jammed ? 'the queue keeps growing' : daysText(o.wait));
+  // Names and how often each kind comes up; the more varied world's sixty new kinds are not named one by one.
+  const nameOf = (i) => KIND_NAMES[i] ?? 'A new kind of request';
+  const often = (i) => {
+    const r = rates[i];
+    return r >= 1 ? `about ${Math.round(r)} a week` : `about ${Math.max(1, Math.round(r * WEEKS_A_YEAR))} a year`;
+  };
+  // Cases left waiting after an average meeting, as shown: whole cases from three up, tenths below.
+  const pile = (o) => (o.left < 0.05 ? 'none' : o.left < 3 ? one(o.left) : String(Math.round(o.left)));
+  const weeksOrDays = (v) => (v >= 10 ? `about ${Math.round(v / 5)} weeks` : `${one(v)} working days`);
+  const waitNow = (o) => (o.escalated === 0 ? 'nothing waits' : o.jammed ? 'the queue keeps growing' : weeksOrDays(o.wait));
 
   const rules = [
     `About ${REQUESTS} client requests a week, of ${WORLDS.today} kinds: a few common, most rare.`,
-    'The menu answers the most common kinds; every other request goes to head office.',
-    `A committee there meets weekly, with room for ${word(ROOM)}; the rest wait another week.`,
+    'The menu’s products, terms and delegations cover the most common kinds of request.',
+    `Anything else goes to a head-office committee that hears ${word(ROOM)} a week; the rest wait.`,
   ];
 
   const puzzle = $derived({
@@ -60,29 +68,82 @@
     met: world === 'today' && now.met && !outcome(world, menu - 1).met,
     checks: [
       { label: `Average wait at head office under two weeks (now ${waitNow(now)})`, ok: now.met },
-      { label: 'Not one answer more than that needs', ok: !outcome(world, menu - 1).met },
+      { label: 'No smaller menu does it', ok: now.met && !outcome(world, menu - 1).met },
     ],
     hints: [
-      `Add answers one at a time from ${word(MENU.start)}, and watch how many exceptions reach the committee’s ${word(ROOM)} places.`,
+      `Add answers one at a time from ${word(MENU.start)}, and watch the cases left waiting after each meeting.`,
       'Once the wait is under two weeks, try one answer fewer.',
     ],
-    found: `${cap(word(BEST))} answers, a third of the kinds: the ${word(WORLDS.today - BEST)} rarer kinds then fit the committee’s ${word(ROOM)} places, and an exception waits about ${word(Math.round(AT.wait))} days.`,
+    found: `${cap(word(BEST))} answers, a third of the kinds: the cases left after a meeting fall from ${word(Math.round(LESS.left))} to ${word(Math.round(AT.left))}, and the wait to about ${word(Math.round(AT.wait))} days.`,
   });
   const showAnswer = () => {
     world = 'today';
     menu = BEST;
   };
 
-  // ---- The chart: the week's requests, kind by kind, and the committee's five places ----
+  // ---- The menu, as the office sees it: the first answers, the newest, and how many in between ----
+  const menuList = $derived(
+    menu <= 6
+      ? KIND_NAMES.slice(0, menu).map((t) => ({ t }))
+      : [{ t: KIND_NAMES[0] }, { t: KIND_NAMES[1] }, { t: `${menu - 4} more`, more: true }, { t: KIND_NAMES[menu - 2] }, { t: KIND_NAMES[menu - 1] }],
+  );
+
+  // ---- What the last move changed, in a line under the chart ----
+  let before = $state(null);
+  let seen = { menu: MENU.start, world: 'today' };
+  $effect(() => {
+    const at = { menu, world };
+    untrack(() => {
+      if (at.menu !== seen.menu || at.world !== seen.world) {
+        before = seen;
+        seen = at;
+      }
+    });
+  });
+  const leftAfter = (o) => {
+    const p = pile(o);
+    return p === 'none' ? 'nothing is left waiting after a meeting' : `${p} ${p === '1' ? 'is' : 'are'} left waiting after an average meeting`;
+  };
+  const change = $derived.by(() => {
+    if (now.escalated === 0) return 'Every kind is on the menu: nothing goes to head office.';
+    const flow = `${one(now.escalated)} cases a week reach the committee’s ${word(ROOM)} places`;
+    if (!before) return now.jammed ? `${cap(flow)}: the queue grows every week.` : `${cap(flow)}; ${leftAfter(now)}.`;
+    if (before.world !== world) {
+      const head = world === 'varied' ? 'A more varied world' : 'Today’s world';
+      return `${head}: the same ${menu} answers send ${one(now.escalated)} a week to head office${now.jammed ? ', and the queue grows every week' : `; ${leftAfter(now)}`}.`;
+    }
+    const d = menu - before.menu;
+    const head =
+      d === 1
+        ? `Added ‘${nameOf(menu - 1)}’, ${often(menu - 1)}`
+        : d === -1
+          ? `Took off ‘${nameOf(menu)}’, ${often(menu)}`
+          : d > 0
+            ? `Added ${d} answers, up to ‘${nameOf(menu - 1)}’`
+            : `Took off ${-d} answers`;
+    const was = outcome(world, before.menu);
+    if (now.jammed) return `${head}: ${flow}, and the queue ${was.jammed ? 'keeps growing' : 'now grows every week'}.`;
+    if (was.jammed) return `${head}: the queue stops growing; ${leftAfter(now)}.`;
+    if (pile(now) === pile(was)) return `${head}: ${leftAfter(now)}, as before.`;
+    return `${head}: left waiting after a meeting, ${pile(now)} instead of ${pile(was)}.`;
+  });
+
+  // ---- The chart: the week's requests, kind by kind, and head office's five places with the cases left waiting ----
   const H = 300;
   const M = { top: 34, right: 2, bottom: 46, left: 30 };
-  const COL = 44;
-  const GAP = 26;
   const Y_MAX = 16;
   const y = linear(0, Y_MAX, H - M.bottom, M.top);
   const base = y(0);
-  const unit = y(0) - y(1);
+  // Head office: five places a week (one row) and the cases left waiting stacked above, five to a row.
+  const TOK = 8;
+  const PITCH = 10;
+  const COL = ROOM * PITCH - (PITCH - TOK);
+  const GAP = 26;
+  const JAM = 30; // cases drawn when the queue grows without end
+  const placesY = base - 1 - TOK;
+  const rowY = (r) => placesY - 6 - TOK - r * PITCH;
   const span = $derived(Math.max(width, 240));
+  const narrow = $derived(span < 420);
   const right = $derived(span - M.right - COL - GAP); // end of the bars
   const colX = $derived(span - M.right - COL);
   const step = $derived((right - M.left) / kinds);
@@ -90,12 +151,41 @@
   const bx = (i) => M.left + i * step;
   const bh = (r) => Math.max(1, base - y(r));
 
-  // The column fills to the exceptions a week, gliding as the menu changes.
-  const fill = new Tween(START.escalated, { duration: 380, easing: cubicOut });
+  // The places fill with the cases heard each week, and the cases left waiting pile up above them.
+  const ms = () => (prefersReducedMotion() ? 0 : 380);
+  const target = (o) => (o.jammed ? JAM : Math.min(JAM, o.left));
+  const heard = new Tween(Math.min(ROOM, START.escalated), { duration: 380, easing: cubicOut });
+  const left = new Tween(target(START), { duration: 380, easing: cubicOut });
   $effect(() => {
-    fill.set(now.escalated, { duration: prefersReducedMotion() ? 0 : 380 });
+    heard.set(Math.min(ROOM, now.escalated), { duration: ms() });
+    left.set(target(now), { duration: ms() });
   });
-  const failing = $derived(now.escalated > 0 && !now.met);
+  const tokens = $derived.by(() => {
+    const n = left.current;
+    const out = [];
+    for (let k = 0; k < Math.ceil(n - 0.04); k++) {
+      const part = Math.min(1, n - k);
+      out.push({ x: colX + (k % ROOM) * PITCH, y: rowY(Math.floor(k / ROOM)), w: TOK * part, fade: now.jammed && k >= JAM - ROOM });
+    }
+    return out;
+  });
+  const stackTop = $derived(tokens.length ? tokens[tokens.length - 1].y : placesY);
+
+  // Over the column: how many are left after a meeting.
+  const headY = $derived(y(8.6));
+  const head = $derived(
+    now.jammed
+      ? { a: 'Left waiting: no end', b: `grows by ${Math.round(now.growth)} a year`, hot: true }
+      : pile(now) === 'none'
+        ? { a: 'None left waiting', b: 'after a meeting', hot: false }
+        : { a: `${pile(now)} left waiting`, b: 'after a meeting, on average', hot: true },
+  );
+
+  // The flow to head office: along above the rare kinds, then down into the five places.
+  // Between the second and third names, so the arrow never runs through a label.
+  const arrowY = $derived((y(rates[1]) + 4 + 3 + (y(rates[2]) + 4 - 10)) / 2);
+  const elbowX = $derived(colX - 12);
+  const together = $derived(narrow ? `${one(now.escalated)} a week` : `together, ${one(now.escalated)} a week`);
 
   // Labels under the axis: centred under their bracket when there is room, pushed to the ends when not.
   // A generous width for 12px text (the menu's label is bold); short forms where the long ones do not fit.
@@ -117,25 +207,90 @@
     }
     return { split, mx, ox, menuText, offText };
   });
-  const together = $derived(`together, ${one(now.escalated)} a week`);
-  const arrowY = y(1.7);
+
+  // Names on the chart: the three commonest kinds beside their bars, and a few rare ones above theirs,
+  // each placed only where it covers no taller bar and no other label.
+  const CHAR = 6.4;
+  const named = $derived.by(() => {
+    const placed = [];
+    const clear = (x0, x1, top, bottom) => {
+      for (const b of placed) if (x0 < b.x1 + 4 && x1 > b.x0 - 4 && top < b.bottom + 2 && bottom > b.top - 2) return false;
+      for (let i = 0; i < kinds; i++) {
+        const l = bx(i);
+        if (l + barW > x0 && l < x1 && base - bh(rates[i]) < bottom + 2) return false;
+      }
+      return true;
+    };
+    const out = [];
+    // The commonest, to the right of each bar's top.
+    for (let i = 0; i < 3; i++) {
+      const t = KIND_NAMES[i];
+      const x0 = bx(i) + barW + 4;
+      const yb = y(rates[i]) + 4;
+      const x1 = x0 + t.length * CHAR;
+      if (x1 > right) continue;
+      placed.push({ x0, x1, top: yb - 10, bottom: yb + 3 });
+      out.push({ t, x: x0, y: yb, anchor: 'start', on: i < menu });
+    }
+    // Rare kinds: text ending at the bar, a tick down to it, in two rows under the flow arrow.
+    const rare =
+      world === 'today'
+        ? [
+            { i: 59, forms: ['Rarest: cooperative, no audited accounts', 'Co-op, no audited accounts', 'Co-op, no accounts'] },
+            { i: 44, forms: ['Grace period after a drought', 'Drought grace period'] },
+          ]
+        : [
+            { i: kinds - 1, forms: ['Sixty new kinds, each under three a year', 'Sixty new kinds', 'New kinds'] },
+            { i: 59, forms: ['Cooperative, no audited accounts', 'Co-op, no accounts'] },
+          ];
+    const rows = [base - 36, base - 18];
+    for (const r of rare) {
+      const cx = bx(r.i) + barW / 2;
+      for (const t of narrow ? r.forms.slice(1) : r.forms) {
+        const w = t.length * CHAR;
+        const spot = rows.find((yb) => clear(cx + 3 - w, cx + 3, yb - 10, yb + 3) && clear(cx - 1, cx + 1, yb + 3, base - bh(rates[r.i]) - 2));
+        if (spot === undefined) continue;
+        placed.push({ x0: cx + 3 - w, x1: cx + 3, top: spot - 10, bottom: spot + 3 });
+        out.push({ t, x: cx + 3, y: spot, anchor: 'end', on: r.i < menu, tick: { x: cx, y0: spot + 4, y1: base - bh(rates[r.i]) - 2 } });
+        break;
+      }
+    }
+    // The flow's label sits over the arrow, near head office; it gives way to the names.
+    const tw = together.length * CHAR;
+    const flow = { x0: elbowX - 4 - tw, x1: elbowX - 4, top: arrowY - 16, bottom: arrowY - 3 };
+    const showFlow = off > 0 && placed.every((b) => !(flow.x0 < b.x1 + 4 && flow.x1 > b.x0 - 4 && flow.top < b.bottom + 2 && flow.bottom > b.top - 2));
+    return { names: out, showFlow };
+  });
+
+  // Hover or tap a bar for its name.
+  let tip = $state(null);
+  function pick(e) {
+    const box = e.currentTarget.ownerSVGElement.getBoundingClientRect();
+    const i = Math.floor((e.clientX - box.left - M.left) / step);
+    tip = i >= 0 && i < kinds ? i : null;
+  }
+  const tipX = $derived(tip === null ? 0 : Math.max(0, Math.min(span - 230, bx(tip) + step + 8)));
 
   const aria = $derived(
-    `Bars for the ${kinds} kinds of request, most common first. The menu answers the ${menu} most common, ${Math.round(now.answered * 100)}% of requests. ` +
+    `Bars for the ${kinds} kinds of request, most common first, from “${KIND_NAMES[0]}” to the rarest. The menu answers the ${menu} most common, ${Math.round(now.answered * 100)}% of requests. ` +
       (off > 0
-        ? `The other ${off} kinds bring ${one(now.escalated)} exceptions a week to a committee with ${ROOM} places a week; ${now.jammed ? 'the queue keeps growing' : `the average wait is ${daysText(now.wait)}`}.`
+        ? `The other ${off} kinds bring ${one(now.escalated)} cases a week to a committee with ${ROOM} places a week; ${now.jammed ? 'the queue grows every week' : `${leftAfter(now)}, and the average wait is ${weeksOrDays(now.wait)}`}.`
         : 'Nothing goes to head office.'),
   );
 
   // ---- Tiles ----
   const answeredSub = $derived(now.escalated === 0 ? 'nothing goes to head office' : `${one(now.escalated)} requests a week go to head office`);
-  const waitValue = $derived(now.escalated === 0 ? 'None' : now.jammed ? 'No end' : `${one(now.wait)} days`);
+  const waitValue = $derived(
+    now.escalated === 0 ? 'None' : now.jammed ? 'No end' : now.wait >= 10 ? `${Math.round(now.wait / 5)} weeks` : `${one(now.wait)} days`,
+  );
   const waitSub = $derived(
     now.escalated === 0
       ? 'every request is answered in the office'
       : now.jammed
         ? `the queue grows by about ${Math.round(now.growth)} cases a year`
-        : `working days; the committee is ${Math.round(now.load * 100)}% full`,
+        : now.wait >= 10
+          ? `${Math.round(now.wait)} working days; the committee is ${Math.round(now.load * 100)}% full`
+          : `in working days; the committee is ${Math.round(now.load * 100)}% full`,
   );
 </script>
 
@@ -153,21 +308,27 @@
       guarantee for a local bank, a loan to a cooperative with no audited accounts, a grace period after a drought.
     </p>
     <p>
-      Each office has a menu of answers it may give on its own. A request the menu cannot answer becomes an exception
-      and travels up the chain to head office, where a committee hears exceptions once a week. Today the menu holds
-      {word(MENU.start)} answers, and the committee’s agenda never clears.
+      Each office has a menu of answers it may give on its own: its products, terms and delegations. A request the menu cannot answer becomes an exception and travels up the chain to head
+      office, where a committee hears exceptions once a week. Today the menu holds {word(MENU.start)} answers, and the
+      committee’s agenda never clears.
     </p>
   {/snippet}
 
   {#snippet figure()}
     <Instrument
       title="The week’s requests, kind by kind"
-      sub="Each bar is one kind of request, most common first. Whatever the menu cannot answer goes to head office."
+      sub="The menu: the answers an office may give on its own. Bars: kinds of client request, most common first."
       {rules}
     >
       <Puzzle id="variety" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls">
-        <Slider id="v-menu" label="Menu of answers" bind:value={menu} min={MENU.min} max={MENU.max} format={(v) => `${v} of ${kinds}`} />
+        <div class="ctl">
+          <Slider id="v-menu" label="Office may answer" bind:value={menu} min={MENU.min} max={MENU.max} format={(v) => `${v} of ${kinds} kinds`} />
+          <p class="tkc-caption menu-list">
+            On the menu:
+            {#each menuList as item, k (k)}{#if k}<span class="dot" aria-hidden="true">{' · '}</span>{/if}<span class:more={item.more} class:last={k === menuList.length - 1}>{item.t}</span>{/each}
+          </p>
+        </div>
         {#if solved}
           <Segmented
             name="v-world"
@@ -184,32 +345,45 @@
       <div class="tkc-chart" bind:clientWidth={width}>
         <svg width={span} height={H} role="img" aria-label={aria}>
           {#each [0, 5, 10, 15] as t (t)}
-            <line class="tkc-grid" x1={M.left} x2={span - M.right} y1={y(t)} y2={y(t)} />
+            <line class="tkc-grid" x1={M.left} x2={right} y1={y(t)} y2={y(t)} />
             <text class="tkc-axis-label" x={M.left - 6} y={y(t) + 4} text-anchor="end">{t}</text>
           {/each}
           <text class="tkc-axis-title" x="0" y={M.top - 16}>Requests a week</text>
 
           {#each rates as r, i (i)}
-            <rect class="bar" class:on={i < menu} x={bx(i)} y={base - bh(r)} width={barW} height={bh(r)} />
+            <rect class="bar" class:on={i < menu} class:hover={tip === i} x={bx(i)} y={base - bh(r)} width={barW} height={bh(r)} />
           {/each}
           <line class="tkc-base" x1={M.left} x2={right} y1={base} y2={base} />
 
+          <!-- The kinds, named: the commonest beside their bars, a few rare ones above theirs. -->
+          {#each named.names as l (l.t)}
+            {#if l.tick}<line class="tick" x1={l.tick.x} x2={l.tick.x} y1={l.tick.y0} y2={l.tick.y1} />{/if}
+            <text class="name tkc-halo" class:on={l.on} x={l.x} y={l.y} text-anchor={l.anchor}>{l.t}</text>
+          {/each}
+
           {#if off > 0}
             <!-- Everything off the menu, however rare each kind, ends up in one place. -->
-            <line class="arrow" x1={labels.split} x2={colX - 5} y1={arrowY} y2={arrowY} />
-            <path class="head" d="M{colX - 1} {arrowY} l-6 -3.5 v7 Z" />
-            <text class="tkc-label-2 tkc-halo" x={colX - 8} y={arrowY - 6} text-anchor="end">{together}</text>
+            <path class="arrow" d="M{labels.split} {arrowY}H{elbowX}V{placesY + TOK / 2}H{colX - 6}" />
+            <path class="head" d="M{colX - 1} {placesY + TOK / 2} l-6 -3.5 v7 Z" />
+            {#if named.showFlow}<text class="tkc-label-2 tkc-halo" x={elbowX - 4} y={arrowY - 6} text-anchor="end">{together}</text>{/if}
           {/if}
 
-          <!-- The committee: five places a week, filled by the exceptions. -->
-          {#each Array(ROOM - 1) as _, k (k)}
-            <line class="divide" x1={colX} x2={colX + COL} y1={base - (k + 1) * unit} y2={base - (k + 1) * unit} />
+          <!-- Head office: five places a week, and the cases left waiting after a meeting. -->
+          {#each Array(ROOM) as _, k (k)}
+            <rect class="place-fill" x={colX + k * PITCH} y={placesY} width={TOK * Math.max(0, Math.min(1, heard.current - k))} height={TOK} />
+            <rect class="place" x={colX + k * PITCH + 0.5} y={placesY + 0.5} width={TOK - 1} height={TOK - 1} />
           {/each}
-          <rect class="fill" class:failing x={colX} y={base - Math.min(fill.current, Y_MAX) * unit} width={COL} height={Math.min(fill.current, Y_MAX) * unit} />
-          {#each Array(Math.max(0, Math.min(ROOM - 1, Math.ceil(fill.current) - 1))) as _, k (k)}
-            <line class="divide over" x1={colX} x2={colX + COL} y1={base - (k + 1) * unit} y2={base - (k + 1) * unit} />
+          {#each tokens as t, k (k)}
+            <rect class="waiting" class:fade={t.fade} x={t.x} y={t.y} width={t.w} height={TOK} />
           {/each}
-          <rect class="slot" x={colX + 0.5} y={base - ROOM * unit + 0.5} width={COL - 1} height={ROOM * unit - 1} />
+          {#if now.jammed}
+            <path class="up" d="M{colX + COL / 2} {stackTop - 4}V{headY + 22}" />
+            <path class="up-head" d="M{colX + COL / 2} {headY + 18} l-3.5 6 h7 Z" />
+          {:else if stackTop - 6 > headY + 24}
+            <line class="leader" x1={colX + COL / 2} x2={colX + COL / 2} y1={headY + 22} y2={stackTop - 4} />
+          {/if}
+          <text class="head-a tkc-halo" class:hot={head.hot} x={span} y={headY} text-anchor="end">{head.a}</text>
+          <text class="tkc-label-2 tkc-halo" x={span} y={headY + 15} text-anchor="end">{head.b}</text>
           <line class="tkc-base" x1={colX - 4} x2={span - M.right} y1={base} y2={base} />
 
           <!-- Under the axis: the menu, the kinds sent up, and head office. -->
@@ -220,13 +394,33 @@
             <text class="under" x={labels.ox} y={base + 22}>{labels.offText}</text>
           {/if}
           <text class="under" x={span} y={base + 22} text-anchor="end">Head office</text>
-          <text class="tkc-axis-title" x={M.left} y={H - 4}>{span < 420 ? 'Kinds, most common first' : 'Kinds of request, most common first'}</text>
+          <text class="tkc-axis-title" x={M.left} y={H - 4}>{narrow ? 'Kinds, most common first' : 'Kinds of request, most common first'}</text>
+
+          <rect
+            x={M.left}
+            y={M.top}
+            width={Math.max(0, right - M.left)}
+            height={base - M.top + 4}
+            fill="transparent"
+            role="presentation"
+            onpointermove={pick}
+            onpointerdown={pick}
+            onpointerleave={(e) => e.pointerType === 'mouse' && (tip = null)}
+          />
         </svg>
+        {#if tip !== null}
+          <div class="tkc-tip" style:left="{tipX}px" style:top="30px">
+            <strong>{nameOf(tip)}</strong>
+            <div>{often(tip)}{tip >= WORLDS.today ? ': new markets, climate, technology' : ''}</div>
+            <div>{tip < menu ? 'On the menu: answered in the office' : 'Sent to head office'}</div>
+          </div>
+        {/if}
+        <p class="tkc-small change">{change}</p>
         <div class="tkc-legend">
-          <span><span class="tkc-swatch" style:background="var(--tkc-options)"></span>On the menu: answered in the office</span>
+          <span><span class="tkc-swatch" style:background="var(--tkc-options)"></span>On the menu</span>
           <span><span class="tkc-swatch" style:background="var(--tkc-muted)"></span>Sent to head office</span>
-          <span><span class="tkc-swatch slot-key"></span>The committee’s {word(ROOM)} places a week</span>
-          <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>Waiting over two weeks</span>
+          <span><span class="tkc-swatch slot-key"></span>{cap(word(ROOM))} places a week</span>
+          <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>Left waiting</span>
         </div>
       </div>
 
@@ -236,8 +430,8 @@
       </div>
 
       {#snippet model()}
-        <p>Kinds of request follow Zipf’s law: the k-th most common is asked for in proportion to 1/k^1.34. In today’s world of {WORLDS.today} kinds the most common is {Math.round((RATES.today[0] / REQUESTS) * 100)}% of requests, the rarest about {word(Math.round(RATES.today[WORLDS.today - 1] * WEEKS_A_YEAR))} a year. Requests arrive at random, {REQUESTS} a week on average. A menu of m answers covers the m most common kinds; every other request goes to a committee that meets weekly and hears up to {word(ROOM)}, oldest first.</p>
-        <p>An exception waits until the next meeting, half a week on average, plus a week for each meeting with no room for it: the exact long-run average for this queue, checked against a simulation. With {word(ROOM)} or more exceptions a week the queue grows without end. The more varied world spreads the same {REQUESTS} requests over {WORLDS.varied} kinds by the same law. In the text, principles let an office settle one unlisted case in three.</p>
+        <p>Kinds of request follow Zipf’s law: the k-th most common is asked for in proportion to 1/k^1.34. In today’s world of {WORLDS.today} kinds the most common is {Math.round((RATES.today[0] / REQUESTS) * 100)}% of requests, the rarest about {word(Math.round(RATES.today[WORLDS.today - 1] * WEEKS_A_YEAR))} a year; names are illustrative. Requests arrive at random. A menu of m answers covers the m most common kinds; the rest go to a committee that meets weekly and hears up to {word(ROOM)}, oldest first.</p>
+        <p>The chart shows the cases left after a meeting, and the wait, as exact long-run averages for this queue, checked against a simulation: half a week to the next meeting, plus a week for each meeting with no room. With {word(ROOM)} or more exceptions a week the queue grows without end. The more varied world spreads the same {REQUESTS} requests over {WORLDS.varied} kinds by the same law. In the text, principles let an office settle one unlisted case in three.</p>
       {/snippet}
     </Instrument>
   {/snippet}
@@ -251,23 +445,23 @@
       to absorb.
     </p>
     <p>
-      The long tail makes it bite. None of the {word(WORLDS.today - BEST)} kinds left off a {word(BEST)}-answer menu
-      comes up more than about once a month; together they bring {one(AT.escalated)} a week, nine-tenths of the
-      committee’s room. Ten more answers save {word(Math.round(AT.wait - MORE.wait))} days between them; one fewer
-      costs {word(Math.round(LESS.wait - AT.wait))}, with the committee {Math.round(LESS.load * 100)}% full: the curve
-      from the queues chapter, on an agenda shared like the fast track’s.
+      None of the {word(WORLDS.today - BEST)} kinds left off a {word(BEST)}-answer menu comes up more than about once a
+      month; together they bring {one(AT.escalated)} a week, nine-tenths of the committee’s room. Ten more answers save
+      {word(Math.round(AT.wait - MORE.wait))} days between them. One fewer, and the committee passes its tipping point,
+      the queues chapter’s curve on an agenda shared like the fast track’s: {word(Math.round(LESS.left))} cases are left
+      after a meeting instead of {word(Math.round(AT.left))}, and the wait grows by
+      {word(Math.round(LESS.wait - AT.wait))} days.
     </p>
     <p>
       Then the world grows more varied: {word(WORLDS.varied - WORLDS.today)} new kinds, from new markets, climate shocks
-      and new technologies, each asked for fewer than {word(Math.ceil(newMax))} times a year. Together they add
-      {word(Math.round(newTotal))} a week, and the same {word(BEST)} answers send {one(SAME.escalated)} a week to
-      {word(ROOM)} places; the queue grows by about {Math.round(SAME.growth)} cases a year. Nobody in the offices has
-      changed.
+      and new technologies, each asked for fewer than {word(Math.ceil(newMax))} times a year, together
+      {word(Math.round(newTotal))} a week. The same {word(BEST)} answers send {one(SAME.escalated)} a week to
+      {word(ROOM)} places; the queue grows by about {Math.round(SAME.growth)} a year. Nobody in the offices has changed.
     </p>
     <h3>Answers nobody listed</h3>
     <p>
       The menu can grow with the world, here to {word(VARIED_BEST)} answers. Or offices can hold what a menu cannot:
-      principles, such as what a loan is for and what the bank can afford to lose, that answer cases nobody listed. If
+      principles, such as what a loan is for and what the bank can afford to lose. If
       principles settled one unlisted case in three, the wait would stay near {word(Math.round(PRINCIPLED.wait))} days.
       Ashby’s homeostat of 1948 kept no list: pushed out of bounds, it tried new settings until one held.
     </p>
@@ -289,37 +483,89 @@
 </Chapter>
 
 <style>
+  .ctl {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+  .menu-list {
+    margin: 0;
+    color: var(--tkc-ink-2);
+  }
+  .menu-list .more {
+    color: var(--tkc-muted);
+  }
+  .menu-list .last {
+    color: var(--tkc-options-ink);
+    font-weight: 600;
+  }
+  .menu-list .dot {
+    color: var(--tkc-muted);
+  }
   .bar {
     fill: var(--tkc-muted);
   }
   .bar.on {
     fill: var(--tkc-options);
   }
+  .bar.hover {
+    stroke: var(--tkc-ink);
+    stroke-width: 1;
+  }
+  .name {
+    font-size: 12px;
+    fill: var(--tkc-ink-2);
+  }
+  .name.on {
+    fill: var(--tkc-options-ink);
+  }
+  .tick {
+    stroke: var(--tkc-muted);
+    stroke-width: 1;
+  }
   .arrow {
+    fill: none;
+    stroke: var(--tkc-ink-2);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+  .head,
+  .up-head {
+    fill: var(--tkc-ink-2);
+  }
+  .up {
     stroke: var(--tkc-ink-2);
     stroke-width: 1.25;
   }
-  .head {
-    fill: var(--tkc-ink-2);
+  .leader {
+    stroke: var(--tkc-muted);
+    stroke-width: 1;
+    stroke-dasharray: 2 2;
   }
-  .fill {
-    fill: var(--tkc-muted);
-  }
-  .fill.failing {
-    fill: var(--tkc-conditions);
-  }
-  .slot {
+  .place {
     fill: none;
     stroke: var(--tkc-ink);
     stroke-width: 1;
   }
-  .divide {
-    stroke: var(--tkc-rule);
-    stroke-width: 1;
+  .place-fill {
+    fill: var(--tkc-muted);
   }
-  .divide.over {
-    stroke: var(--tkc-surface);
-    stroke-width: 1.5;
+  .waiting {
+    fill: var(--tkc-conditions);
+  }
+  .waiting.fade {
+    opacity: 0.45;
+  }
+  .head-a {
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--tkc-ink-2);
+  }
+  .head-a.hot {
+    fill: var(--tkc-conditions-ink);
+  }
+  .change {
+    margin: 8px 0 6px;
   }
   .two {
     grid-template-columns: repeat(2, minmax(0, 1fr));

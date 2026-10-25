@@ -8,7 +8,7 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { scenes, meets, WORLDS, TARGET, BUDGET, PILOT, READ, FUTURES, MAX_PILOTS, PUZZLE_WORLD } from '../lib/sim/tinkering.js';
+  import { scenes, meets, openFuture, WORLDS, TARGET, BUDGET, PILOT, READ, FUTURES, MAX_PILOTS, PUZZLE_WORLD, OPENED } from '../lib/sim/tinkering.js';
   import { log10, line } from '../lib/scales.js';
   import { int } from '../lib/format.js';
 
@@ -27,6 +27,8 @@
   const sc = $derived(S[world]);
   const run = $derived(sc.runs[pilots]);
   const base = $derived(sc.runs[1]);
+  // One of the thousand futures, opened: what each pilot read, what each approach was worth, and the pick.
+  const opened = $derived(openFuture(pilots, sc.sigma));
 
   // ---- Words and numbers, all from the model ----
   const pct = (v) => (v === 0 ? '0%' : v < 0.01 ? `${(v * 100).toFixed(1)}%` : `${Math.round(v * 100)}%`);
@@ -48,16 +50,20 @@
     wildN: S.wild.bestN,
     wildT: int(S.wild.runs[S.wild.bestN].typical),
   };
+  const mult = (v) => `×${v < 0.1 ? v.toFixed(2) : v.toFixed(1)}`;
+  const O12 = openFuture(ANSWER, U.sigma);
+  const O1 = openFuture(1, U.sigma);
+  const SHARE = ['', 'all', 'half', 'a third', 'a quarter', 'a fifth'][Math.round(O12.best.worth / O12.pick.worth)] ?? 'a fraction';
 
   const rules = [
     'A budget of 100; a typical approach returns what it costs, but results vary widely.',
-    `Each pilot costs ${PILOT} and shows roughly how well its approach works.`,
-    'The rest scales up the approach whose pilot did best.',
+    `Each pilot costs ${PILOT}, earns nothing itself, and gives a rough reading of its approach.`,
+    'What is left goes behind the approach whose pilot read best.',
   ];
 
   const progress = $derived(
     pilots > T.to
-      ? `Each pilot costs ${PILOT}: with ${pilots} of them, ${BUDGET - PILOT * pilots} is left to put behind the best.`
+      ? `Each pilot costs ${PILOT} and earns nothing: with ${pilots} of them, only ${BUDGET - PILOT * pilots} is left to put behind the best.`
       : pilots > 1 && pilots < T.from
         ? `The best of ${words(pilots)} pilots is often only an ordinary approach.`
         : '',
@@ -71,7 +77,7 @@
     ],
     progress,
     hints: [
-      `One big programme bets all 100 on a single approach. A pilot costs ${PILOT}, and shows which approaches to drop.`,
+      `One big programme bets all 100 on a single approach, untried. A pilot costs ${PILOT}, and shows roughly which approaches to drop.`,
       'Too few pilots, and the best of them is often ordinary; too many, and little is left to put behind it.',
     ],
     found: `${cap(words(T.from))} to ${words(T.to)} pilots: with twelve, the typical result is ${T.t12} and the worst one in ten ${T.w12}, against ${T.t1} and ${T.w1}.`,
@@ -81,9 +87,75 @@
     kind = PUZZLE_WORLD;
   }
 
+  // ---- The budget: coins of 2, one per pilot, and the rest behind the best ----
+  const COINS = BUDGET / PILOT;
+  const strip = $derived(
+    pilots === 1
+      ? { spent: '', rest: `All ${BUDGET} behind one approach, untried` }
+      : { spent: `${PILOT * pilots} spent on ${pilots} pilots`, rest: `${BUDGET - PILOT * pilots} behind the best` },
+  );
+
+  // ---- One future, opened: each approach's worth per unit of money (a bar from ×1) and its pilot's reading (a ring) ----
+  const BH = 132;
+  const bm = { top: 26, bottom: 22, left: 28, right: 10 };
+  const W_LO = 0.1;
+  const W_HI = 10;
+  const wy = (v) => {
+    const t = (Math.log(Math.min(W_HI, Math.max(W_LO, v))) - Math.log(W_LO)) / (Math.log(W_HI) - Math.log(W_LO));
+    return BH - bm.bottom - t * (BH - bm.top - bm.bottom);
+  };
+  const slot = $derived(Math.min(28, (span - bm.left - bm.right) / opened.pilots.length));
+  const px = (i) => bm.left + (i + 0.5) * slot;
+  const colW = $derived(Math.max(2, Math.min(12, slot - 4)));
+  const WT = [
+    { v: 0.25, t: '×¼' },
+    { v: 1, t: '×1' },
+    { v: 4, t: '×4' },
+  ];
+  // "Read best" by the pick's ring and "worth most" by the best bar: above their marks, or below where they would touch.
+  const CW = 6.6;
+  const callouts = $derived.by(() => {
+    const o = opened;
+    const lo = bm.left;
+    const hi = span - 2;
+    const floor = BH - bm.bottom + 4;
+    const at = (text, i, yb, pick) => {
+      const w = text.length * CW;
+      const cx = Math.max(lo + w / 2, Math.min(hi - w / 2, px(i)));
+      return { text, x: cx, y: yb, anchor: 'middle', pick, box: [cx - w / 2, cx + w / 2, yb - 10, yb + 3] };
+    };
+    const marks = (q) => {
+      const ys = [wy(1), wy(q.worth)];
+      if (q.read !== null) ys.push(wy(q.read) - 4, wy(q.read) + 4);
+      return [Math.min(...ys), Math.max(...ys)];
+    };
+    const spots = (text, q, pick) => {
+      const [t, b] = marks(q);
+      const out = [at(text, q.n - 1, t - 6, pick)];
+      if (b + 14 <= floor) out.push(at(text, q.n - 1, b + 13, pick));
+      return out;
+    };
+    if (o.n === 1) return [at(`untried, worth ${mult(o.pick.worth)}`, 0, marks(o.pick)[0] - 6, true)];
+    if (o.pick.n === o.best.n) return [spots('read best, worth most', o.pick, true)[0]];
+    const hit = (u, v) => u.box[0] < v.box[1] + 4 && u.box[1] > v.box[0] - 4 && u.box[2] < v.box[3] + 1 && u.box[3] > v.box[2] - 1;
+    const A = spots('read best', o.pick, true);
+    const B = spots('worth most', o.best, false);
+    for (const b of B) for (const a of A) if (!hit(a, b)) return [a, b];
+    return [A[0], B[0]];
+  });
+  const numbered = (i) => slot >= 16 || i === opened.pick.n - 1 || i === opened.best.n - 1;
+  const story = $derived.by(() => {
+    const o = opened;
+    if (o.n === 1)
+      return `One big programme puts all ${BUDGET} behind approach 1, untried. In this future it is worth ${mult(o.pick.worth)}: ${int(o.result)} comes back.`;
+    const head = `Pilot ${o.pick.n} read best (${mult(o.pick.read)}), so the ${o.rest} left went behind its approach`;
+    if (o.pick.n === o.best.n) return `${head}, the one worth most (${mult(o.pick.worth)}): ${int(o.result)} comes back.`;
+    return `${head}, worth ${mult(o.pick.worth)}: ${int(o.result)} comes back. Pilot ${o.best.n} read ${mult(o.best.read)} but was worth ${mult(o.best.worth)}.`;
+  });
+
   // ---- The chart: one dot per future, stacked in columns on a log scale of what the 100 returns ----
-  const H = 264;
-  const m = { top: 42, right: 14, bottom: 44, left: 14 };
+  const H = 236;
+  const m = { top: 52, right: 14, bottom: 44, left: 14 };
   const LO = 0.8;
   const HI = 12500;
   const BASE = H - m.bottom;
@@ -134,7 +206,9 @@
     return line([[pts[0][0], BASE], ...pts, [pts[pts.length - 1][0], BASE]]);
   });
 
-  // The typical result and the worst one in ten, each labelled in a row of its own above the stacks.
+  // Three labelled lines, each in a row of its own above the stacks: one big programme's typical 100 on top, then the
+  // worst one in ten, then the typical result. A line runs up to its own label's row, so a label is placed on the side
+  // away from the lines that reach higher than it.
   const CHAR = 6.7;
   function tag(text, at, y, prefer) {
     const w = text.length * CHAR;
@@ -146,22 +220,16 @@
     if (right) return { text, x: at + 5, y, anchor: 'start' };
     return { text, x: Math.max(L, Math.min(at + 5, R - w)), y, anchor: 'start' };
   }
-  // A line runs up to its own label's row, so the label in the lower row must not sit across the line of the upper one.
-  const ROWS = [14, 31];
-  const across = (l, at) => {
-    const w = l.text.length * CHAR;
-    const x0 = l.anchor === 'end' ? l.x - w : l.x;
-    return at > x0 - 3 && at < x0 + w + 3;
-  };
+  const ROWS = [13, 28, 43];
   const marks = $derived.by(() => {
     const xt = x(run.typical);
     const xw = x(run.worst);
-    const t = `Typical ${int(run.typical)}`;
-    const w = `Worst one in ten ${int(run.worst)}`;
-    const typicalFirst = { typical: { x: xt, tag: tag(t, xt, ROWS[0], 'start') }, worst: { x: xw, tag: tag(w, xw, ROWS[1], 'end') } };
-    if (!across(typicalFirst.worst.tag, xt)) return typicalFirst;
-    const worstFirst = { typical: { x: xt, tag: tag(t, xt, ROWS[1], 'start') }, worst: { x: xw, tag: tag(w, xw, ROWS[0], 'end') } };
-    return across(worstFirst.typical.tag, xw) ? typicalFirst : worstFirst;
+    const big = pilots > 1 && Math.abs(xt - x100) > 3;
+    return {
+      typical: { x: xt, tag: tag(`Typical ${int(run.typical)}`, xt, ROWS[2], run.typical >= BUDGET ? 'start' : 'end') },
+      worst: { x: xw, tag: tag(`Worst one in ten ${int(run.worst)}`, xw, ROWS[1], run.worst < BUDGET ? 'end' : 'start') },
+      big: big ? { x: x100, tag: tag(narrow ? 'Big programme: 100' : 'One big programme’s typical: 100', x100, ROWS[0], 'end') } : null,
+    };
   });
 
   const TICKS = [1, 10, 100, 1000, 10000];
@@ -171,7 +239,13 @@
   const describe = $derived(
     `${int(FUTURES)} futures, ${plan}, results ${WORLDS.find((w) => w.id === world).label.toLowerCase()}. ` +
       `Typical result ${int(run.typical)}, worst one in ten ${int(run.worst)}; ${pct(run.below)} of futures return less than 100. ` +
-      `An outline shows one big programme’s spread: typical ${int(base.typical)}, worst one in ten ${int(base.worst)}.`,
+      `An outline shows one big programme’s spread: typical ${int(base.typical)}, worst one in ten ${int(base.worst)}. ` +
+      `In the future opened above it: ${story}`,
+  );
+  const bandAria = $derived(
+    opened.n === 1
+      ? `One future, opened: one approach, untried, worth ${mult(opened.pick.worth)}.`
+      : `One future, opened: ${opened.n} pilots. ` + opened.pilots.map((q) => `Pilot ${q.n} read ${mult(q.read)}, worth ${mult(q.worth)}.`).join(' '),
   );
 </script>
 
@@ -197,24 +271,75 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="One budget, a thousand futures" sub="Each dot is one possible future: what the budget of 100 returns. Gridlines step tenfold." {rules}>
+    <Instrument title="One budget, a thousand futures" sub="Above: one future, opened. Below: what the budget of 100 returns in each of 1,000 futures." {rules}>
       <Puzzle id="tinkering" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls">
-        <Slider
-          id="tk-pilots"
-          label="Pilots first"
-          bind:value={pilots}
-          min={1}
-          max={MAX_PILOTS}
-          format={(v) => (v === 1 ? 'None' : `${v} pilots`)}
-          ends={['One big programme', `${MAX_PILOTS} pilots`]}
-        />
+        <div class="ctl">
+          <Slider
+            id="tk-pilots"
+            label="Pilots first"
+            bind:value={pilots}
+            min={1}
+            max={MAX_PILOTS}
+            format={(v) => (v === 1 ? 'None' : `${v} pilots`)}
+            ends={['One big programme', `${MAX_PILOTS} pilots`]}
+          />
+          <div class="budget" aria-label="The budget of {BUDGET}: {strip.spent ? `${strip.spent}; ` : ''}{strip.rest}." role="img">
+            <div class="coins" aria-hidden="true">
+              {#each Array(COINS) as _, k (k)}<span class="coin" class:spent={pilots > 1 && k < pilots}></span>{/each}
+            </div>
+            <div class="budget-text tkc-caption" aria-hidden="true">
+              {#if strip.spent}<span>{strip.spent}</span>{/if}<span class="rest">{strip.rest}</span>
+            </div>
+          </div>
+        </div>
         {#if revealed}
           <Segmented name="tk-world" label="Results are" bind:value={kind} options={WORLDS.map((w) => ({ value: w.id, label: w.label }))} />
         {/if}
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
+        <svg width={span} height={BH} role="img" aria-label={bandAria}>
+          <text class="tkc-axis-title" x="0" y="12">One future, opened</text>
+          <g class="key" aria-hidden="true">
+            <circle class="read" cx={span - 98} cy="8" r="3.5" />
+            <text class="tkc-label-2" x={span - 90} y="12">read</text>
+            <rect class="worth key-bar" x={span - 48} y="3" width="7" height="10" />
+            <text class="tkc-label-2" x={span - 36} y="12">worth</text>
+          </g>
+          {#each WT as t (t.v)}
+            <line class="tkc-grid" class:par={t.v === 1} x1={bm.left} x2={span - bm.right} y1={wy(t.v)} y2={wy(t.v)} />
+            <text class="tkc-axis-label" x={bm.left - 5} y={wy(t.v) + 4} text-anchor="end">{t.t}</text>
+          {/each}
+          {#each opened.pilots as q, i (q.n)}
+            {@const isPick = q.n === opened.pick.n}
+            {@const isBest = q.n === opened.best.n}
+            <rect
+              class="worth"
+              class:pick={isPick}
+              class:best={isBest && !isPick}
+              x={px(i) - colW / 2}
+              y={Math.min(wy(1), wy(q.worth))}
+              width={colW}
+              height={Math.max(1.5, Math.abs(wy(q.worth) - wy(1)))}
+            />
+            {#if q.read !== null}
+              <circle class="read-halo" cx={px(i)} cy={wy(q.read)} r={Math.max(2.5, Math.min(4, slot / 2 - 0.5))} />
+              <circle class="read" class:pick={isPick} cx={px(i)} cy={wy(q.read)} r={Math.max(2.5, Math.min(4, slot / 2 - 0.5))} />
+            {/if}
+            {#if opened.n > 1 && numbered(i)}
+              <text class="num" class:pick={isPick} class:best={isBest && !isPick} x={px(i)} y={BH - 4} text-anchor="middle">{q.n}</text>
+            {/if}
+          {/each}
+          {#each callouts as c (c.text)}
+            <text class="callout tkc-halo" class:pick={c.pick} x={c.x} y={c.y} text-anchor={c.anchor}>{c.text}</text>
+          {/each}
+          {#if opened.n === 1}
+            <text class="num" x={px(0) - 6} y={BH - 4}>approach 1</text>
+          {/if}
+        </svg>
+        <p class="tkc-small story">{story}</p>
+
         <svg width={span} height={H} role="img" aria-label={describe}>
           {#each TICKS as t (t)}
             <line class="tkc-grid" x1={x(t)} x2={x(t)} y1={m.top} y2={BASE} />
@@ -225,12 +350,13 @@
             <circle class="fut" class:low={d.low} cx={d.cx} cy={d.cy} r={r} />
           {/each}
           <path class="outline" d={outline} />
+          <circle class="ring" cx={dots[OPENED].cx} cy={dots[OPENED].cy} r={r + 2.5} />
 
-          <line class="budget" x1={x100} x2={x100} y1={m.top - 4} y2={BASE} />
+          <line class="budget-line" x1={x100} x2={x100} y1={marks.big ? marks.big.tag.y + 5 : marks.typical.tag.y + 5} y2={BASE} />
           <line class="typical" x1={marks.typical.x} x2={marks.typical.x} y1={marks.typical.tag.y + 5} y2={BASE} />
           <line class="worst" x1={marks.worst.x} x2={marks.worst.x} y1={marks.worst.tag.y + 5} y2={BASE} />
-          {#each [marks.typical.tag, marks.worst.tag] as l (l.y)}
-            <text class="tkc-label tkc-halo" x={l.x} y={l.y} text-anchor={l.anchor}>{l.text}</text>
+          {#each [marks.big?.tag, marks.worst.tag, marks.typical.tag].filter(Boolean) as l (l.y)}
+            <text class="tkc-label tkc-halo" class:soft={l === marks.big?.tag} x={l.x} y={l.y} text-anchor={l.anchor}>{l.text}</text>
           {/each}
 
           {#each TICKS as t (t)}
@@ -240,7 +366,8 @@
         </svg>
         <div class="tkc-legend">
           <span><span class="tkc-swatch sw-fut"></span>Returns 100 or more</span>
-          <span><span class="tkc-swatch sw-low"></span>Returns less than 100</span>
+          <span><span class="tkc-swatch sw-low"></span>Less than 100</span>
+          <span><span class="tkc-swatch sw-ring"></span>Opened above</span>
           <span><span class="tkc-swatch sw-outline"></span>One big programme’s spread</span>
         </div>
       </div>
@@ -264,8 +391,9 @@
         </p>
         <p>
           Every setting meets the same {int(FUTURES)} futures, each holding {MAX_PILOTS} approaches; n pilots try the first
-          n. The draws are spread evenly over the distribution, so one big programme’s typical result is 100. Stopping a
-          pilot early, and learning between pilots, are left out.
+          n, and the future opened above the dots is always the same one. The draws are spread evenly over the
+          distribution, so one big programme’s typical result is 100. Stopping a pilot early, and learning between pilots,
+          are left out.
         </p>
       {/snippet}
     </Instrument>
@@ -280,15 +408,16 @@
     </p>
     <p>
       The pilots make no approach better. They turn the spread of results into a choice, and a choice is worth more the
-      wider the spread. When results are predictable, every approach does about as well as the next, the pilots find
-      nothing worth their cost, and twelve of them leave a typical {T.pred12}. When results are wild, {words(T.wildN)}
-      pilots do best, with a typical result of {T.wildT}. Unpredictability is what pilots are paid in.
+      wider the spread, even when the readings mislead: in the opened future, pilot {O12.pick.n} read best but was worth
+      {SHARE} of pilot {O12.best.n}, and its {O12.rest} still returned {int(O12.result)} against one big programme’s
+      {int(O1.result)}. When results are predictable, the approaches barely differ, and twelve pilots leave a typical
+      {T.pred12}. When results are wild, {words(T.wildN)} pilots do best, at a typical {T.wildT}. Unpredictability is
+      what pilots are paid in.
     </p>
     <p>
-      One big programme takes the swings whole: whatever its one approach turns out to be worth, the whole budget gets
-      it. Real programmes often have a worse shape than this model gives them, because their surprises are mostly
-      overruns. Bent Flyvbjerg and Alexander Budzier studied 1,471 IT projects: the average overran its budget by 27%,
-      and one in six by about 200%.
+      One big programme takes the swings whole: whatever its one approach proves worth, the whole budget gets it. Real
+      programmes often fare worse, because their surprises are mostly overruns. Bent Flyvbjerg and
+      Alexander Budzier studied 1,471 IT projects: the average overran its budget by 27%, and one in six by about 200%.
     </p>
     <p>
       One big programme is a long chain of <span class="tkc-and">ANDs</span>: its one
@@ -311,6 +440,91 @@
 </Chapter>
 
 <style>
+  .ctl {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+  .budget {
+    display: grid;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .coins {
+    display: flex;
+    gap: 2px;
+  }
+  .coin {
+    flex: 1 1 0;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--tkc-options);
+  }
+  .coin.spent {
+    background: var(--tkc-muted);
+  }
+  .budget-text {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0 12px;
+  }
+  .budget-text .rest {
+    color: var(--tkc-options-ink);
+    font-weight: 600;
+    margin-left: auto;
+  }
+  .read {
+    fill: none;
+    stroke: var(--tkc-ink);
+    stroke-width: 1.5;
+  }
+  .read-halo {
+    fill: none;
+    stroke: var(--tkc-surface);
+    stroke-width: 4;
+  }
+  .read.pick {
+    stroke: var(--tkc-options);
+    stroke-width: 2;
+  }
+  .worth {
+    fill: var(--tkc-rule);
+  }
+  .worth.best,
+  .key-bar {
+    fill: var(--tkc-ink-2);
+  }
+  .worth.pick {
+    fill: var(--tkc-options);
+  }
+  .par {
+    stroke: var(--tkc-rule);
+    stroke-dasharray: 3 2;
+  }
+  .num {
+    font-size: 11px;
+    fill: var(--tkc-muted);
+  }
+  .num.pick {
+    fill: var(--tkc-options-ink);
+    font-weight: 700;
+  }
+  .num.best {
+    fill: var(--tkc-ink);
+    font-weight: 700;
+  }
+  .callout {
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--tkc-ink);
+  }
+  .callout.pick {
+    fill: var(--tkc-options-ink);
+  }
+  .story {
+    margin: 2px 0 10px;
+  }
   .fut {
     fill: var(--tkc-ink-2);
     opacity: 0.5;
@@ -325,9 +539,15 @@
     stroke-width: 1.5;
     stroke-linejoin: round;
   }
-  .budget {
-    stroke: var(--tkc-conditions);
-    stroke-width: 1.5;
+  .ring {
+    fill: none;
+    stroke: var(--tkc-options);
+    stroke-width: 2;
+  }
+  .budget-line {
+    stroke: var(--tkc-ink-2);
+    stroke-width: 1.25;
+    stroke-dasharray: 1.5 3;
   }
   .typical,
   .worst {
@@ -337,12 +557,17 @@
   .worst {
     stroke-dasharray: 5 3;
   }
+  .soft {
+    fill: var(--tkc-ink-2);
+    font-weight: 500;
+  }
   .at-budget {
-    fill: var(--tkc-conditions-ink);
+    fill: var(--tkc-ink);
     font-weight: 700;
   }
   .sw-fut,
-  .sw-low {
+  .sw-low,
+  .sw-ring {
     border-radius: 50%;
   }
   .sw-fut {
@@ -351,6 +576,10 @@
   }
   .sw-low {
     background: var(--tkc-conditions);
+  }
+  .sw-ring {
+    background: none;
+    border: 2px solid var(--tkc-options);
   }
   .sw-outline {
     width: 14px;

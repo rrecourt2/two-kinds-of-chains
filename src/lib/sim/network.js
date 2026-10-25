@@ -120,16 +120,20 @@ export function byLinks(adj) {
 }
 
 // ---------------------------------------------------------------------------
-// The chapter's stress test. 48 banks grown around a few hubs; each holds 5%
-// capital. One bank loses 8% of its assets on its own loans: it fails only if
+// The chapter's stress test. 48 banks grown around a few hubs; today each holds
+// 5% capital. One bank loses 8% of its assets on its own loans: it fails only if
 // that is more than its capital, and then its lenders take the loss. The reader
-// chooses where the loss lands, and how to share 48 extra points of capital.
+// chooses where the loss lands, the capital every bank holds (2–10% of assets),
+// and whether the most connected banks hold extra on top (48 percentage points
+// in all). The supervisor may add at most 48 percentage points to today's capital.
 
 export const BANKS = 48;
 export const HUB_LINKS = 4; // about four links per bank on average; each newcomer links to two
-export const CAPITAL = 5; // % of assets, every bank
+export const CAPITAL = 5; // % of assets, every bank, today
+export const CAPITALS = [2, 3, 4, 5, 6, 7, 8, 9, 10]; // the slider: capital for every bank, % of assets
 export const LOSS = 8; // % of assets the bank where the loss lands loses on its own loans
-export const EXTRA = 48; // points of extra capital to share out, across all banks
+export const EXTRA = 48; // percentage points of extra capital for the hubs, in all; also the budget
+export const LIMIT = 5; // the puzzle: wherever the loss lands, at most this many banks fail
 
 /**
  * The hub networks of earlier versions of the chapter used seeds 15200–15239;
@@ -146,16 +150,41 @@ export function hubSystem(t = EXAMPLE) {
   return buildNetwork('hubs', BANKS, HUB_LINKS, HUB_SEED + t);
 }
 
-/** Ways to share out the extra capital: `top` most connected banks get EXTRA ÷ top points each. */
+/**
+ * The other banking system, shown once the puzzle is solved: the same 48 banks
+ * linked as many similar banks, every pair with the same chance, about ten
+ * partners each (the earlier chapter's random networks, seeds 2100–2139).
+ * Network 8 is the one whose worst landings come closest to the average of the
+ * 40 (test/contagion.test.js).
+ */
+export const SIMILAR_LINKS = 10;
+export const SIMILAR_SEED = 2100;
+export const SIMILAR_EXAMPLE = 8;
+
+/** Similar-bank network number `t` (the figure's is SIMILAR_EXAMPLE). */
+export function similarSystem(t = SIMILAR_EXAMPLE) {
+  return buildNetwork('random', BANKS, SIMILAR_LINKS, SIMILAR_SEED + t);
+}
+
+/** The two banking systems: as it is (grown around hubs), and many similar banks. */
+export const SYSTEMS = [
+  { value: 'hubs', label: 'As it is', seed: HUB_SEED + EXAMPLE, network: hubSystem },
+  { value: 'similar', label: 'Many similar banks', seed: SIMILAR_SEED + SIMILAR_EXAMPLE, network: similarSystem },
+];
+export const systemOf = (value) => SYSTEMS.find((s) => s.value === value);
+
+/**
+ * Extra capital for the hubs, on top of what every bank holds: the `top` most
+ * connected banks get EXTRA ÷ top percentage points each (48 in all).
+ */
 export const SHARES = [
   { value: 'none', label: 'None', top: 0 },
-  { value: 'every', label: 'Every bank +1', top: BANKS },
-  { value: 'top12', label: 'Top 12 +4', top: 12 },
-  { value: 'top1', label: 'Top bank +48', top: 1 },
+  { value: 'top3', label: '3 biggest +16', top: 3 },
+  { value: 'top12', label: '12 biggest +4', top: 12 },
 ];
 export const shareOf = (value) => SHARES.find((s) => s.value === value);
 
-/** Each bank's capital, in % of assets, once the `top` most connected get the extra points. */
+/** Each bank's capital, in % of assets: `base` for every bank, plus the extra for the `top` most connected. */
 export function capitalFor(adj, top, base = CAPITAL, extra = EXTRA) {
   const capital = new Array(adj.length).fill(base);
   if (top > 0) {
@@ -178,14 +207,64 @@ export function everywhere(adj, capital, loss = LOSS) {
   return { sizes, worst, worstAt: sizes.map((s, i) => (s === worst ? i : -1)).filter((i) => i >= 0) };
 }
 
-/** In how many of the hub networks a share of the extra capital keeps the worst place to `limit` failures or fewer. */
-export function holdsAcross(top, limit = 5, networks = ALTERNATIVES) {
+/**
+ * Percentage points of capital added to today's (CAPITAL for every bank): the
+ * change for every bank plus the extra for the hubs. Negative when every bank
+ * holds less than today.
+ */
+export function added(base, top, extra = EXTRA) {
+  return BANKS * (base - CAPITAL) + (top > 0 ? extra : 0);
+}
+
+/** The puzzle's budget: capital is raised, never cut below today's, by at most EXTRA percentage points. */
+export function withinBudget(base, top) {
+  return base >= CAPITAL && added(base, top) <= EXTRA;
+}
+
+/**
+ * The curve: for every capital on the slider, the banks that fail at the worst
+ * place to land (and where that is), with the `top` most connected holding extra.
+ */
+export function worstCurve(adj, top, capitals = CAPITALS) {
+  return capitals.map((capital) => ({ capital, ...everywhere(adj, capitalFor(adj, top, capital)) }));
+}
+
+/** Where a curve tips: the index `i` of its steepest fall, between capitals[i] and capitals[i + 1]. */
+export function tippingPoint(curve) {
+  let at = 0;
+  for (let i = 1; i < curve.length - 1; i++) if (curve[i].worst - curve[i + 1].worst > curve[at].worst - curve[at + 1].worst) at = i;
+  return at;
+}
+
+/**
+ * A bank's rule as a quorum of its partners: it fails once `k` of its
+ * `partners` have failed (null if it stands even when all of them fail).
+ */
+export function partnersToFail(capitalPct, partners) {
+  const k = absorbs(capitalPct, partners) + 1;
+  return k > partners ? null : k;
+}
+
+/** In how many of the networks of one system this capital keeps the worst place to `limit` failures or fewer. */
+export function holdsAcross(top, limit = LIMIT, networks = ALTERNATIVES, base = CAPITAL, system = 'hubs') {
+  const network = systemOf(system).network;
   let held = 0;
   for (let t = 0; t < networks; t++) {
-    const adj = hubSystem(t);
-    if (everywhere(adj, capitalFor(adj, top)).worst <= limit) held++;
+    const adj = network(t);
+    if (everywhere(adj, capitalFor(adj, top, base)).worst <= limit) held++;
   }
   return held;
+}
+
+/** The most banks any one landing brings down, across the networks of one system, at this capital. */
+export function worstAcross(system, base = CAPITAL, top = 0, networks = ALTERNATIVES) {
+  const network = systemOf(system).network;
+  let most = 0;
+  for (let t = 0; t < networks; t++) {
+    const adj = network(t);
+    most = Math.max(most, everywhere(adj, capitalFor(adj, top, base)).worst);
+  }
+  return most;
 }
 
 /**

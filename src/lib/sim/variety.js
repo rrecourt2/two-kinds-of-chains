@@ -16,6 +16,73 @@ export const DAYS_A_WEEK = 5;
 export const WEEKS_A_YEAR = 52;
 export const MENU = { min: 5, max: 60, start: 10 };
 
+/**
+ * Today's sixty kinds of client request, most common first: illustrative names for the bars and the menu.
+ * The more varied world keeps these sixty in the same order and adds sixty rarer, newer kinds after them.
+ */
+export const KIND_NAMES = [
+  'Loan on standard terms',
+  'New repayment date',
+  'More time for a report',
+  'Top-up of a loan',
+  'Early repayment',
+  'Change of signatory',
+  'Small covenant waiver',
+  'Drawdown in two parts',
+  'Swap of collateral',
+  'Later disbursement date',
+  'Fee waiver',
+  'Change of bank account',
+  'Fixed rate, not floating',
+  'Trade finance line',
+  'Loan to a subsidiary',
+  'Interest-only months',
+  'Release of a pledge',
+  'Change of auditor',
+  'Working capital line',
+  'Currency switch',
+  'Guarantee for a local bank',
+  'Loan with another lender',
+  'Change of owner',
+  'Leasing, not a loan',
+  'Grace period after a flood',
+  'Merger of two clients',
+  'Subordinated loan',
+  'Loan in a new country',
+  'Equity, not debt',
+  'Loan on warehouse receipts',
+  'Green loan, lower rate',
+  'Supplier finance',
+  'Working capital in a new currency',
+  'Guarantee for a bond',
+  'Loan to a start-up',
+  'Loan to a state-owned firm',
+  'First-loss cover for a fund',
+  'Insurance, not collateral',
+  'Loan to a savings group',
+  'Payment holiday after a quake',
+  'Loan to a hospital',
+  'Sharia-compliant terms',
+  'Bridge loan before a bond',
+  'Repayment under capital controls',
+  'Grace period after a drought',
+  'Carbon credits as security',
+  'Loan secured on livestock',
+  'Credit scored on mobile money',
+  'Partial write-off',
+  'Split of a family firm',
+  'Loan in a conflict area',
+  'Mortgage on customary land',
+  'Pledge of a future harvest',
+  'Debt-for-nature swap',
+  'Client in default elsewhere',
+  'Refugee-run business',
+  'Guarantee in a new currency',
+  'Moratorium set by a regulator',
+  'Restructuring after devaluation',
+  'Cooperative, no audited accounts',
+];
+
 /** Share of all requests of each kind, most common first. */
 export function kindShares(kinds, exponent = EXPONENT) {
   const w = Array.from({ length: kinds }, (_, i) => Math.pow(i + 1, -exponent));
@@ -101,6 +168,8 @@ export function outcome(world, menu, opts = {}) {
     answered: 1 - unanswered(world, menu),
     escalated: lam,
     load: lam / ROOM,
+    // Cases left waiting after an average meeting (infinite when the queue grows without end).
+    left: meanBacklog(lam),
     wait,
     jammed: lam >= ROOM,
     // When jammed, how many more cases wait at the end of each year than at its start.
