@@ -1,27 +1,31 @@
 // The irony of the reliable machine (chapter “The irony of the reliable machine”).
 //
-// A development lender screens about 200 payments a working day. A system screens a share of them and gets 1 in
-// 1,000 wrong; people screen the rest and, in practice, get 1 in 100 wrong. A few days a year the system fails, and
-// people screen every payment that day by hand. Their skill s (0 to 1) sets their mistakes on such a day:
-// 1% + 9% × (1 − s) of the payments. A whole day by hand — a failure, or a practice day on which the system screens
-// behind them — brings s back to 1. After it, s fades (time constant two months) toward a floor that the share
-// they screen every day keeps up: full practice at 30% or more, proportionally less below. Day 0 is go-live; until
-// then people screened everything, so they start in full practice. Mistakes are expected numbers.
+// Portfolio monitoring at a development lender. Borrowers send their accounts and covenant certificates every
+// quarter; on an average working day about ten sets arrive, and twenty figures from each are spread into the
+// lender's template, from which the covenants and the rating are computed: 200 figures a day. A system reads a share
+// of them and misreads 1 in 1,000; analysts read the rest and, in practice, misread 1 in 100. A few days a year the
+// system fails, and analysts spread every set that day by hand. Their skill s (0 to 1) sets their misreadings on
+// such a day: 1% + 9% × (1 − s) of the figures. A whole day by hand — a failure, or a practice day on which the
+// system checks behind them — brings s back to 1. After it, s fades (time constant two months) toward a floor that
+// the share they read every day keeps up: full practice at 30% or more, proportionally less below. Day 0 is
+// go-live; until then analysts read everything, so they start in full practice. Misread figures are expected numbers.
 import { makeRng, exponential } from './rng.js';
 
 export const PARAMS = {
-  perDay: 200,
+  sets: 10, // sets of accounts reaching the lender on an average working day
+  figures: 20, // figures spread from each set into the lender's template
+  perDay: 200, // figures a working day: sets × figures
   monthDays: 21,
   months: 36,
   errSystem: 0.001,
   errPractised: 0.01,
   errRusty: 0.1,
-  fullShare: 0.3, // screening this share by hand every day keeps people in full practice
+  fullShare: 0.3, // reading this share by hand every day keeps analysts in full practice
   fadeMonths: 2, // time constant of the fade after a whole day by hand
   failsPerYear: 3,
   seed: 157, // seven failures in three years, the first a month after go-live
 };
-/** The board's limit for a day the system fails, and the share the system must screen. */
+/** The limit for a day the system fails (misread figures), and the share the system must read. */
 export const LIMIT = 10;
 export const TARGET = 0.9;
 /** Working days between practice days. */
@@ -47,16 +51,20 @@ export const FAILS = failureDays();
 /** The skill that the daily share by hand keeps up on its own. */
 export const floorSkill = (auto, p = PARAMS) => Math.min(1, (1 - auto) / p.fullShare);
 
-/** People's share of mistakes on a day they screen everything, at skill s. */
+/** The share of figures analysts misread on a day they spread everything, at skill s. */
 export const errorRate = (s, p = PARAMS) => p.errPractised + (p.errRusty - p.errPractised) * (1 - s);
 
-/** Expected mistakes on a normal day (practice days included: the system screens behind people). */
+/**
+ * Expected misread figures on a normal day: the system's share at its rate, the analysts' daily share (read with
+ * time to spare) at the practised rate. Practice days count as normal: the system checks behind the analysts.
+ */
 export const normalDay = (auto, p = PARAMS) => p.perDay * (auto * p.errSystem + (1 - auto) * p.errPractised);
 
 /**
- * Three years from go-live. `auto` is the share the system screens (0 to 0.99); `practice` is 'none', 'quarter'
- * or 'month'. Returns, for every working day, the mistakes people would make if the system failed that morning
- * (`curve`), the days it did fail with their mistakes, the practice days, and the totals the chapter quotes.
+ * Three years from go-live. `auto` is the share the system reads (0 to 0.99); `practice` is 'none', 'quarter'
+ * or 'month'. Returns, for every working day, the figures analysts would misread if the system failed that morning
+ * (`curve`), the days it did fail with their misread figures (`mistakes`), the practice days, and the totals the
+ * chapter quotes.
  */
 export function run(auto, practice = 'none', fails = FAILS, p = PARAMS) {
   const days = p.months * p.monthDays;
@@ -90,6 +98,8 @@ export function run(auto, practice = 'none', fails = FAILS, p = PARAMS) {
     normalYear: perNormalDay * 12 * p.monthDays,
     normalTotal: perNormalDay * (days - failed.length),
     failTotal,
+    // The share of three years' misread figures that fall on the few days it failed.
+    failShare: failTotal / (failTotal + perNormalDay * (days - failed.length)),
     worstAny,
     worstFailed,
     floor,
@@ -100,3 +110,10 @@ export function run(auto, practice = 'none', fails = FAILS, p = PARAMS) {
 export const automatedEnough = (auto) => auto >= TARGET - EPS;
 export const failureDayOk = (r) => r.worstAny < LIMIT;
 export const solves = (auto, practice) => automatedEnough(auto) && failureDayOk(run(auto, practice));
+
+/** The largest whole percentage the system may read with this practice and still pass the failure-day check. */
+export const mostAutomated = (practice) => {
+  let best = 0;
+  for (let a = 0; a <= 99; a++) if (failureDayOk(run(a / 100, practice))) best = a;
+  return best;
+};

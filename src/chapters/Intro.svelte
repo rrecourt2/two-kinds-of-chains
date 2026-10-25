@@ -33,7 +33,7 @@
     disbursement: 'A three-month promise, twelve conditions: how often is the money on time?',
     covenants: 'Twelve covenants on every loan, and 10 of 200 borrowers in real trouble: what does one breach tell the lender?',
     tools: 'The same AI with a person in the loop or on autopilot: which one gains when the AI turns erratic?',
-    automation: 'A screening system that almost never fails: what does the day it fails cost, once nobody does its work any more?',
+    automation: 'A system that reads borrowers’ accounts and almost never fails: what does the day it fails cost, once nobody does its work any more?',
     variety: 'Sixty kinds of client request, a menu of ten answers and a committee with five places a week: how many answers does it take?',
     tinkering: 'A budget of 100, and nobody can tell which approach will work: one big programme, or pilots first?',
     redqueen: 'Checks catch three frauds in four in their first month. What do they catch in year three, once the other side has learned?',
