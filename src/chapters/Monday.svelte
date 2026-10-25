@@ -111,36 +111,36 @@
   <header class="head">
     <div class="tkc-eyebrow">Chapter {total} of {total} · Patterns</div>
     <h2 class="tkc-display tkc-chapter-title" id="{prefix}-chapter-title" tabindex="-1">What it means on Monday</h2>
-    <p class="tkc-lede">The controls can stay. What changes is their shape. Two questions sort any step in a process: does it do the work or check it, and is there an alternative when it is unavailable?</p>
+    <p class="tkc-lede">Good complexity multiplies options. Bad complexity multiplies conditions. Scale multiplies whichever you have. Every link in this story did one or the other, and what it cost depended on how long the chain had grown and what weather it met.</p>
   </header>
 
-  <div class="matrix" role="table" aria-label="Two-question test for a step in a process">
+  <div class="matrix" role="table" aria-label="Options and conditions, in a short chain and a long one">
     <div class="corner" role="presentation"></div>
-    <div class="colhead" role="columnheader">There is an alternative</div>
-    <div class="colhead" role="columnheader">Only one person or system can do it</div>
+    <div class="colhead" role="columnheader">A short chain, calm weather</div>
+    <div class="colhead" role="columnheader">A long chain, rough weather</div>
 
-    <div class="rowhead" role="rowheader">It does the work</div>
+    <div class="rowhead" role="rowheader">A link that adds an option</div>
+    <div class="cell" role="cell">
+      <span class="cell-tag" aria-hidden="true">A short chain, calm weather</span>
+      <span class="cell-name">Looks like waste</span>
+      <span>Paid for every day, needed on few of them. <em>A stand-in who never stands in; a reviewer with time to spare; pilots when results are predictable.</em></span>
+    </div>
     <div class="cell good" role="cell">
-      <span class="cell-tag" aria-hidden="true">There is an alternative</span>
-      <span class="cell-name">Specialization</span>
-      <span>Good complexity: it grows stronger with volume. <em>Examples: a pool of credit analysts; a platform any team can use.</em></span>
-    </div>
-    <div class="cell" role="cell">
-      <span class="cell-tag" aria-hidden="true">Only one person or system can do it</span>
-      <span class="cell-name">Key-person risk</span>
-      <span>Valuable but fragile: one absence stops it; a second person or a fallback is what makes it sturdy. <em>Example: the one person who can fix a legacy system.</em></span>
+      <span class="cell-tag" aria-hidden="true">A long chain, rough weather</span>
+      <span class="cell-name">Grows stronger</span>
+      <span>The swings become choices. <em>The pencil’s thousands of suppliers; one shared line; pilots when nobody can tell what will work; a person in the loop of an erratic AI.</em></span>
     </div>
 
-    <div class="rowhead" role="rowheader">It checks the work</div>
+    <div class="rowhead" role="rowheader">A link that adds a condition</div>
     <div class="cell" role="cell">
-      <span class="cell-tag" aria-hidden="true">There is an alternative</span>
-      <span class="cell-name">Light control</span>
-      <span>Cheapest when it is fast and automatic. <em>Examples: a check as data is typed; a four-eyes check by any qualified colleague.</em></span>
+      <span class="cell-tag" aria-hidden="true">A short chain, calm weather</span>
+      <span class="cell-name">Barely felt</span>
+      <span>Each link nearly always holds, and so, mostly, does the chain. <em>Six checks at 95%; conditions that each wait for one other; an autopilot while the AI is steady.</em></span>
     </div>
     <div class="cell bad" role="cell">
-      <span class="cell-tag" aria-hidden="true">Only one person or system can do it</span>
-      <span class="cell-name">Bad complexity</span>
-      <span>The step everything waits for; a second route keeps the check and removes the wait. <em>Examples: a named sign-off everything waits for; a form that re-keys data another system already has.</em></span>
+      <span class="cell-tag" aria-hidden="true">A long chain, rough weather</span>
+      <span class="cell-name">Stalls all at once</span>
+      <span>Past the tipping point, each extra link costs more than the last. <em>Reviewers at 95%; a programme tied in a knot; the hubs of the stress test; Tempus at his bench.</em></span>
     </div>
   </div>
 
