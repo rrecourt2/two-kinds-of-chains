@@ -279,7 +279,7 @@
   );
 
   // ---- Tiles ----
-  const answeredSub = $derived(now.escalated === 0 ? 'nothing goes to head office' : `${one(now.escalated)} requests a week go to head office`);
+  const answeredSub = $derived(now.escalated === 0 ? `all ${REQUESTS} requests a week` : `${one(REQUESTS - now.escalated)} of about ${REQUESTS} requests a week`);
   const waitValue = $derived(
     now.escalated === 0 ? 'None' : now.jammed ? 'No end' : now.wait >= 10 ? `${Math.round(now.wait / 5)} weeks` : `${one(now.wait)} days`,
   );
@@ -447,8 +447,7 @@
     <p>
       None of the {word(WORLDS.today - BEST)} kinds left off a {word(BEST)}-answer menu comes up more than about once a
       month; together they bring {one(AT.escalated)} a week, nine-tenths of the committee’s room. Ten more answers save
-      {word(Math.round(AT.wait - MORE.wait))} days between them. One fewer, and the committee passes its tipping point,
-      the queues chapter’s curve on an agenda shared like the fast track’s: {word(Math.round(LESS.left))} cases are left
+      {word(Math.round(AT.wait - MORE.wait))} days between them. One fewer, and the committee passes its tipping point: {word(Math.round(LESS.left))} cases are left
       after a meeting instead of {word(Math.round(AT.left))}, and the wait grows by
       {word(Math.round(LESS.wait - AT.wait))} days.
     </p>

@@ -195,12 +195,12 @@
     <p>
       A covenant is only as good as the figures it is tested on. Every quarter a development lender’s borrowers send
       their accounts: banks, microlenders, factories, power plants, in a dozen accounting traditions. Analysts used to
-      spread them by hand, about {word(PARAMS.sets)} sets a working day, {word(PARAMS.figures)} figures from each into
+      spread them by hand, about {word(PARAMS.sets)} sets a working day, {word(PARAMS.figures)} key figures from each into
       the lender’s template. Then the bank bought a system that reads them with a tenth of the
       analysts’ mistakes. Year by year it took more of the reading.
     </p>
     <p>
-      A few days a year it fails: an outage, or an update that quietly breaks it. On those days analysts spread every
+      A few days a year it fails: an outage, or an update that breaks it. On those days analysts spread every
       set by hand again.
     </p>
     <p>On a normal day, the more the system reads, the fewer the misread figures. The question is what the days it fails cost.</p>
@@ -209,7 +209,7 @@
   {#snippet figure()}
     <Instrument
       title="Three years with the system"
-      sub="Each working day: how many of the day’s {PARAMS.perDay} figures analysts would misread if the system failed that morning."
+      sub="Each working day: how many of the day’s {PARAMS.perDay} figures from borrowers’ accounts analysts would misread if it failed."
       {rules}
     >
       <Puzzle id="automation" {...puzzle} onshow={showAnswer} />
@@ -285,7 +285,7 @@
         <Stat
           label={auto === 0 ? 'Misread on days it failed' : `Misread on the ${word(r.failed.length)} days it failed`}
           value={auto === 0 ? 'None' : pct(r.failShare)}
-          sub={auto === 0 ? 'no system to fail' : `of three years’ misread figures (${int(r.failTotal)}), on ${pct(r.failed.length / DAYS)} of the days`}
+          sub={auto === 0 ? 'no system to fail' : `${int(r.failTotal)} of three years’ ${int(r.failTotal + r.normalTotal)} misread figures, on ${pct(r.failed.length / DAYS)} of the days`}
           swatch={over ? 'var(--tkc-conditions)' : ''}
         />
       </div>
@@ -309,8 +309,7 @@
   {#snippet after()}
     <p>
       The system did what it was bought for: at 99%, normal days bring {T.yearBase} misread figures a year instead of
-      {T.yearHand}. The first failure, a month in, cost {T.first}, while the analysts still remembered it; later
-      ones cost up to {T.worst}. The {T.count} days it failed brought {T.failTotal}: {T.failShare} of three years’ misread
+      {T.yearHand}. With no practice days, the first failure, a month in, cost {T.first}, while skills were fresh; later ones cost up to {T.worst}. The {T.count} failures brought {T.failTotal}: {T.failShare} of three years’ misread
       figures, on {T.failDays} of the days. Each can leave a covenant tested on a wrong number.
     </p>
     <p>
@@ -320,8 +319,7 @@
       contribution of the human operator.”
     </p>
     <p>
-      Reliability makes it a loop that feeds itself, as on the fast track: the better the system reads, the more
-      reading it is given, the less the analysts practise, and the better it looks beside them. Every failure is also a
+      Reliability starts a loop that feeds itself: the better the system reads, the more reading it is given, the less the analysts practise, and the better the system looks beside them. Every failure is also a
       day of practice, so the rarer the failures, the more each one costs. In the chain, reading is an
       <span class="tkc-or">OR</span>: the system, or the analysts when it fails. Like the riddle’s stand-in who has never
       stood in, the second half of that OR can exist on paper only.

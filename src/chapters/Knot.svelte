@@ -291,7 +291,7 @@
         'Conditions that wait for each other, directly or not, form a knot.',
       ]}
     >
-      <Puzzle id="knot" {...puzzle} onshow={showAnswer} />
+      <Puzzle id="knot" {...puzzle} predict onshow={showAnswer} />
 
       <div class="tkc-controls">
         <Slider
@@ -303,7 +303,7 @@
           step={10}
           format={fmtLinks}
           limit={live ? null : START}
-          limitNote="{START + 10} to {MAX} links open after your first answer."
+          limitNote="{START + 10} to {MAX} links, and the average over many programmes, open after your first answer."
         />
         <div class="ctl">
           <Segmented
@@ -363,7 +363,7 @@
         <div class="tkc-legend">
           <span><span class="tkc-swatch round" style:background="var(--tkc-options)" aria-hidden="true"></span>Can be met</span>
           <span><span class="tkc-swatch round" style:background="var(--tkc-conditions)" aria-hidden="true"></span>Stuck</span>
-          <span><span class="knot-key" aria-hidden="true"></span>A knot</span>
+          <span><span class="knot-key" aria-hidden="true"></span>{joint > 1 ? 'A knot (blue: signed together)' : 'A knot'}</span>
           <span>
             <svg width="22" height="10" aria-hidden="true"><path d="M1 5H15" class="key-shaft" /><path d="M21 5L15 2V8Z" class="key-head" /></svg>
             Waits for
@@ -438,12 +438,10 @@
 
   {#snippet after()}
     <p>
-      Between {START} links and {ASKED}, only the number of links changed. Across {int(RUNS)} programmes like this one, the
-      share of conditions that can be met falls from {share(20)}% at 20 links to {share(40)}% at 40, {share(60)}% at 60
-      and {share(80)}% at 80. Programmes that can be met in full fall from {full(20)} to {full(40)}, {full(60)} and {full(80)}.
+      Between {START} links and {ASKED}, only the number of links changed. Across {int(RUNS)} programmes like this one, the share of conditions that can be met falls from {share(40)}% at 40 links to {share(80)}% at 80, and the programmes that can be met in full, from {full(40)} to {full(80)}.
     </p>
     <p>
-      That is a tipping point, like the knee in the queues’ curve, and it sits at one link per condition. Below it, knots
+      That is a tipping point, like the one on the queues chapter’s curve, and it sits at one link per condition. Below it, knots
       are few and small. Above it, they share conditions and join into one knot that grows until it holds most of the
       programme: {Math.round(at('largest', ASKED))} of the 40, on average, at {ASKED} links. In this programme, the tariff rise,
       the regulator, the law and the proof that tariffs cover costs end up in the same knot as the equity and the loan.
@@ -458,8 +456,7 @@
     <p>
       The biologist Stuart Kauffman found the same cliff in design, and called it a complexity catastrophe. When each of
       twelve design choices depends on every other, a hundred teams improving a design one change at a time almost all
-      stall at one of some 315 dead ends, where any single change makes things worse; one reaches the best. Kept inside
-      modules of four, the same dependencies let every team reach it. That is the watchmakers’ secret.
+      stall at one of some 315 dead ends, where any single change makes things worse; one reaches the best. Three dependencies each, kept inside modules of four whose teams try their choices together, let every team reach it. That is the watchmakers’ secret.
     </p>
   {/snippet}
 

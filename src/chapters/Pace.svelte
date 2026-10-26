@@ -193,7 +193,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="Sixty years in one country" sub="Each bar is one year’s losses; the line is the cushion held. The tiles average {int(HISTORIES)} histories like this." {rules}>
+    <Instrument title="Sixty years in one country" sub="Each bar is one year’s losses; the outline is the cushion held. The tiles average {int(HISTORIES)} histories like this." {rules}>
       <Puzzle id="pace" {...puzzle} onshow={showAnswer} />
 
       <div class="tkc-controls">

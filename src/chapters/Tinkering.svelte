@@ -271,7 +271,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="One budget, a thousand futures" sub="Above: one future, opened. Below: what the budget of 100 returns in each of 1,000 futures." {rules}>
+    <Instrument title="One budget, a thousand futures" sub="A new kind of programme, such as off-grid power for clinics. Above: one future, opened; below, 1,000 futures." {rules}>
       <Puzzle id="tinkering" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls">
         <div class="ctl">
@@ -338,7 +338,12 @@
             <text class="num" x={px(0) - 6} y={BH - 4}>approach 1</text>
           {/if}
         </svg>
-        <p class="tkc-small story">{story}</p>
+        <p class="tkc-small story">
+          {story}{#if opened.n === 1}{' '}With pilots, each shows here: its reading
+            <svg class="mark" width="9" height="9" aria-hidden="true"><circle class="read" cx="4.5" cy="4.5" r="3.5" /></svg>
+            against its worth
+            <svg class="mark" width="8" height="11" aria-hidden="true"><rect class="worth key-bar" x="0.5" y="0.5" width="7" height="10" /></svg>.{/if}
+        </p>
 
         <svg width={span} height={H} role="img" aria-label={describe}>
           {#each TICKS as t (t)}
@@ -524,6 +529,11 @@
   }
   .story {
     margin: 2px 0 10px;
+  }
+  .story .mark {
+    display: inline-block;
+    vertical-align: -1px;
+    overflow: visible;
   }
   .fut {
     fill: var(--tkc-ink-2);

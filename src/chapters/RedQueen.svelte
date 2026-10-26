@@ -74,7 +74,7 @@
   // ---- Both views share one month axis: the catch above, one run's attempts by pattern below ----
   const wide = $derived(width >= 480);
   const span = $derived(Math.max(width, 240));
-  const LABEL = $derived(wide ? 118 : 84);
+  const LABEL = $derived(wide ? 118 : 92);
   const YG = $derived(wide ? 6 : 3); // the gap between years
   const cw = $derived((span - LABEL - 2 * YG) / MONTHS);
   const xOf = (mo) => LABEL + mo * cw + Math.floor(mo / 12) * YG;
@@ -481,7 +481,7 @@
     border-radius: 2px;
   }
   .narrow .name {
-    font-size: 9px;
+    font-size: 10px;
   }
   .narrow .note,
   .y3-small {

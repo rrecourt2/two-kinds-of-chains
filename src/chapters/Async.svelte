@@ -158,8 +158,7 @@
     <ul>
       <li>
         <strong>The slowest piece sets the pace.</strong> With credit and the E&amp;S review both twice as fast, credit
-        and the legal documents tie at two days. And real work varies: the
-        more pieces run side by side, the more likely one of them is late, and that one sets the date.
+        and the legal documents tie at two days. And real work varies: the more pieces run side by side, the more likely one of them is late.
       </li>
       <li>
         <strong>Bad inputs are cheapest to stop at the start.</strong> Quality engineers call this the 1-10-100 rule: a

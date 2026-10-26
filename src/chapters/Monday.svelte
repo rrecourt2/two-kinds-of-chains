@@ -40,7 +40,7 @@
     { title: 'Several sources, not one', text: 'A unit that draws on several sources grows a little more slowly in good years and survives the years when one source fails.', ch: 'extinction' },
     { title: 'Gates sized to the loss', text: 'A check earns its wait where one loss would be too large to survive; on small amounts the same check is mostly a queue.', ch: 'gate' },
     { title: 'Small teams, light links', text: 'Work sits in small teams that are fully linked inside and lightly linked to each other, so required links grow with the team, not with the whole organization.', ch: 'graph' },
-    { title: 'Conditions read side by side', text: 'Conditions in different documents can wait for each other; read side by side, a loop shows while it is small enough to close together. Past about one link each, the loops join into one knot that can only be met all at once.', ch: 'knot' },
+    { title: 'Conditions read together', text: 'Conditions in different documents can wait for each other; read side by side, a knot shows while it is small enough to close together. Past about one link per condition, small knots join into one that can only be met all at once.', ch: 'knot' },
     { title: 'Modular work', text: 'Work is saved in finished pieces, each with a clear owner and a clear interface, so an interruption costs only the piece in hand and trouble in one part stays there.', ch: 'modules' },
     { title: 'Conditions that bend', text: 'Every condition stays on the list; a late document can be met another way where one exists, and a condition that need not come first follows the money as an undertaking with a deadline.', ch: 'disbursement' },
     { title: 'Warning lights read against the base rate', text: 'What a covenant breach says depends on how many healthy borrowers trip the same covenant; past a few strong covenants, each new one adds mostly noise, and every false alarm becomes a waiver.', ch: 'covenants' },
@@ -48,7 +48,7 @@
     { title: 'A backup kept in practice', text: 'The more reliably a system does the work, the longer its people go without doing it; a day by hand now and then, with the system checking behind them, keeps the day it fails from finding them out of practice.', ch: 'automation' },
     { title: 'Menus as varied as the world', text: 'Offices hold answers for the kinds of request they actually meet, and principles for the ones nobody listed, so what reaches head office is the truly new rather than the merely unlisted.', ch: 'variety' },
     { title: 'Pilots that can be stopped', text: 'Where nobody can tell in advance what will work, several small pilots go first, each cheap to stop, and the money follows the one that works.', ch: 'tinkering' },
-    { title: 'Checks that stand still are learned', text: 'Against someone who tests every link, a check keeps running long after the attempts have moved round it; a check nobody can predict keeps more of what it catches.', ch: 'redqueen' },
+    { title: 'Checks that stand still are learned', text: 'Against someone who tests every link, a check that stands still is soon walked round, and one moved after last month’s attempts runs to stand still; a check nobody can predict keeps more of what it catches.', ch: 'redqueen' },
     { title: 'Lessons that fade at a measured pace', text: 'Links added after a crisis come off a little with each calm year, neither all at once nor never, at a pace set by what an idle cushion costs.', ch: 'pace' },
   ];
 
@@ -85,7 +85,7 @@
     ['Nassim Nicholas Taleb', '2010', '“On Robustness and Fragility”, in The Black Swan, second edition', 'Species density: the larger and more connected the space, the more a few winners spread at the expense of the rest.'],
     ['Basel Committee on Banking Supervision', '2006', 'International Convergence of Capital Measurement and Capital Standards (Basel II), paragraphs 463, 472 and 667', 'Operational-risk capital for the worst year in a thousand; at least five years of data for default rates, and seven for losses on loans to firms, banks and governments.'],
     ['Frederick P. Brooks', '1975', 'The Mythical Man-Month', 'Adding people to a late project makes it later.'],
-    ['Richard M. Karp', '1990', '“The transitive closure of a random digraph”, Random Structures & Algorithms', 'Below one link each, loops stay small; above it, one giant loop forms.'],
+    ['Richard M. Karp', '1990', '“The transitive closure of a random digraph”, Random Structures & Algorithms', 'Below one link each, knots of waiting stay small; above it, one giant knot forms.'],
     ['Tomasz Łuczak', '1990', '“The phase transition in the evolution of random digraphs”, Journal of Graph Theory', 'The same threshold, from the other side.'],
     ['Edward G. Coffman, Michael J. Elphick and Arie Shoshani', '1971', '“System deadlocks”, ACM Computing Surveys', 'A circular wait: the condition under which nothing can move first.'],
     ['Stuart Kauffman and Simon Levin', '1987', '“Towards a general theory of adaptive walks on rugged landscapes”, Journal of Theoretical Biology', 'The complexity catastrophe: interlocking parts stop improvement one step at a time.'],
@@ -111,7 +111,7 @@
   <header class="head">
     <div class="tkc-eyebrow">Chapter {total} of {total} · Patterns</div>
     <h2 class="tkc-display tkc-chapter-title" id="{prefix}-chapter-title" tabindex="-1">What it means on Monday</h2>
-    <p class="tkc-lede">Good complexity multiplies options. Bad complexity multiplies conditions. Scale multiplies whichever you have. Every link in this story did one or the other, and what it cost depended on how long the chain had grown and what weather it met.</p>
+    <p class="tkc-lede">Every link in this story added an option or a condition. What it cost depended on how long the chain was, and on the weather.</p>
   </header>
 
   <div class="matrix" role="table" aria-label="Options and conditions, in a short chain and a long one">
@@ -123,7 +123,7 @@
     <div class="cell" role="cell">
       <span class="cell-tag" aria-hidden="true">A short chain, calm weather</span>
       <span class="cell-name">Looks like waste</span>
-      <span>Paid for every day, needed on few of them. <em>A stand-in who never stands in; a reviewer with time to spare; pilots when results are predictable.</em></span>
+      <span>Paid for every day, needed on few of them. <em>A stand-in who never stands in; a reviewer with time to spare; a day by hand while the system works; pilots when results are predictable.</em></span>
     </div>
     <div class="cell good" role="cell">
       <span class="cell-tag" aria-hidden="true">A long chain, rough weather</span>
@@ -135,7 +135,7 @@
     <div class="cell" role="cell">
       <span class="cell-tag" aria-hidden="true">A short chain, calm weather</span>
       <span class="cell-name">Barely felt</span>
-      <span>Each link nearly always holds, and so, mostly, does the chain. <em>Six checks at 95%; conditions that each wait for one other; an autopilot while the AI is steady.</em></span>
+      <span>Each link nearly always holds, and so, mostly, does the chain. <em>Six checks at 95%; a few conditions that wait on one another; an autopilot while the AI is steady.</em></span>
     </div>
     <div class="cell bad" role="cell">
       <span class="cell-tag" aria-hidden="true">A long chain, rough weather</span>

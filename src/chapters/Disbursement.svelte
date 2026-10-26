@@ -138,7 +138,7 @@
       w: textWidth(c.name + (c.setsDate && c.required ? ' · sets the date' : '')) + 4,
       band: true,
     })),
-  ]);
+  ].map((k) => ({ ...k, w: Math.min(k.w, width - k.x) })));
   const verdict = $derived(
     loan.day <= TARGET
       ? `This client is paid on day ${loan.day}, within the promise.`

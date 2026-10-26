@@ -274,8 +274,7 @@
         is a queue everywhere.
       </p>
       <p>
-        The gate itself is an <span class="tkc-and">AND</span> with an <strong>IF</strong> in front: if a payment is above $1m, it does not
-        go out unchecked. Inside it sits an <span class="tkc-or">OR</span>, taken as given here: any one of three qualified
+        The gate itself is an <span class="tkc-and">AND</span> behind an <strong>IF</strong>: above $1m, no payment goes out unchecked. Inside it sits an <span class="tkc-or">OR</span>, taken as given here: any one of three qualified
         reviewers may make the call, a quorum of one. If each
         payment waited for its own named reviewer instead, the same gate would make payments late again.
       </p>

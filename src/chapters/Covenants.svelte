@@ -223,7 +223,7 @@
       that would have come either way.
     </p>
     <p>
-      Each covenant is an <strong>IF</strong>. If every breach is a default acted on as written, each is a link in a chain of
+      Each covenant is an <strong>IF</strong>: past its line, the loan is in breach. If every breach is a default, the covenants are links in a chain of
       <span class="tkc-and">ANDs</span>, and with {WORDS[MAX]}, noise alone breaks the loan for three healthy borrowers in
       five a year; each breach becomes a waiver. If a breach means a closer look, it is an <span class="tkc-or">OR</span>: the loan goes on
       if the covenants hold or the look finds the borrower sound. The chain bends on noise.
