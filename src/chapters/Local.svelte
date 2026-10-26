@@ -68,11 +68,10 @@
     saves === null ? 'every deal is marked; it passes no one' : `${num(view.long.urgent ?? LONE_URGENT)} days if marked, ${num(view.long.ordinary)} if not`,
   );
 
-  // What the orange places cost this quarter, counted from the figure itself.
-  const placesOf = (v, kind) => v.mondays.reduce((a, m) => a + m.places.filter((p) => kind === undefined || p === kind).length, 0);
-  const lost = $derived(placesOf(view, 'deferred'));
-  const used = $derived(placesOf(view));
-  const usedNone = placesOf(VIEWS[0]);
+  // What the orange places cost, in the long run rather than in the one quarter drawn, so the caption
+  // moves steadily with the slider and agrees with the text.
+  const lost = $derived(Math.round(view.long.deferredPerWeek * MONDAYS));
+  const full = (row) => Math.round(row.placesUsed * 100);
 
   const puzzle = {
     goal: 'Each team marks its deal urgent whenever that is quicker for it. Once every team has chosen, what happens to the average wait?',
@@ -155,8 +154,8 @@
         </div>
         <p class="tkc-caption ft-caption">
           Orange: an urgent paper read unprepared and deferred. Its place is used, nothing is decided, and it comes back
-          the next Monday. This quarter: {lost === 0 ? 'no places' : `${lost} place${lost === 1 ? '' : 's'}`} lost to
-          deferrals; {used} of {ROOM * MONDAYS} places used{marked === 0 ? '' : ` (${usedNone} with no marks)`}.
+          the next Monday. In the long run, a quarter loses {lost === 0 ? 'no places' : `${lost} place${lost === 1 ? '' : 's'}`}
+          to deferrals, and the agenda is {full(view.long)}% full{marked === 0 ? '' : ` (${full(NONE)}% with no marks)`}.
         </p>
       </div>
 
@@ -197,8 +196,7 @@
     <p>
       That is why the marks spread. The first ones save little: with one deal in ten marked, under a day. But each mark
       pushes the unmarked deals further back, so the next mark saves more: 6.6 days with half the deals marked, 78 with
-      nine in ten. It is a loop, of the kind that feeds itself: every mark makes the next one more worth having, until
-      nobody can afford to be the last deal without one.
+      nine in ten. It is a loop that feeds itself, and it runs until nobody can afford to be the last deal without one.
     </p>
     <p>
       Going first, on its own, only reorders the line: one deal’s gain is another’s wait, and the average stays where it

@@ -20,7 +20,8 @@
   let width = $state(560);
   let hover = $state(null);
 
-  const result = $derived(simulateSystems({ ...FIXED, info, approvals }, { journeys: 12 }));
+  // The first 40 requests are recorded day by day (recording draws nothing, so the results are unchanged).
+  const result = $derived(simulateSystems({ ...FIXED, info, approvals }, { journeys: 40 }));
   const baseline = simulateSystems({ ...FIXED, ...START });
   const isStart = $derived(info === START.info && approvals === START.approvals);
 
@@ -36,12 +37,12 @@
   const binW = $derived(Math.max(1, x(1) - x(0) - 2));
   const baseOutline = $derived(baseBins.reduce((d, c, i) => d + `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(c).toFixed(1)}H${x(i + 1).toFixed(1)}`, ''));
 
-  // The main chart: one typical request's journey through the six systems, day by day. It is the recorded
-  // journey closest to the median, preferring one where a problem was found. The day scale stays at four
-  // working weeks unless the journey is longer, so a faster design shows as a shorter row of days.
+  // The main chart: one request's journey through the six systems, day by day. It is the recorded journey
+  // closest to the median as the tile rounds it, preferring one where a problem was found. The day scale stays
+  // at four working weeks unless the journey is longer, so a faster design shows as a shorter row of days.
   const stopsIn = (j) => j.filter((d) => d.gates.includes(STOP) || d.final === STOP).length;
   const pick = $derived.by(() => {
-    const off = (j) => Math.abs(j.length - result.median);
+    const off = (j) => Math.abs(j.length - Math.round(result.median));
     return result.journeys.reduce((a, j, i) => (off(j) < off(result.journeys[a]) || (off(j) === off(result.journeys[a]) && stopsIn(j) > stopsIn(result.journeys[a])) ? i : a), 0);
   });
   const journey = $derived(result.journeys[pick] ?? []);
@@ -56,6 +57,12 @@
   const rowGap = 4;
   const journeyStops = $derived(stopsIn(journey));
   const dayTicks = $derived([1, ...Array.from({ length: Math.floor(scaleDays / 5) }, (_, i) => (i + 1) * 5)].filter((d) => d <= scaleDays));
+  // Room above the rows for the label on the end line.
+  const JT = 16;
+  const endX = $derived(labelW + shownDays * cellW);
+  const endText = $derived(journey.length > MAX ? `not done by day ${MAX}` : `done: day ${journey.length}`);
+  const svgW = $derived(Math.max(width, labelW + scaleDays * cellW + 4));
+  const endAnchor = $derived(endX + endText.length * 3.3 > svgW ? 'end' : endX - endText.length * 3.3 < labelW ? 'start' : 'middle');
 
   // Who sees a problem: the rule behind the share that slips through.
   const PRICING = SYSTEMS.indexOf('Pricing tool');
@@ -108,7 +115,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['Six systems, a day each; each form has a one-in-ten chance of a hidden problem.', 'An approver catches half the problems in front of them; one at the end, 90%.', 'Approvers are in 85% of days, and nobody stands in for them.']} title="One request, six linked systems" sub="One typical request through the six systems, day by day; below it, how long 1,500 such requests take.">
+    <Instrument rules={['Six systems, a day each; each form has a one-in-ten chance of a hidden problem.', 'An approver catches half the problems in front of them; one at the end, 90%.', 'Approvers are in 85% of days, and nobody stands in for them.']} title="One request, six linked systems" sub="One request through the six systems, day by day; below it, how long 1,500 such requests take.">
       <Puzzle id="systems" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls tkc-controls--wide">
         <Segmented
@@ -135,12 +142,14 @@
       <div class="journey">
         <p class="tkc-label j-title">One request, day by day</p>
         <p class="tkc-small">
-          A typical request: {journey.length >= HORIZON ? 'more than a year' : `${journey.length} working day${journey.length === 1 ? '' : 's'}`} for
+          One request near the median: {journey.length >= HORIZON ? 'more than a year' : `${journey.length} working day${journey.length === 1 ? '' : 's'}`} for
           {journeyHours} hours of work, the rest waiting;
-          {journeyStops ? `stopped ${journeyStops === 1 ? 'once' : `${journeyStops} times`} by a problem.` : 'no problem found.'}
+          {journeyStops ? `stopped ${journeyStops === 1 ? 'once' : `${journeyStops} times`} by a problem, fixed and approved again.` : 'no problem found.'}
         </p>
         <div class="tkc-scroll-x" bind:clientWidth={width}>
-          <svg width={Math.max(width, labelW + scaleDays * cellW + 4)} height={rows.length * (rowH + rowGap) + 22} role="img" aria-label="Day-by-day journey of one typical request through the systems: {journey.length} working days, {journeyHours} hours of work.">
+          <svg width={svgW} height={JT + rows.length * (rowH + rowGap) + 22} role="img" aria-label="Day-by-day journey of one request near the median through the systems: {journey.length} working days, {journeyHours} hours of work.">
+            <text class="tkc-label-2" x={endX} y="11" text-anchor={endAnchor}>{endText}</text>
+            <g transform="translate(0 {JT})">
             {#each rows as label, r}
               <text class="tkc-label-2" class:j-small={narrowJ} x="0" y={r * (rowH + rowGap) + rowH / 2 + 4}>{label}</text>
               <line class="tkc-grid" x1={labelW} x2={labelW + scaleDays * cellW} y1={r * (rowH + rowGap) + rowH + rowGap / 2} y2={r * (rowH + rowGap) + rowH + rowGap / 2} />
@@ -155,11 +164,12 @@
                 <rect x={labelW + d * cellW + 0.5} y={systems * (rowH + rowGap)} width={Math.max(1, cellW - 2)} height={rowH} rx="3" class="cell {cellClass[day.final]}" />
               {/if}
             {/each}
-            <line class="j-end" x1={labelW + shownDays * cellW} x2={labelW + shownDays * cellW} y1="-2" y2={rows.length * (rowH + rowGap)} />
+            <line class="j-end" x1={endX} x2={endX} y1="-2" y2={rows.length * (rowH + rowGap)} />
             {#each dayTicks as t}
               <text class="tkc-axis-label" x={labelW + (t - 0.5) * cellW} y={rows.length * (rowH + rowGap) + 14} text-anchor="middle">{t}</text>
             {/each}
             <text class="tkc-axis-label" x={labelW - 8} y={rows.length * (rowH + rowGap) + 14} text-anchor="end">Day</text>
+            </g>
           </svg>
         </div>
         {#if journey.length > MAX}
@@ -170,57 +180,7 @@
           <span><span class="tkc-swatch sw-ok"></span>Approved</span>
           <span><span class="tkc-swatch sw-away"></span>Waiting: approver away</span>
           <span><span class="tkc-swatch sw-stop"></span>Problem found: stopped</span>
-          <span><span class="tkc-swatch sw-fix"></span>Fixing where it spread</span>
-        </div>
-      </div>
-
-      <div class="tkc-chart">
-        <p class="tkc-label j-title">1,500 such requests</p>
-        <svg {width} height={H} role="img" aria-label="Distribution of lead times. Median {Math.round(result.median)} days; the slowest one in ten take {Math.round(result.p90)} days or more.">
-          {#each ticks(0, yMax, 3) as t}
-            <line class="tkc-grid" x1={m.left} x2={width - m.right} y1={y(t)} y2={y(t)} />
-            <text class="tkc-axis-label" x={m.left - 6} y={y(t) + 4} text-anchor="end">{t}</text>
-          {/each}
-          <line class="tkc-base" x1={m.left} x2={width - m.right} y1={y(0)} y2={y(0)} />
-          {#each bins as c, i}
-            {#if c > 0}
-              <path d={barUp(x(i) + 1, y(c), binW, y(0) - y(c), 2)} class="bin" class:hot={hover === i} class:tail={i >= result.p90} />
-            {/if}
-          {/each}
-          {#if !isStart}<path d={baseOutline} class="ghost" />{/if}
-          <line class="deadline" x1={x(DEADLINE + 1)} x2={x(DEADLINE + 1)} y1={m.top - 6} y2={y(0)} />
-          <text class="tkc-axis-label" x={x(DEADLINE + 1) + 4} y={m.top - 10}>Two weeks</text>
-          <line class="marker" x1={x(result.median + 0.5)} x2={x(result.median + 0.5)} y1={m.top + 4} y2={y(0)} />
-          <text class="tkc-label tkc-halo" x={x(result.median + 0.5) + 4} y={m.top + 14}>Median</text>
-          {#each [0, 10, 20, 30, 40, 50, 60] as t}
-            <text class="tkc-axis-label" x={x(t + 0.5)} y={H - m.bottom + 16} text-anchor="middle">{t === MAX ? '60+' : t}</text>
-          {/each}
-          <text class="tkc-axis-title" x={m.left + (width - m.left - m.right) / 2} y={H - 4} text-anchor="middle">Working days from request to done</text>
-          <text class="tkc-axis-title" x={m.left - 30} y={m.top - 10}>Requests</text>
-          <rect
-            x={m.left}
-            y={m.top}
-            width={Math.max(0, width - m.left - m.right)}
-            height={H - m.top - m.bottom}
-            fill="transparent"
-            role="presentation"
-            onpointermove={(e) => {
-              const box = e.currentTarget.getBoundingClientRect();
-              hover = Math.max(0, Math.min(MAX, Math.floor(x.invert(e.clientX - box.left + m.left))));
-            }}
-            onpointerleave={() => (hover = null)}
-          />
-        </svg>
-        {#if hover !== null}
-          <div class="tkc-tip" style:left="{Math.min(width - 170, Math.max(0, x(hover) - 60))}px" style:top="30px">
-            <strong>{bins[hover]} requests</strong>
-            <div>took {hover === MAX ? '60 or more' : hover} working day{hover === 1 ? '' : 's'}</div>
-          </div>
-        {/if}
-        <div class="tkc-legend">
-          <span><span class="tkc-swatch" style:background="var(--tkc-ink-2)"></span>Requests by lead time</span>
-          <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>Slowest one in ten</span>
-          {#if !isStart}<span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-muted)"></span>Starting setup</span>{/if}
+          <span><span class="tkc-swatch sw-fix"></span>{info === 'copies' ? 'Fixing it, in every copy it reached' : 'Fixing it, once, in the shared record'}</span>
         </div>
       </div>
 
@@ -228,6 +188,59 @@
         <Stat label="Typical request" value="{shortDays(result.median, HORIZON)} days" sub="median, working days" />
         <Stat label="Hidden problems that slip through" value={pct(result.slipped, 1)} sub="of requests, after every check" />
       </div>
+
+      <!-- The second chart repeats what the tiles say, so it stays folded until asked for. -->
+      <details class="tkc-note hist">
+        <summary>1,500 such requests</summary>
+        <div class="tkc-chart">
+          <svg {width} height={H} role="img" aria-label="Distribution of lead times. Median {Math.round(result.median)} days; the slowest one in ten take {Math.round(result.p90)} days or more.">
+            {#each ticks(0, yMax, 3) as t}
+              <line class="tkc-grid" x1={m.left} x2={width - m.right} y1={y(t)} y2={y(t)} />
+              <text class="tkc-axis-label" x={m.left - 6} y={y(t) + 4} text-anchor="end">{t}</text>
+            {/each}
+            <line class="tkc-base" x1={m.left} x2={width - m.right} y1={y(0)} y2={y(0)} />
+            {#each bins as c, i}
+              {#if c > 0}
+                <path d={barUp(x(i) + 1, y(c), binW, y(0) - y(c), 2)} class="bin" class:hot={hover === i} class:tail={i >= result.p90} />
+              {/if}
+            {/each}
+            {#if !isStart}<path d={baseOutline} class="ghost" />{/if}
+            <line class="deadline" x1={x(DEADLINE + 1)} x2={x(DEADLINE + 1)} y1={m.top - 6} y2={y(0)} />
+            <text class="tkc-axis-label" x={x(DEADLINE + 1) + 4} y={m.top - 10}>Two weeks</text>
+            <line class="marker" x1={x(result.median + 0.5)} x2={x(result.median + 0.5)} y1={m.top + 4} y2={y(0)} />
+            <text class="tkc-label tkc-halo" x={x(result.median + 0.5) + 4} y={m.top + 14}>Median</text>
+            {#each [0, 10, 20, 30, 40, 50, 60] as t}
+              <text class="tkc-axis-label" x={x(t + 0.5)} y={H - m.bottom + 16} text-anchor="middle">{t === MAX ? '60+' : t}</text>
+            {/each}
+            <text class="tkc-axis-title" x={m.left + (width - m.left - m.right) / 2} y={H - 4} text-anchor="middle">Working days from request to done</text>
+            <text class="tkc-axis-title" x={m.left - 30} y={m.top - 10}>Requests</text>
+            <rect
+              x={m.left}
+              y={m.top}
+              width={Math.max(0, width - m.left - m.right)}
+              height={H - m.top - m.bottom}
+              fill="transparent"
+              role="presentation"
+              onpointermove={(e) => {
+                const box = e.currentTarget.getBoundingClientRect();
+                hover = Math.max(0, Math.min(MAX, Math.floor(x.invert(e.clientX - box.left + m.left))));
+              }}
+              onpointerleave={() => (hover = null)}
+            />
+          </svg>
+          {#if hover !== null}
+            <div class="tkc-tip" style:left="{Math.min(width - 170, Math.max(0, x(hover) - 60))}px" style:top="30px">
+              <strong>{bins[hover]} requests</strong>
+              <div>took {hover === MAX ? '60 or more' : hover} working day{hover === 1 ? '' : 's'}</div>
+            </div>
+          {/if}
+          <div class="tkc-legend">
+            <span><span class="tkc-swatch" style:background="var(--tkc-ink-2)"></span>Requests by lead time</span>
+            <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>Slowest one in ten</span>
+            {#if !isStart}<span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-muted)"></span>Starting setup</span>{/if}
+          </div>
+        </div>
+      </details>
 
       {#snippet model()}
         <p>Filling in a system takes two hours of work; the next person picks it up the next day. Each form has a 10% chance of a hidden problem.</p>
@@ -314,8 +327,11 @@
     font-size: 0.875rem;
     color: var(--tkc-ink);
   }
-  .tkc-chart .j-title {
-    margin-bottom: 4px;
+  .hist .tkc-chart {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding-top: 8px;
   }
   .j-small {
     font-size: 11px;

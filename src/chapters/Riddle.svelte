@@ -50,8 +50,8 @@
   });
   const sub = $derived(
     need === COUNT
-      ? 'One month for six people. A decision needs all six in on the same day: the top strip is dark only when every role below is covered.'
-      : `One month for six people. A decision needs any ${WORDS[need]} of the six: the top strip is dark on days with at most ${WORDS[COUNT - need]} gap${COUNT - need > 1 ? 's' : ''} below.`,
+      ? 'One month, six roles. The top strip is dark on days when every role below is covered.'
+      : `One month, six roles. The top strip is dark on days when at least ${WORDS[need]} roles below are covered.`,
   );
 
   const puzzle = {
@@ -98,11 +98,11 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['A decision needs all six roles covered on the same day.', 'Each person is in on 90% of days; absences last about three days.', 'A qualified stand-in can cover a role; nobody’s absences depend on another’s.']} title="Who is in this month?" {sub}>
+    <Instrument rules={[need === COUNT ? 'A decision needs all six roles covered on the same day.' : `A decision needs any ${WORDS[need]} of the six roles covered on the same day.`, 'Each person is in on 90% of days; absences last about three days.', 'A qualified stand-in can cover a role; nobody’s absences depend on another’s.']} title="Who is in this month?" {sub}>
       <Puzzle id="riddle" {...puzzle} predict onshow={showAnswer} />
       <!-- Before the first answer, lower attendance can be tried; better attendance and the stand-ins wait. -->
       <div class="tkc-controls">
-        <Slider id="r-avail" label="Attendance" bind:value={availability} min={70} max={99} format={(v) => `${v}% of days`} limit={live ? null : 90} limitNote="Above 90%: after your first answer." />
+        <Slider id="r-avail" label="Attendance" bind:value={availability} min={70} max={99} format={(v) => `${v}% of days`} limit={live ? null : 90} limitNote="Above 90%: opens after your first answer." />
         <div class:tkc-wait={!live} inert={live ? undefined : true} data-lock="Opens after your first answer.">
           <Slider id="r-backup" label="Stand-ins per role" bind:value={backups} min={0} max={3} format={(v) => (v === 0 ? 'None' : String(v))} />
         </div>
@@ -154,7 +154,7 @@
           label={need === COUNT ? 'Longest wait for everyone to be in' : `Longest wait for any ${WORDS[need]} to be in`}
           value={month.longestWait === 0 ? 'No wait' : `${month.longestWait} working day${month.longestWait === 1 ? '' : 's'}`}
           sub={month.longestWait === 0 ? 'the decision never had to wait' : need === COUNT ? 'in a row with someone missing' : 'in a row with too few in'}
-          swatch="var(--tkc-conditions)"
+          swatch={month.longestWait === 0 ? null : 'var(--tkc-conditions)'}
         />
       </div>
 

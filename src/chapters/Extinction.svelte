@@ -73,13 +73,32 @@
   });
   const tip = $derived(hover !== null && hover <= reach ? hover : null);
 
+  // "Generalist ahead" names the shaded band: at its right edge where it fits, on one line or two, and never
+  // struck through by the line at the reader's swing (on a phone it may sit just right of that line).
+  const aheadTag = $derived.by(() => {
+    const xl = cx(crossing);
+    const xr = curveW - cm.right;
+    const xn = cx(swing);
+    const widthOf = (lines) => Math.max(...lines.map((s) => s.length)) * 6.4;
+    const one = ['Generalist ahead'];
+    const two = ['Generalist', 'ahead'];
+    const at = (lines, where) => {
+      const w = widthOf(lines);
+      const x0 = where === 'right' ? xr - 6 - w : where === 'left' ? xl + 6 : xn + 6;
+      return { lines, w, x0, x: where === 'right' ? xr - 6 : x0, anchor: where === 'right' ? 'end' : 'start' };
+    };
+    const options = [at(one, 'right'), at(two, 'right'), at(one, 'left'), at(two, 'left'), at(one, 'line'), at(two, 'line')];
+    const fits = (o) => o.x0 >= xl + 2 && o.x0 + o.w <= curveW - 2 && (xn < o.x0 - 5 || xn > o.x0 + o.w + 5);
+    return options.find(fits) ?? options[0];
+  });
+
   const puzzle = $derived({
     goal: 'The specialist grows faster in a calm world. Make the years more variable: at what swing does the generalist start to grow faster?',
     met: swing === firstAhead,
     checks: [{ label: `Generalist grows faster (now specialist ${signedPct(gs)}, generalist ${signedPct(gg)})`, ok: gg > gs }],
     progress: gg > gs && swing > firstAhead ? 'The generalist is ahead here. Is it already ahead in a calmer world?' : '',
     hints: ['Start from a calm world and make the years more variable, one step at a time.', 'Watch the two growth rates above the islands as you go. The lead changes hands once.'],
-    found: `At about ±${crossing}%: beyond it the generalist grows faster, and the specialist begins to vanish from island after island.`,
+    found: `At about ±${crossing}%: beyond it the generalist grows faster, and the specialist, already losing islands, vanishes from more with every step.`,
   });
 </script>
 
@@ -171,7 +190,7 @@
           {/each}
           {#if done}
             <rect x={cx(crossing)} y={cm.top} width={Math.max(0, cx(70) - cx(crossing))} height={CH - cm.top - cm.bottom} class="zone" />
-            <text class="tkc-axis-label tkc-halo" x={cx(crossing) + 6} y={cm.top + 12}>Generalist ahead</text>
+            <text class="tkc-axis-label tkc-halo" y={cm.top + 12} text-anchor={aheadTag.anchor}>{#each aheadTag.lines as l, i (l)}<tspan x={aheadTag.x} dy={i ? 13 : 0}>{l}</tspan>{/each}</text>
           {/if}
           <path d={curve('specialist')} class="cv" style:stroke="var(--tkc-ink-2)" />
           <path d={curve('generalist')} class="cv" style:stroke="var(--tkc-options)" />
@@ -212,8 +231,7 @@
     <p>
       In a calm world the specialist wins: it grows faster and fills its islands first. As the years get more variable,
       its one plant fails it again and again, and it disappears from island after island. The generalist is not better
-      at anything; it just never depends on a single plant. Nor is the change gradual: past the crossing, a tipping
-      point, each extra bit of variability costs the specialist more than the last.
+      at anything; it just never depends on a single plant. The crossing is a tipping point: past it, each extra bit of variability costs the specialist more than the last.
     </p>
     <p>
       This is not Adam Smith’s specialist: its trouble is not its skill but its single source of food. A chain of named
@@ -234,8 +252,7 @@
     <p>
       A larger area holds more species in all, but fewer for its size; Nassim Taleb reads globalization into that rule,
       as a few winners spread at the expense of the rest. The islands here never swap animals, so a collapse on one stays
-      there: each is a firebreak, as the banks in the stress test were not. Any one island is fragile; what lasts is the
-      archipelago: a quorum of one in forty.
+      there: each is a firebreak, as the banks in the stress test were not. Each island is fragile; the archipelago lasts while any one of its forty does: a quorum of one.
     </p>
   {/snippet}
 

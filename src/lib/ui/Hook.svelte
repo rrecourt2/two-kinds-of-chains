@@ -295,7 +295,7 @@
         {/each}
         <!-- Two trays: the loans stuck at a check, and the loans that get through. -->
         <line x1={gateFrom} x2={endX - 6} y1={trayY + 6} y2={trayY + 6} class="tray" />
-        <text class="tkc-axis-label" x={gateFrom} y={H - 4}>{phase === 'done' ? `Stuck: ${REQUESTS - flow.through}` : 'Stuck'}</text>
+        <text class="tkc-axis-label" x={gateFrom} y={H - 4}>{phase === 'done' ? `Stuck: ${REQUESTS - flow.through}` : 'Stuck at a check'}</text>
         <line x1={endX + 4} x2={width - 2} y1={trayY + 6} y2={trayY + 6} class="tray" />
         {#if showGuess}
           {#each Array(guess) as _, slot}
@@ -323,7 +323,7 @@
       {#if backups}
         <div class="tkc-legend backup-key">
           <span><span class="tkc-swatch sw-twin"></span>Blue outline: a backup, a second person or system. A loan is stuck only when both fail.</span>
-          <span><span class="tkc-swatch sw-saved"></span>{showCounts ? 'Blue loans and figures: loans a backup saved' : 'Blue loans: saved by a backup'}</span>
+          <span><span class="tkc-swatch sw-saved"></span>{showCounts ? 'Blue figures under the checks: loans a backup saved there' : 'A loan flashes blue where a backup saves it'}</span>
         </div>
       {/if}
     </div>

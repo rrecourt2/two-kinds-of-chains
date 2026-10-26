@@ -99,6 +99,13 @@
   // With the reserve: the band it carries, between the two curves, and the old edge (cover 1.0) dashed.
   const band = $derived(R > 0 ? line([...frontier(0), ...frontier(R).reverse()]) + 'Z' : '');
   const oldEdge = $derived(R > 0 ? edgeOf(0) : '');
+  // Its label sits beside its top-left end, just inside the top of the chart, clear of the line.
+  const oldEdgeTag = $derived.by(() => {
+    const ty = m.top + 13;
+    const reach = y.invert(ty + 3); // the currency fall at the label's lower edge
+    const s = SAMPLES.find((v) => breakingCurrency(v, 0) <= reach) ?? T0;
+    return { x: x(s) + 6, y: ty };
+  });
 
   const summary = $derived(
     `Traffic fall across, currency fall up. ${MONTHS} months on record, all paid, lowest cover ${lowest.toFixed(2)}; the record’s worst: traffic down ${WT}%, currency down ${WC}%, in different years. ` +
@@ -198,6 +205,7 @@
           <text class="tkc-label-2 tkc-halo" x={(x(0) + x(WORST.traffic)) / 2} y={y(WORST.currency) - 11} text-anchor="middle">the record’s worst</text>
 
           {#if done && R > 0}
+            <text class="old-edge-label tkc-halo" x={oldEdgeTag.x} y={oldEdgeTag.y}>without the reserve</text>
             <text class="carry-label tkc-halo" x={span - m.right - 6} y={y(0.27)} text-anchor="end">Paid from the reserve</text>
           {:else if done}
             <text class="miss-label tkc-halo" x={span - m.right - 6} y={y(C1) + 16} text-anchor="end">Cover below 1.0: the road misses</text>
@@ -258,8 +266,8 @@
         </p>
         <p>
           The record is invented. Traffic usually grows about 5% a year and the currency slips about 2%; a recession in
-          year three and a devaluation in year six bring the worst months. Reserves, hedges and interest rates are left
-          out.
+          year three and a devaluation in year six bring the worst months. Hedges and interest rates are left out; the
+          reserve holds six months’ payments.
         </p>
       {/snippet}
     </Instrument>
@@ -274,8 +282,8 @@
     </p>
     <p>
       The falls do not add; they multiply. The payment hangs on a chain of two links, cars
-      <span class="tkc-and">AND</span> the currency, each scaling what the other leaves, and is missed <strong>IF</strong> cover falls
-      below 1.0. Fixed running costs
+      <span class="tkc-and">AND</span> the currency, each scaling what the other leaves, and is missed <strong>IF</strong> the cash
+      falls short. Fixed running costs
       sharpen it: a {WT}% fall in traffic takes a quarter off the cash for the loan, and a {WC}% fall in the currency
       then takes a fifth of what is left. Like the rounds of the coin game, the links compound.
     </p>
@@ -334,6 +342,10 @@
   .carry-label {
     font-size: 12px;
     font-weight: 600;
+    fill: var(--tkc-options-ink);
+  }
+  .old-edge-label {
+    font-size: 12px;
     fill: var(--tkc-options-ink);
   }
   .miss-label {

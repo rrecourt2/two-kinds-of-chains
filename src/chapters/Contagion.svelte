@@ -38,7 +38,12 @@
 
   const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
   const TIMES = ['', 'once', 'twice', 'three times', 'four times', 'five times', 'six times'];
-  const BIGGEST = ['The biggest bank', 'The second biggest bank', 'The third biggest bank'];
+  // Grown around hubs, the best-connected banks are the biggest; among many similar banks they are only the
+  // best connected.
+  const NAMED = {
+    hubs: ['The biggest bank', 'The second biggest bank', 'The third biggest bank'],
+    similar: ['The best-connected bank', 'The second best-connected bank'],
+  };
 
   // Each banking system's network, its banks from most to least connected, and the worst place to land
   // at every capital for each choice of extra for the hubs, all computed once.
@@ -54,6 +59,8 @@
   }
   const DATA = Object.fromEntries(SYSTEMS.map((s) => [s.value, systemData(s.value)]));
   const HUBS = DATA.hubs;
+  // The drawn similar network's partners per bank, on average (the generator aims at SIMILAR_LINKS).
+  const similarMean = Math.round(DATA.similar.edges.length * 2 / N);
   const hub = HUBS.order[0];
   const ci = (c) => CAPITALS.indexOf(c);
 
@@ -67,7 +74,7 @@
   const links = (b) => net.adj[b].length;
   const game = getContext('tkc-game');
   const solved = $derived(!game.isOpen('contagion'));
-  // The loss stays on the bank of the same rank: the biggest bank in one system, the biggest in the other.
+  // The loss stays on the bank of the same rank: the biggest bank in one system, the best connected in the other.
   function switchSystem(value) {
     if (value === system) return;
     const r = net.rankOf[at];
@@ -181,8 +188,8 @@
     diagram?.querySelector(`[data-bank="${at}"]`)?.focus();
   }
 
-  const who = (b) => BIGGEST[net.rankOf[b]] ?? 'This bank';
-  const describe = (b) => (net.rankOf[b] < 3 ? BIGGEST[net.rankOf[b]].toLowerCase() : `a bank with ${links(b)} partners`);
+  const who = (b) => NAMED[system][net.rankOf[b]] ?? 'This bank';
+  const describe = (b) => (NAMED[system][net.rankOf[b]]?.toLowerCase() ?? `a bank with ${links(b)} partners`);
   // A bank's rule in words: an IF on its capital, which its loans turn into a quorum of its partners.
   function quorum(k, n) {
     if (k === n) return n === 2 ? 'if both its partners fail' : `if all ${n} of its partners fail`;
@@ -213,22 +220,154 @@
   );
 
   // ---- The curve: the worst place to land, against the capital every bank holds. ----
-  const CH = 216;
+  // A little taller on a phone, where the cliffs stand closer together and the labels need the room.
+  const CH = $derived(chartW < 420 ? 256 : 216);
   const cm = { top: 30, right: 14, bottom: 40, left: 34 };
   const cx = $derived(linear(CAPITALS[0], CAPITALS.at(-1), cm.left, chartW - cm.right));
-  const cy = linear(0, N, CH - cm.bottom, cm.top);
+  const cy = $derived(linear(0, N, CH - cm.bottom, cm.top));
   const path = (s) => line(net.curves[s].map((p) => [cx(p.capital), cy(p.worst)]));
   const others = $derived(SHARES.filter((s) => s.value !== share));
   const xTicks = $derived((chartW - cm.left - cm.right) / (CAPITALS.length - 1) >= 30 ? CAPITALS : CAPITALS.filter((c) => c % 2 === 0));
-  const tip = $derived.by(() => {
-    const curve = net.curves[share];
-    const i = tippingPoint(curve);
-    return { x: (cx(curve[i].capital) + cx(curve[i + 1].capital)) / 2, y: (cy(curve[i].worst) + cy(curve[i + 1].worst)) / 2 };
-  });
-  // The dot's label: beside the dot, below it near the top, and above the limit line near the bottom.
-  const dotLeft = $derived(base >= 9);
-  const dotY = $derived(now.worst > 40 ? cy(now.worst) + 18 : now.worst <= LIMIT + 2 ? Math.min(cy(now.worst), cy(LIMIT)) - 7 : cy(now.worst) - 9);
   const shareLabel = (s) => SHARES.find((x) => x.value === s).label;
+  // Once the puzzle is solved, the other banking system's curve for the same extra, dotted.
+  const otherSystem = $derived(SYSTEMS.find((s) => s.value !== system));
+  const twin = $derived(solved ? DATA[otherSystem.value].curves[share] : null);
+  const AXIS_TITLE = '↑ Banks that fail, at the worst place';
+  // A grey curve that never strays more than two banks from the orange one is drawn under it and not named.
+  const alike = (a, b) => a.every((p, k) => Math.abs(p.worst - b[k].worst) <= 2);
+  const greysAlike = $derived(others.every((s) => alike(net.curves[s.value], net.curves[share])));
+
+  // ---- Direct labels on the curve, each placed where it crosses no line and no label placed before it. ----
+  const CHAR = 6; // a 12px character, a little generous
+  function tag(text, x, y, anchor = 'start') {
+    const w = text.length * CHAR + 4;
+    const x0 = anchor === 'end' ? x - w : x;
+    return { text, x, y, anchor, x0, x1: x0 + w, y0: y - 10, y1: y + 3 };
+  }
+  const clash = (a, b) => a.x0 < b.x1 + 3 && b.x0 < a.x1 + 3 && a.y0 < b.y1 + 2 && b.y0 < a.y1 + 2;
+  // How close a line through `pts` comes to a label (0 if it runs through it).
+  function reach(b, pts) {
+    let best = Infinity;
+    for (let k = 1; k < pts.length; k++) {
+      const [ax, ay] = pts[k - 1];
+      const [bx, by] = pts[k];
+      const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 2));
+      for (let s = 0; s <= n; s++) {
+        const qx = ax + ((bx - ax) * s) / n;
+        const qy = ay + ((by - ay) * s) / n;
+        best = Math.min(best, Math.hypot(Math.max(b.x0 - qx, 0, qx - b.x1), Math.max(b.y0 - qy, 0, qy - b.y1)));
+      }
+    }
+    return best;
+  }
+  const ptsOf = (curve) => curve.map((p) => [cx(p.capital), cy(p.worst)]);
+  const cliffOf = (curve) => {
+    const i = tippingPoint(curve);
+    const P = [cx(curve[i].capital), cy(curve[i].worst)];
+    const Q = [cx(curve[i + 1].capital), cy(curve[i + 1].worst)];
+    return { i, P, Q, M: [(P[0] + Q[0]) / 2, (P[1] + Q[1]) / 2] };
+  };
+  // Beside a point: right, left, above and below it (far enough out to clear a steep cliff through it).
+  const around = (text, [x, y], dx = 10) => [
+    tag(text, x + dx, y + 4),
+    tag(text, x - dx, y + 4, 'end'),
+    tag(text, x + dx - 1, y - 7),
+    tag(text, x - dx + 1, y - 7, 'end'),
+    tag(text, x + dx + 1, y + 16),
+    tag(text, x - dx - 1, y + 16, 'end'),
+  ];
+  const curveTags = $derived.by(() => {
+    const lines = [
+      { id: share, pts: ptsOf(net.curves[share]) },
+      ...others.map((s) => ({ id: s.value, pts: ptsOf(net.curves[s.value]) })),
+      ...(twin ? [{ id: 'twin', pts: ptsOf(twin) }] : []),
+    ];
+    const rules = [
+      [[cm.left, cy(LIMIT)], [chartW - cm.right, cy(LIMIT)]],
+      [[cx(base), cy(now.worst)], [cx(base), cy(0)]],
+    ];
+    const placed = [
+      { x0: 0, x1: 8 + AXIS_TITLE.length * CHAR, y0: cm.top - 27, y1: cm.top - 13 },
+      { x0: cx(base) - 6, x1: cx(base) + 6, y0: cy(now.worst) - 6, y1: cy(now.worst) + 6 },
+    ];
+    // What a label would cover, weighted: running off the chart or into another label counts most, then the
+    // axes, the orange curve and the two rules; a faint grey or dotted line, under the label's halo, least.
+    const misses = (b) =>
+      (b.x0 < 0 || b.x1 > chartW ? 50 : 0) +
+      (b.x0 < cm.left + 2 || b.x1 > chartW - 1 || b.y0 < cm.top - 14 || b.y1 > cy(0) - 2 ? 4 : 0) +
+      20 * placed.filter((p) => clash(p, b)).length +
+      2 * rules.filter((r) => reach(b, r) <= 3).length +
+      lines.filter((l) => reach(b, l.pts) <= 3).reduce((a, l) => a + (l.id === share ? 2 : 1), 0);
+    const out = [];
+    // The dot, the tipping point and the limit are always labelled, in the best place there is.
+    const must = (cls, options) => {
+      let b = options[0];
+      let worst = Infinity;
+      for (const o of options) {
+        const m = misses(o);
+        if (m < worst) (b = o), (worst = m);
+        if (!m) break;
+      }
+      placed.push(b);
+      out.push({ ...b, cls });
+    };
+    // A curve's name only where it is free, and nearer its own curve than any other.
+    const name = (cls, id, options) => {
+      const own = lines.find((l) => l.id === id).pts;
+      const b = options.find((o) => {
+        if (misses(o)) return false;
+        const d = reach(o, own);
+        return d <= 12 && lines.every((l) => l.id === id || reach(o, l.pts) > d + 3);
+      });
+      if (b) placed.push(b), out.push({ ...b, cls });
+    };
+    const dot = [cx(base), cy(now.worst)];
+    const dotText = now.worst === 0 ? 'worst: none' : `worst: ${now.worst}`;
+    // Beside the dot; near the floor, above the limit line; then a little further off.
+    const aboveLimit = Math.min(dot[1], cy(LIMIT)) - 7;
+    const dotOptions = [
+      ...around(dotText, dot, 9),
+      tag(dotText, dot[0] + 9, aboveLimit),
+      tag(dotText, dot[0] - 9, aboveLimit, 'end'),
+      tag(dotText, dot[0] + 9, dot[1] + 28),
+      tag(dotText, dot[0] - 9, dot[1] + 28, 'end'),
+      tag(dotText, dot[0] + 9, dot[1] - 19),
+      tag(dotText, dot[0] - 9, dot[1] - 19, 'end'),
+    ];
+    // Right of the line first, unless the dot is near the right edge.
+    const flip = (list) => list.flatMap((o, k) => (k % 2 ? [] : [list[k + 1], o]));
+    must('tkc-label tkc-halo', base >= 9 ? flip(dotOptions) : dotOptions);
+    // The tipping point: beside the middle of the cliff, then beside points further up or down it.
+    const { P: tp, Q: tq } = cliffOf(net.curves[share]);
+    const along = (f) => [tp[0] + (tq[0] - tp[0]) * f, tp[1] + (tq[1] - tp[1]) * f];
+    must('tkc-label-2 tkc-halo', [0.5, 0.3, 0.7, 0.15, 0.85].flatMap((f) => around('tipping point', along(f))));
+    const limitText = `limit: ${WORDS[LIMIT]}`;
+    must('tkc-label-2 tkc-halo', [
+      tag(limitText, cm.left + 4, cy(LIMIT) - 5),
+      tag(limitText, chartW - cm.right - 2, cy(LIMIT) - 5, 'end'),
+      ...CAPITALS.map((c) => tag(limitText, cx(c) + 4, cy(LIMIT) - 5)),
+      ...CAPITALS.map((c) => tag(limitText, cx(c) + 4, cy(LIMIT) + 14)),
+    ]);
+    // Each grey curve is named where it leaves the top: beside its cliff first, then near its other points.
+    const nearby = (curve, text) => {
+      const { i, P, Q, M } = cliffOf(curve);
+      const pts = ptsOf(curve);
+      const order = pts.map((_, k) => k).sort((a, b) => Math.abs(a - i - 0.5) - Math.abs(b - i - 0.5));
+      return [...around(text, M), ...around(text, P), ...around(text, Q), ...order.flatMap((k) => around(text, pts[k]))];
+    };
+    for (const s of others) if (!alike(net.curves[s.value], net.curves[share])) name('grey-tag tkc-halo', s.value, nearby(net.curves[s.value], s.label));
+    if (twin && !alike(twin, net.curves[share])) name('twin-tag tkc-halo', 'twin', nearby(twin, otherSystem.label));
+    return out;
+  });
+  // Where a grey curve could not be named on the chart (on a phone, mostly), the legend names both, in the
+  // order their cliffs stand from the left.
+  const greyKey = $derived.by(() => {
+    if (greysAlike) return 'Grey: the other two choices, almost the same here';
+    const named = others.every((s) => alike(net.curves[s.value], net.curves[share]) || curveTags.some((t) => t.text === s.label));
+    if (named) return 'Grey: the other two choices';
+    const order = [...others].sort((a, b) => tippingPoint(net.curves[a.value]) - tippingPoint(net.curves[b.value]));
+    return `Grey, from the left: ${order.map((s) => s.label).join('; ')}`;
+  });
 
   function onMove(e) {
     const box = e.currentTarget.ownerSVGElement.getBoundingClientRect();
@@ -326,9 +465,69 @@
         {#if solved}
           <div class="ctl">
             <Segmented name="c-system" label="The banking system" value={system} onchange={switchSystem} options={SYSTEMS.map(({ value, label }) => ({ value, label }))} />
-            <p class="tkc-small">Many similar banks: the same {N} banks and rules, about {WORDS[SIMILAR_LINKS]} partners each, no hubs.</p>
+            <p class="tkc-small">Many similar banks: the same {N} banks and rules, about {WORDS[similarMean]} partners each, no hubs.</p>
           </div>
         {/if}
+      </div>
+
+      <div class="tkc-chart curve" bind:clientWidth={chartW}>
+        <div class="tkc-fig-title small">Worst place to land, at every level of capital{system === 'similar' ? ': many similar banks' : ''}</div>
+        <svg
+          width={chartW}
+          height={CH}
+          role="img"
+          aria-label="Banks that fail at the worst place to land, against the capital every bank holds. {systemOf(system).label}, {shareLabel(share)}: {net.curves[share].map((p) => `${p.capital}%, ${p.worst}`).join('; ')}. Limit: {WORDS[LIMIT]}. Grey lines: the other two choices of extra.{twin ? ` Dotted: ${otherSystem.label.toLowerCase()}, the same extra: ${twin.map((p) => `${p.capital}%, ${p.worst}`).join('; ')}.` : ''}"
+        >
+          {#each [0, 12, 24, 36, 48] as t (t)}
+            <line class={t === 0 ? 'tkc-base' : 'tkc-grid'} x1={cm.left} x2={chartW - cm.right} y1={cy(t)} y2={cy(t)} />
+            <text class="tkc-axis-label" x={cm.left - 6} y={cy(t) + 4} text-anchor="end">{t}</text>
+          {/each}
+          <line class="limit" x1={cm.left} x2={chartW - cm.right} y1={cy(LIMIT)} y2={cy(LIMIT)} />
+          {#each others as s (s.value)}
+            <path d={path(s.value)} class="faint" />
+          {/each}
+          {#if twin}<path d={line(ptsOf(twin))} class="twin" />{/if}
+          <path d={path(share)} class="bold" />
+          {#each net.curves[share] as p (p.capital)}
+            <circle cx={cx(p.capital)} cy={cy(p.worst)} r="2.75" class="pt-small" />
+          {/each}
+          <line class="now" x1={cx(base)} x2={cx(base)} y1={cy(now.worst)} y2={cy(0)} />
+          {#each curveTags as l (l.text)}
+            <text class={l.cls} x={l.x} y={l.y} text-anchor={l.anchor}>{l.text}</text>
+          {/each}
+          <circle cx={cx(base)} cy={cy(now.worst)} r="5.5" class="pt" />
+          {#if hover !== null}
+            <line class="cross" x1={cx(hover)} x2={cx(hover)} y1={cm.top} y2={cy(0)} />
+          {/if}
+          {#each xTicks as c (c)}
+            <text class="tkc-axis-label" x={cx(c)} y={CH - cm.bottom + 16} text-anchor="middle">{c}%</text>
+          {/each}
+          <text class="tkc-axis-title" x={cm.left + (chartW - cm.left - cm.right) / 2} y={CH - 4} text-anchor="middle">Capital, every bank</text>
+          <text class="tkc-axis-title" x={4} y={cm.top - 16}>{AXIS_TITLE}</text>
+          <rect x={cm.left} y={cm.top} width={Math.max(0, chartW - cm.left - cm.right)} height={CH - cm.top - cm.bottom} fill="transparent" role="presentation" onpointermove={onMove} onpointerleave={() => (hover = null)} />
+        </svg>
+        {#if hover !== null}
+          <div class="tkc-tip" style:left="{Math.min(chartW - 190, Math.max(0, cx(hover) + 10))}px" style:top="40px">
+            <div>Every bank at {hover}%</div>
+            {#each [share, ...others.map((s) => s.value)] as s (s)}
+              <div class="tkc-tip-row">
+                <span class="tkc-swatch tkc-swatch--line" style:background={s === share ? 'var(--tkc-conditions)' : 'var(--tkc-rule)'}></span><strong>{net.curves[s][ci(hover)].worst}</strong>
+                {shareLabel(s) === 'None' ? 'no extra' : shareLabel(s)}
+              </div>
+            {/each}
+            {#if twin}
+              <div class="tkc-tip-row">
+                <span class="tkc-swatch sw-dots"></span><strong>{twin[ci(hover)].worst}</strong>
+                {otherSystem.label.toLowerCase()}
+              </div>
+            {/if}
+          </div>
+        {/if}
+        <div class="tkc-legend">
+          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span>Extra for the hubs: {shareLabel(share)}</span>
+          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-rule)"></span>{greyKey}</span>
+          {#if twin}<span><span class="tkc-swatch sw-dots"></span>Dotted: {otherSystem.label.toLowerCase()}, same extra</span>{/if}
+        </div>
       </div>
 
       <div class="tkc-chart net" bind:clientWidth={width} bind:this={diagram}>
@@ -372,65 +571,13 @@
         <div class="tkc-legend">
           <span><span class="tkc-swatch sw-ring"></span>Where the loss lands</span>
           <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>Failed</span>
-          <span><span class="tkc-swatch sw-extra"></span>Extra for the hubs</span>
+          {#if share !== 'none'}<span><span class="tkc-swatch sw-extra"></span>Extra for the hubs</span>{/if}
         </div>
       </div>
 
       <div class="tkc-stats two" use:announce>
-        <Stat label="Banks that fail" value="{count} of {N}" sub={failSub} swatch="var(--tkc-conditions)" />
+        <Stat label="Banks that fail, from this landing" value="{count} of {N}" sub={failSub} swatch="var(--tkc-conditions)" />
         <Stat label="Capital added" value={addValue} sub={addSub} />
-      </div>
-
-      <div class="tkc-chart curve" bind:clientWidth={chartW}>
-        <div class="tkc-fig-title small">Worst place to land, at every level of capital{system === 'similar' ? ': many similar banks' : ''}</div>
-        <svg
-          width={chartW}
-          height={CH}
-          role="img"
-          aria-label="Banks that fail at the worst place to land, against the capital every bank holds. {systemOf(system).label}, {shareLabel(share)}: {net.curves[share].map((p) => `${p.capital}%, ${p.worst}`).join('; ')}. Limit: {WORDS[LIMIT]}. Grey lines: the other two choices of extra."
-        >
-          {#each [0, 12, 24, 36, 48] as t (t)}
-            <line class={t === 0 ? 'tkc-base' : 'tkc-grid'} x1={cm.left} x2={chartW - cm.right} y1={cy(t)} y2={cy(t)} />
-            <text class="tkc-axis-label" x={cm.left - 6} y={cy(t) + 4} text-anchor="end">{t}</text>
-          {/each}
-          <line class="limit" x1={cm.left} x2={chartW - cm.right} y1={cy(LIMIT)} y2={cy(LIMIT)} />
-          {#each others as s (s.value)}
-            <path d={path(s.value)} class="faint" />
-          {/each}
-          <path d={path(share)} class="bold" />
-          {#each net.curves[share] as p (p.capital)}
-            <circle cx={cx(p.capital)} cy={cy(p.worst)} r="2.75" class="pt-small" />
-          {/each}
-          <line class="now" x1={cx(base)} x2={cx(base)} y1={cm.top} y2={cy(0)} />
-          <text class="tkc-label-2 tkc-halo" x={cm.left + 4} y={cy(LIMIT) - 5}>limit: {WORDS[LIMIT]}</text>
-          <text class="tkc-label-2 tkc-halo" x={tip.x + 7} y={tip.y + 4}>tipping point</text>
-          <circle cx={cx(base)} cy={cy(now.worst)} r="5.5" class="pt" />
-          <text class="tkc-label tkc-halo" x={cx(base) + (dotLeft ? -9 : 9)} y={dotY} text-anchor={dotLeft ? 'end' : 'start'}>{now.worst === 0 ? 'none fail' : `${now.worst} fail`}</text>
-          {#if hover !== null}
-            <line class="cross" x1={cx(hover)} x2={cx(hover)} y1={cm.top} y2={cy(0)} />
-          {/if}
-          {#each xTicks as c (c)}
-            <text class="tkc-axis-label" x={cx(c)} y={CH - cm.bottom + 16} text-anchor="middle">{c}%</text>
-          {/each}
-          <text class="tkc-axis-title" x={cm.left + (chartW - cm.left - cm.right) / 2} y={CH - 4} text-anchor="middle">Capital, every bank</text>
-          <text class="tkc-axis-title" x={4} y={cm.top - 16}>↑ Banks that fail, at the worst place</text>
-          <rect x={cm.left} y={cm.top} width={Math.max(0, chartW - cm.left - cm.right)} height={CH - cm.top - cm.bottom} fill="transparent" role="presentation" onpointermove={onMove} onpointerleave={() => (hover = null)} />
-        </svg>
-        {#if hover !== null}
-          <div class="tkc-tip" style:left="{Math.min(chartW - 190, Math.max(0, cx(hover) + 10))}px" style:top="40px">
-            <div>Every bank at {hover}%</div>
-            {#each [share, ...others.map((s) => s.value)] as s (s)}
-              <div class="tkc-tip-row">
-                <span class="tkc-swatch tkc-swatch--line" style:background={s === share ? 'var(--tkc-conditions)' : 'var(--tkc-rule)'}></span><strong>{net.curves[s][ci(hover)].worst}</strong>
-                {shareLabel(s) === 'None' ? 'no extra' : shareLabel(s)}
-              </div>
-            {/each}
-          </div>
-        {/if}
-        <div class="tkc-legend">
-          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span>Extra for the hubs: {shareLabel(share)}</span>
-          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-rule)"></span>The other two</span>
-        </div>
       </div>
 
       {#snippet model()}
@@ -452,9 +599,7 @@
       its {WORDS[hubLinks]} do. When the hub falls, each round of failures sets up the next: a loop that feeds itself.
     </p>
     <p>
-      So one bank’s IF becomes the system’s tipping point. Raising every bank to {evenly}% spends the {EXTRA} percentage
-      points and changes nothing: a buffer helps only once it covers the {LOSS}% loss. Four more each for the 12
-      biggest puts it where the links meet, and the cliff moves from {tipNone}% to {tipTop12}%. Many similar banks, about
+      So one bank’s IF becomes the system’s tipping point, the cliff in the curve. Raising every bank to {evenly}% spends the {EXTRA} percentage points and changes nothing: the cliff is at {tipNone}%. Four more each for the 12 biggest puts the buffer where the links meet, and the cliff moves to {tipTop12}%. Many similar banks, about
       {WORDS[SIMILAR_LINKS]} partners each, absorb what the hubs pass on: at {CAPITAL}% no landing brings down more than
       {WORDS[similarMost]}, and their cliff sits at {tipSimilar}%, unaided. Robust yet fragile belongs to the hubs.
     </p>
@@ -475,7 +620,7 @@
     <BankNote ask="Which partner, supplier or system in our chain would bring down many others if it failed?">
       <p>
         In 2011 the world’s bank supervisors agreed that the banks whose failure would travel furthest should hold more
-        capital than the rest: 1 to 3.5 extra percentage points, set by how large, interlinked, complex, global and hard to replace a
+        capital than the rest: 1 to 3.5 extra percentage points of risk-weighted assets, set by how large, interlinked, complex, global and hard to replace a
         bank is. National supervisors now do the same for the banks that matter most at home.
       </p>
     </BankNote>
@@ -498,10 +643,14 @@
     cursor: pointer;
     touch-action: manipulation;
   }
+  /* The curve sits right under the controls, so the lever and the cliff can be watched together; the
+     network where the loss lands follows. */
   .net {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 8px;
+    border-top: 1px solid var(--tkc-hair);
+    padding-top: 14px;
   }
   .readout {
     font-size: 0.875rem;
@@ -583,8 +732,6 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 8px;
-    border-top: 1px solid var(--tkc-hair);
-    padding-top: 14px;
   }
   .small {
     font-size: 0.9375rem;
@@ -599,6 +746,26 @@
     stroke: var(--tkc-rule);
     stroke-width: 1.75;
     stroke-linejoin: round;
+  }
+  /* The other banking system, same extra: dotted, so it is not taken for the dashed limit. */
+  .twin {
+    fill: none;
+    stroke: var(--tkc-muted);
+    stroke-width: 2;
+    stroke-dasharray: 0.5 4.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .grey-tag,
+  .twin-tag {
+    fill: var(--tkc-muted);
+    font-size: 12px;
+  }
+  .sw-dots {
+    width: 15px;
+    height: 3px;
+    border-radius: 0;
+    background: radial-gradient(circle, var(--tkc-muted) 1.2px, transparent 1.4px) 0 50% / 5px 3px repeat-x;
   }
   .bold {
     fill: none;
