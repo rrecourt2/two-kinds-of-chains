@@ -20,45 +20,58 @@
   let backups = $state(false);
   let runs = $state([]); // history of { gates, backups, through, guess }
   let width = $state(560);
+  let stripW = $state(320);
   let t = $state(0);
   let announce = $state('');
   let raf = 0;
-  let seed = 1;
   let guessEl = $state();
   let statusEl = $state();
   let resultEl = $state();
   let picEl = $state();
 
-  const pass = $derived(backups ? 1 - (1 - RELIABILITY) ** 2 : RELIABILITY);
-
-  // Exact counts at each gate (rounded), so the picture matches the arithmetic. With backups, each check
-  // still trips on about one loan in twenty of those that reach it; its backup saves all but the few
-  // that the rounded arithmetic leaves stuck, and those saves are drawn as they happen.
-  function plan(n, q, s, withBackups = false) {
+  // Every run draws its own luck: each loan meets each check afresh, and clears it 95% of the time. With a
+  // backup, a check that trips is tried a second time, and the loan is stuck only when both fail.
+  function plan(n, withBackups, s) {
     const rng = makeRng(s);
-    const alive = Array.from({ length: REQUESTS }, (_, i) => i);
     const stuckAt = new Array(REQUESTS).fill(-1);
     const savedAt = Array.from({ length: REQUESTS }, () => []);
     const saved = new Array(n).fill(0);
-    for (let k = 0; k < n; k++) {
-      const arriving = alive.length;
-      const target = Math.round(REQUESTS * q ** (k + 1));
-      let stuck = 0;
-      while (alive.length > target) {
-        const j = Math.floor(rng() * alive.length);
-        stuckAt[alive[j]] = k;
-        alive.splice(j, 1);
-        stuck++;
-      }
-      if (withBackups) {
-        saved[k] = Math.max(0, Math.round(arriving * (1 - RELIABILITY)) - stuck);
-        const pool = [...alive];
-        for (let m = 0; m < saved[k] && pool.length; m++) savedAt[pool.splice(Math.floor(rng() * pool.length), 1)[0]].push(k);
+    for (let i = 0; i < REQUESTS; i++) {
+      for (let k = 0; k < n; k++) {
+        if (rng() < RELIABILITY) continue;
+        if (withBackups && rng() < RELIABILITY) {
+          savedAt[i].push(k);
+          saved[k]++;
+          continue;
+        }
+        stuckAt[i] = k;
+        break;
       }
     }
-    return { stuckAt, savedAt, saved, through: alive.length, jitter: Array.from({ length: REQUESTS }, () => rng() * 2 - 1) };
+    const through = stuckAt.filter((k) => k < 0).length;
+    return { stuckAt, savedAt, saved, through, jitter: Array.from({ length: REQUESTS }, () => rng() * 2 - 1) };
   }
-  let flow = $state(plan(6, RELIABILITY, 1));
+  const freshSeed = () => Math.floor(Math.random() * 2 ** 31) + 1;
+  let flow = $state(plan(6, false, 1));
+
+  // What to expect, and how far one run of 100 strays from it: the share that clears every check, and the
+  // counts between which nine runs in ten end (the 5th and 95th percentiles of a binomial count).
+  const passOf = (r) => (r.backups ? 1 - (1 - RELIABILITY) ** 2 : RELIABILITY) ** r.gates;
+  const expectOf = (r) => Math.round(REQUESTS * passOf(r));
+  function spreadOf(r) {
+    const p = passOf(r);
+    let pmf = (1 - p) ** REQUESTS;
+    let cdf = 0;
+    let lo = null;
+    let hi = null;
+    for (let k = 0; k <= REQUESTS; k++) {
+      cdf += pmf;
+      if (lo === null && cdf > 0.05) lo = k;
+      if (hi === null && cdf >= 0.95) hi = k;
+      pmf *= ((REQUESTS - k) / (k + 1)) * (p / (1 - p));
+    }
+    return { lo, hi };
+  }
 
   // Geometry: an inbox of 100 requests, a lane through the gates, and a tray for what gets through.
   const H = 250;
@@ -150,8 +163,7 @@
     if (next.backups !== undefined) backups = next.backups;
     duration = runs.length ? 1500 : 2400;
     stagger = runs.length ? 12 : 22;
-    seed += 1;
-    flow = plan(gates, pass, seed, backups);
+    flow = plan(gates, backups, freshSeed());
     prepareSlots();
     phase = 'run';
     announce = `Sending 100 loans through ${describe({ gates, backups })}.`;
@@ -186,15 +198,16 @@
     t = totalTime();
     phase = 'done';
     runs = [...runs, { gates, backups, through: flow.through, guess }];
-    // The opening guess is the first puzzle: two points within 5, one within 10.
+    // The opening guess is the first puzzle, judged against what to expect, not against one run's luck:
+    // two points within 5, one within 10.
     scoredRun = runs.length === 1 && !!game?.isOpen('start');
     if (scoredRun) {
-      const off = Math.abs(guess - flow.through);
+      const off = Math.abs(guess - expectOf({ gates, backups }));
       if (off <= 5) game.solve('start');
       else if (off <= 10) (game.help('start'), game.solve('start'));
       else game.show('start');
     }
-    announce = `${flow.through} of 100 got through ${describe({ gates, backups })}.${runs.length === 1 ? ` You guessed ${guess}.` : ''}`;
+    announce = `${flow.through} of 100 got through ${describe({ gates, backups })}.${runs.length === 1 ? ` You guessed ${guess}; expect about ${expectOf({ gates, backups })}.` : ''}`;
     await tick();
     resultEl?.focus({ preventScroll: true });
     // On a phone the result can land below the fold: bring its first lines into view.
@@ -210,7 +223,7 @@
     phase = 'ask';
     announce = '';
     t = 0;
-    flow = plan(6, RELIABILITY, seed);
+    flow = plan(6, false, 1);
     prepareSlots();
     await tick();
     guessEl?.focus();
@@ -220,8 +233,48 @@
 
   const first = $derived(runs[0]);
   const latest = $derived(runs[runs.length - 1]);
+  const previous = $derived(runs[runs.length - 2]);
   const word = (n) => (n === 6 ? 'six' : n === 12 ? 'twelve' : String(n));
   const describe = (r) => `${word(r.gates)} checks${r.backups ? ', each with a backup' : ''}`;
+
+  // The tally: every run so far, grouped by the chain it went through, the latest chain's runs on a number line.
+  const kindOf = (r) => `${r.gates}${r.backups ? 'b' : ''}`;
+  const sameKind = (a, b) => !!a && !!b && kindOf(a) === kindOf(b);
+  const SHOWN = 10; // the most runs listed for one chain; earlier ones are summed up as "…"
+  const groups = $derived.by(() => {
+    const out = [];
+    for (const r of runs) {
+      let g = out.find((x) => x.kind === kindOf(r));
+      if (!g) out.push((g = { kind: kindOf(r), gates: r.gates, backups: r.backups, counts: [] }));
+      g.counts.push(r.through);
+    }
+    return out;
+  });
+  const expected = $derived(latest ? expectOf(latest) : 0);
+  const spread = $derived(latest ? spreadOf(latest) : { lo: 0, hi: 0 });
+  const mine = $derived(latest ? runs.filter((r) => sameKind(r, latest)).map((r) => r.through) : []);
+  // A short stretch of the line from 0 to 100: forty loans wide, around what to expect.
+  const SH = 54;
+  const WINDOW = 40;
+  const from = $derived(Math.max(0, Math.min(REQUESTS - WINDOW, expected - WINDOW / 2)));
+  const sx = (v) => 6 + ((stripW - 12) * (Math.max(from, Math.min(from + WINDOW, v)) - from)) / WINDOW;
+  // Runs that ended on the same count stack upwards, four high at most.
+  const stripDots = $derived.by(() => {
+    const seen = {};
+    return mine.map((v, k) => {
+      const level = Math.min(3, (seen[v] = (seen[v] ?? -1) + 1));
+      return { x: sx(v), y: 27 - level * 7, last: k === mine.length - 1 };
+    });
+  });
+  const expectLabel = $derived.by(() => {
+    const text = `expect ${expected}`;
+    const w = text.length * 6.6;
+    const x = Math.max(w / 2, Math.min(stripW - w / 2, sx(expected)));
+    return { text, x, x0: x - w / 2, x1: x + w / 2 };
+  });
+  const stripLabel = $derived(
+    `Your runs through ${latest ? describe(latest) : ''}: ${mine.join(', ')}. Expect about ${expected}; nine runs in ten end between ${spread.lo} and ${spread.hi}.`,
+  );
   const savedTotal = $derived(flow.saved.reduce((a, b) => a + b, 0));
   const entry = $derived(game?.entry('start'));
   const pointsText = $derived.by(() => {
@@ -264,7 +317,7 @@
           <input id="{prefix}-guess" type="range" min="0" max="100" bind:value={guess} bind:this={guessEl} aria-describedby="{prefix}-hook-q" style:--pct="{guess}%" />
           <output for="{prefix}-guess" class="guess-value tkc-num">{guess}</output>
         </div>
-        <p class="tkc-small rule">{entry && entry.status !== 'open' ? 'Your first guess already counted; this one is practice.' : 'Within 5 of the result: 2 points. Within 10: 1 point.'}</p>
+        <p class="tkc-small rule">{entry && entry.status !== 'open' ? 'Your first guess already counted; this one is practice.' : 'Within 5 of what to expect: 2 points. Within 10: 1 point.'}</p>
         <button type="button" class="tkc-btn tkc-btn--primary go" onclick={() => send()}>Send 100 loans</button>
       </div>
     {:else if phase === 'run'}
@@ -335,15 +388,18 @@
           <span class="of">of 100 got through {describe(latest)}</span>
         </div>
         {#if runs.length === 1}
+          {@const e = expectOf(first)}
           <p class="lead">
             You guessed {first.guess}.
-            {#if Math.abs(first.guess - first.through) <= 5}
-              Spot on. Each check looks safe on its own, yet one loan in four gets stuck: {arithmetic}.
-            {:else if first.guess > first.through}
-              Most people guess higher. Each check looks safe on its own, yet one loan in four gets stuck, because the
-              chances multiply: {arithmetic}.
+            {#if Math.abs(first.guess - e) <= 5}
+              Spot on: expect about {e} (this run: {first.through}). Each check looks safe on its own, yet one loan in four
+              gets stuck: {arithmetic}.
+            {:else if first.guess > e}
+              Most people guess higher. Expect about {e} (this run: {first.through}): each check looks safe on its own, yet
+              one loan in four gets stuck, because the chances multiply: {arithmetic}.
             {:else}
-              Fewer get stuck than that: {arithmetic}. Still, one loan in four does.
+              Fewer get stuck than that: expect about {e} (this run: {first.through}), since {arithmetic}. Still, one loan in
+              four does.
             {/if}
             {#if pointsText}<span class="points" class:none={!scoredRun || !entry?.points}>{pointsText}</span>{/if}
           </p>
@@ -353,10 +409,42 @@
             is stuck only when both fail. The checks still tripped {savedTotal + REQUESTS - latest.through} times; the backups saved
             {savedTotal} of them. Conditions multiply the risk; alternatives divide it.
           </p>
+        {:else if sameKind(latest, previous)}
+          <p class="lead">
+            Same {word(latest.gates)} checks, same 95%, and this time {latest.through}: each loan meets each check afresh, so no
+            two runs end quite alike. Expect about {expected}.
+          </p>
         {:else}
-          <p class="lead">Twice the checks, and almost half the loans get stuck: {arithmetic}. Every new condition multiplies in another 95%.</p>
+          <p class="lead">Twice the checks, and almost half the loans can be expected to get stuck: {arithmetic}. Every new condition multiplies in another 95%.</p>
         {/if}
+        <div class="runs">
+          <p class="tkc-small tally">
+            {#if groups.length > 1}<span class="group g-name">Your runs</span>{/if}
+            {#each groups as g (g.kind)}
+              {@const shown = g.counts.slice(-SHOWN)}
+              <span class="group">
+                <span class="g-name">{groups.length > 1 ? `${g.gates === 6 ? 'Six' : 'Twelve'} checks${g.backups ? ' with backups' : ''}` : 'Your runs'}:</span>
+                {g.counts.length > SHOWN ? '… · ' : ''}{#each shown as v, k (k)}{k ? ' · ' : ''}<span class="tkc-num" class:now={g.kind === kindOf(latest) && k === shown.length - 1}>{v}</span>{/each}
+              </span>
+            {/each}
+          </p>
+          <div class="strip" bind:clientWidth={stripW}>
+            <svg width={stripW} height={SH} role="img" aria-label={stripLabel}>
+              <rect class="band" x={sx(spread.lo)} y="4" width={Math.max(2, sx(spread.hi) - sx(spread.lo))} height="30" rx="3" />
+              <line class="axis" x1={sx(from)} x2={sx(from + WINDOW)} y1="34" y2="34" />
+              <line class="expect" x1={sx(expected)} x2={sx(expected)} y1="4" y2="38" />
+              {#each stripDots as d, k (k)}
+                <circle cx={d.x} cy={d.y} r={d.last ? 4.5 : 3.5} class="run" class:last={d.last} />
+              {/each}
+              {#if expectLabel.x0 > 28}<text class="tkc-axis-label" x={sx(from)} y={SH - 4}>{from}</text>{/if}
+              {#if expectLabel.x1 < stripW - 34}<text class="tkc-axis-label" x={sx(from + WINDOW)} y={SH - 4} text-anchor="end">{from + WINDOW}</text>{/if}
+              <text class="tkc-axis-label" x={expectLabel.x} y={SH - 4} text-anchor="middle">{expectLabel.text}</text>
+            </svg>
+          </div>
+          <p class="tkc-small range">In 1,000 runs of 100 loans, between {spread.lo} and {spread.hi} get through nine times in ten.</p>
+        </div>
         <div class="tkc-row">
+          <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: latest.gates, backups: latest.backups })}>Run it again</button>
           {#if !(latest.gates === 12 && !latest.backups)}
             <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: 12, backups: false })}>Twelve checks, no backups</button>
           {/if}
@@ -365,13 +453,6 @@
           {/if}
           <button type="button" class="tkc-btn tkc-btn--small" onclick={again}>Start over</button>
         </div>
-        {#if runs.length > 1}
-          <ul class="history">
-            {#each runs as r, i (i)}
-              <li><span class="tkc-num">{r.through}</span> of 100 · {describe(r)}</li>
-            {/each}
-          </ul>
-        {/if}
         <div class="next">
           <button type="button" class="tkc-btn tkc-btn--primary" onclick={() => go?.(1)}>Start the story →</button>
           <span class="tkc-small">{(game?.ids.length ?? total + 1) - 1} more puzzles about why this happens, and what changes it.</span>
@@ -444,8 +525,10 @@
   .result {
     grid-area: result;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
     align-content: start;
+    min-width: 0;
   }
   .result:focus {
     outline: none;
@@ -615,19 +698,58 @@
   .rule {
     color: var(--tkc-muted);
   }
-  .history {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 18px;
-    font-size: 0.875rem;
-    color: var(--tkc-ink-2);
+  /* The tally of runs: the counts in words, the latest chain's runs as dots on a line from 0 to 100, and the
+     band where nine runs in ten end. */
+  .runs {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    max-width: 30rem;
   }
-  .history .tkc-num {
+  .strip {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .group {
+    display: block;
+  }
+  .g-name {
+    color: var(--tkc-muted);
+  }
+  .tally .tkc-num {
+    font-weight: 600;
+  }
+  .tally .now {
     font-weight: 700;
-    color: var(--tkc-ink);
+    color: var(--tkc-options-ink);
+  }
+  .strip svg {
+    display: block;
+  }
+  .band {
+    fill: var(--tkc-sunken);
+  }
+  .axis {
+    stroke: var(--tkc-rule);
+    stroke-width: 1;
+  }
+  .expect {
+    stroke: var(--tkc-ink-2);
+    stroke-width: 1.25;
+    stroke-dasharray: 3 2;
+  }
+  .run {
+    fill: var(--tkc-options);
+    fill-opacity: 0.45;
+  }
+  .run.last {
+    fill-opacity: 1;
+    stroke: var(--tkc-surface);
+    stroke-width: 1.5;
+  }
+  .range {
+    color: var(--tkc-muted);
+    text-wrap: pretty;
   }
   .next {
     display: flex;

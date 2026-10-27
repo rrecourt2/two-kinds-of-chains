@@ -196,12 +196,12 @@
     <p>
       That is why the marks spread. The first ones save little: with one deal in ten marked, under a day. But each mark
       pushes the unmarked deals further back, so the next mark saves more: 6.6 days with half the deals marked, 78 with
-      nine in ten. It is a loop that feeds itself, and it runs until nobody can afford to be the last deal without one.
+      nine in ten. It is a <span class="tkc-idea">loop</span> that feeds itself, and it runs until nobody can afford to be the last deal without one.
     </p>
     <p>
       Going first, on its own, only reorders the line: one deal’s gain is another’s wait, and the average stays where it
       was. The deferrals are what stretch it. With every deal marked, they take 0.8 places a week, and the agenda goes
-      from 80% to 96% full, past the tipping point on the queues chapter’s curve. The curve does the rest: the share of
+      from 80% to 96% full, past the <span class="tkc-idea">tipping point</span> on the queues chapter’s curve. The curve does the rest: the share of
       deals decided at their first Monday falls from 75% to 17%.
     </p>
     <p>

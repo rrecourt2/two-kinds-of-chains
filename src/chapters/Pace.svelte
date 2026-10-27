@@ -317,7 +317,7 @@
       </p>
       <p>
         In between, at about {word(T.some)} years, the two costs together are lowest. Losses raise the cushion and calm
-        lowers it, but not so far that the next crisis finds it bare: a loop that steadies itself, like a thermostat. Biologists know the pattern as hormesis: a small dose of stress
+        lowers it, but not so far that the next crisis finds it bare: a <span class="tkc-idea">loop</span> that steadies itself, like a thermostat. Biologists know the pattern as hormesis: a small dose of stress
         makes an organism stronger, and a large one harms it. Antifragility is a matter of dose: enough change to adapt, not so fast that the lesson is forgotten.
       </p>
       <h3>What sets the pace</h3>

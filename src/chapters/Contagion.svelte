@@ -24,7 +24,8 @@
     byLinks,
     capitalFor,
     landing,
-    added,
+    MAX_AVERAGE,
+    averageCapital,
     withinBudget,
     worstCurve,
     tippingPoint,
@@ -37,7 +38,6 @@
   import { prefersReducedMotion, watchVisibility } from '../lib/motion.js';
 
   const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
-  const TIMES = ['', 'once', 'twice', 'three times', 'four times', 'five times', 'six times'];
   // Grown around hubs, the best-connected banks are the biggest; among many similar banks they are only the
   // best connected.
   const NAMED = {
@@ -90,7 +90,7 @@
   const capital = $derived(capitalFor(net.adj, top, base));
   const outcome = $derived(landing(net.adj, capital, at));
   const now = $derived(net.curves[share][ci(base)]);
-  const add = $derived(added(base, top));
+  const average = $derived(averageCapital(base, top));
   const hasExtra = (b) => capital[b] > base;
 
   // The outcome, revealed one round of failures at a time.
@@ -214,9 +214,13 @@
             ? 'Its weakest partners fall with it, in one round'
             : `${rounds} rounds, each set off by the one before`,
   );
-  const addValue = $derived(add < 0 ? `−${-add}` : String(add));
-  const addSub = $derived(
-    base < CAPITAL ? `percentage points: every bank below today’s ${CAPITAL}%` : add > EXTRA ? `percentage points, over the ${EXTRA} allowed` : `percentage points, of the ${EXTRA} allowed`,
+  const pct1 = (v) => `${v.toFixed(1)}%`;
+  const averageSub = $derived(
+    base < CAPITAL
+      ? `of assets; ${top ? `${WORDS[N - top] ?? N - top} banks` : 'every bank'} below today’s ${CAPITAL}%`
+      : average > MAX_AVERAGE
+        ? `of assets, over the ${MAX_AVERAGE}% allowed`
+        : `of assets; up to ${MAX_AVERAGE}% allowed`,
   );
 
   // ---- The curve: the worst place to land, against the capital every bank holds. ----
@@ -374,33 +378,33 @@
     hover = Math.max(CAPITALS[0], Math.min(CAPITALS.at(-1), Math.round(cx.invert(e.clientX - box.left))));
   }
 
-  // ---- The puzzle: every landing to five failures or fewer, within the budget. ----
+  // ---- The puzzle: every landing to five failures or fewer, no bank cut, average capital at most 6%. ----
   const answer = HUBS.curves.top12[ci(CAPITAL)];
   const met = $derived(now.worst <= LIMIT && withinBudget(base, top));
   function progressFor() {
     if (met || base < CAPITAL) return '';
     if (now.worst <= LIMIT)
-      return `${now.worst === 0 ? 'Nothing fails, wherever the loss lands' : `At most ${WORDS[now.worst]} fail`}, but the capital added is ${add}: ${TIMES[add / EXTRA] ?? `${add / EXTRA} times`} the ${EXTRA} allowed.`;
+      return `${now.worst === 0 ? 'Nothing fails, wherever the loss lands' : `At most ${WORDS[now.worst]} fail`}, but average capital is ${pct1(average)}, over the ${MAX_AVERAGE}% allowed.`;
     const where = describe(now.worstAt.reduce((a, b) => (net.rankOf[b] < net.rankOf[a] ? b : a)));
     if (share === 'none' && base > CAPITAL) return `${base}% is still less than the ${LOSS}% loss: a loss at ${where} brings down ${now.worst}.`;
     if (share === 'top3') return `The three biggest stand; a loss at ${where} still brings down ${now.worst}.`;
     return '';
   }
   const puzzle = $derived({
-    goal: `Raise capital by at most ${EXTRA} percentage points in all, so that wherever the loss lands, ${WORDS[LIMIT]} banks or fewer fail.`,
+    goal: `Extra capital may lift the average from ${CAPITAL}% to ${MAX_AVERAGE}%. Place it so that no landing brings down more than ${WORDS[LIMIT]} banks.`,
     met,
     checks: [
       { label: `Wherever the loss lands, ${WORDS[LIMIT]} banks or fewer fail (now ${now.worst ? `up to ${now.worst}` : 'none'})`, ok: now.worst <= LIMIT },
       base < CAPITAL
         ? { label: `Capital raised, not cut: every bank at ${CAPITAL}% or more (now ${base}%)`, ok: false }
-        : { label: `At most ${EXTRA} percentage points added (now ${add})`, ok: add <= EXTRA },
+        : { label: `Average capital ${MAX_AVERAGE}% or less (now ${pct1(average)})`, ok: average <= MAX_AVERAGE },
     ],
     progress: progressFor(),
     hints: [
-      `A buffer stops the loss only where it covers all ${LOSS}%; raising every bank that far adds ${added(LOSS, 0)}.`,
+      `A buffer stops the loss only where it covers all ${LOSS}%; raising every bank that far puts the average at ${averageCapital(LOSS, 0)}%.`,
       'The loss travels furthest from the biggest banks. On the curve, the grey lines show the other two choices of extra.',
     ],
-    found: `Capital of ${CAPITAL + EXTRA / 12}% for the 12 biggest: wherever the loss lands, at most ${WORDS[answer.worst]} banks fail, for ${EXTRA} percentage points; ${LOSS}% everywhere would cost ${added(LOSS, 0)}.`,
+    found: `The 12 biggest at ${CAPITAL + EXTRA / 12}%, an average of ${averageCapital(CAPITAL, 12)}%: at most ${WORDS[answer.worst]} banks fail; stopping the loss everywhere would take ${LOSS}% for every bank.`,
   });
 
   // Numbers quoted in the explanation, read from the same model.
@@ -440,8 +444,8 @@
       along the links.
     </p>
     <p>
-      Today every bank holds capital of {CAPITAL}% of its assets. The supervisor can ask for {EXTRA} percentage points
-      more, in all: one more for every bank, or more for the few hubs.
+      Today every bank holds capital of {CAPITAL}% of its assets. The supervisor can raise the average to
+      {MAX_AVERAGE}%: one more point for every bank, or more for a few hubs.
     </p>
   {/snippet}
 
@@ -460,7 +464,7 @@
         <Slider id="c-capital" label="Capital, every bank" bind:value={base} min={CAPITALS[0]} max={CAPITALS.at(-1)} format={(v) => `${v}% of assets`} />
         <div class="ctl">
           <Segmented name="c-extra" label="Extra for the hubs" bind:value={share} options={SHARES.map(({ value, label }) => ({ value, label }))} />
-          <p class="tkc-small">On top, for the banks with the most partners: {EXTRA} percentage points in all.</p>
+          <p class="tkc-small">On top, for the banks with the most partners; either kind of extra adds {WORDS[EXTRA / N]} point to the average.</p>
         </div>
         {#if solved}
           <div class="ctl">
@@ -577,11 +581,11 @@
 
       <div class="tkc-stats two" use:announce>
         <Stat label="Banks that fail, from this landing" value="{count} of {N}" sub={failSub} swatch="var(--tkc-conditions)" />
-        <Stat label="Capital added" value={addValue} sub={addSub} />
+        <Stat label="Average capital" value={pct1(average)} sub={averageSub} />
       </div>
 
       {#snippet model()}
-        <p>Each bank lends {INTERBANK_PCT}% of its assets to its partners, split evenly; every link runs both ways. A bank with k partners loses {INTERBANK_PCT} ÷ k % for each one that fails, and fails once its losses exceed its capital. Failures spread in rounds until a round adds none. Capital moves in whole percentage points; what is added counts from today’s {CAPITAL}%.</p>
+        <p>Each bank lends {INTERBANK_PCT}% of its assets to its partners, split evenly; every link runs both ways. A bank with k partners loses {INTERBANK_PCT} ÷ k % for each one that fails, and fails once its losses exceed its capital. Failures spread in rounds until a round adds none. Capital moves in whole percentage points; the average is unweighted across the {N} banks.</p>
         <p>As it is, the network grows by preferential attachment: each new bank links to two others, more often to those with many links already. Across {ALTERNATIVES} networks grown this way, {CAPITAL}% with four more for the 12 biggest keeps every landing to {WORDS[LIMIT]} failures or fewer in {robust}; {tipTop12}% with four more, in {robustLower}. Many similar banks: every pair is linked with the same chance; across {ALTERNATIVES} such networks, no landing at {CAPITAL}% brings down more than {WORDS[similarMost]}. After Watts (2002) and Gai and Kapadia (2010).</p>
       {/snippet}
     </Instrument>
@@ -594,12 +598,12 @@
       fragile, as central bankers came to call it.
     </p>
     <p>
-      Each bank hangs on an <strong>IF</strong>: it fails if its losses exceed its capital. Through its loans the IF
-      becomes a quorum: a small bank falls if {WORDS[smallK]} of its two partners fails, the biggest if {WORDS[hubK]} of
-      its {WORDS[hubLinks]} do. When the hub falls, each round of failures sets up the next: a loop that feeds itself.
+      Each bank hangs on an <span class="tkc-if">IF</span>: it fails if its losses exceed its capital. Through its loans the IF
+      becomes a <span class="tkc-idea">quorum</span>: a small bank falls if {WORDS[smallK]} of its two partners fails, the biggest if {WORDS[hubK]} of
+      its {WORDS[hubLinks]} do. When the hub falls, each round of failures sets up the next: a <span class="tkc-idea">loop</span> that feeds itself.
     </p>
     <p>
-      So one bank’s IF becomes the system’s tipping point, the cliff in the curve. Raising every bank to {evenly}% spends the {EXTRA} percentage points and changes nothing: the cliff is at {tipNone}%. Four more each for the 12 biggest puts the buffer where the links meet, and the cliff moves to {tipTop12}%. Many similar banks, about
+      So one bank’s <span class="tkc-if">IF</span> becomes the system’s <span class="tkc-idea">tipping point</span>, the cliff in the curve. Raising every bank to {evenly}% uses the whole allowance and changes nothing: the cliff is at {tipNone}%. The same average, as four more each for the 12 biggest, puts the buffer where the links meet, and the cliff moves to {tipTop12}%. Many similar banks, about
       {WORDS[SIMILAR_LINKS]} partners each, absorb what the hubs pass on: at {CAPITAL}% no landing brings down more than
       {WORDS[similarMost]}, and their cliff sits at {tipSimilar}%, unaided. Robust yet fragile belongs to the hubs.
     </p>

@@ -173,7 +173,7 @@
       six hold on 94% of days. Nobody has to be in more often; more people can sign.
     </p>
     <p>
-      The danger is how fast a chain of ANDs falls apart. With four more named roles, the decision is possible on one
+      The danger is how fast a chain of <span class="tkc-and">ANDs</span> falls apart. With four more named roles, the decision is possible on one
       day in three, though each of the ten is in on nine days in ten. The blocked days come in stretches, too: one person’s week of holiday stops everything that needs
       them.
     </p>
@@ -188,8 +188,8 @@
       strong. ANDs weaken it with every link, and past a point it is blocked more often than it is open.
     </p>
     <p>
-      Between the two sits the quorum. All six of six is an AND; any one of two, a person or their stand-in, is an
-      OR; any four of six lies in between. The same six people, each in on nine days in ten, are all in together on
+      Between the two sits the <span class="tkc-idea">quorum</span>. All six of six is an <span class="tkc-and">AND</span>; any one of two, a person or their stand-in, is an
+      <span class="tkc-or">OR</span>; any four of six lies in between. The same six people, each in on nine days in ten, are all in together on
       {pct(coverageOdds(COUNT, 0, 0.9).enough)} of days; any five on {pct(coverageOdds(COUNT, 0, 0.9, 5).enough)}, any
       four on {pct(coverageOdds(COUNT, 0, 0.9, 4).enough)}. A quorum keeps several judgements without waiting for every
       one of them.

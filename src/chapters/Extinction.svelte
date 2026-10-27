@@ -231,7 +231,7 @@
     <p>
       In a calm world the specialist wins: it grows faster and fills its islands first. As the years get more variable,
       its one plant fails it again and again, and it disappears from island after island. The generalist is not better
-      at anything; it just never depends on a single plant. The crossing is a tipping point: past it, each extra bit of variability costs the specialist more than the last.
+      at anything; it just never depends on a single plant. The crossing is a <span class="tkc-idea">tipping point</span>: past it, each extra bit of variability costs the specialist more than the last.
     </p>
     <p>
       This is not Adam Smith’s specialist: its trouble is not its skill but its single source of food. A chain of named
@@ -250,9 +250,10 @@
     </p>
     <h3>Why islands</h3>
     <p>
-      A larger area holds more species in all, but fewer for its size; Nassim Taleb reads globalization into that rule,
-      as a few winners spread at the expense of the rest. The islands here never swap animals, so a collapse on one stays
-      there: each is a firebreak, as the banks in the stress test were not. Each island is fragile; the archipelago lasts while any one of its forty does: a quorum of one.
+      A larger area holds more species in all, but fewer for its size. Globalization joins the world into one large
+      area, where a few winners spread at the expense of local variety. The islands here never swap animals, so a
+      collapse on one stays there: each is a firebreak, as the banks in the stress test were not. Each island is
+      fragile; the archipelago lasts while any one of its forty does: a <span class="tkc-idea">quorum</span> of one.
     </p>
   {/snippet}
 

@@ -1,8 +1,8 @@
-// Requisite variety: local offices with a menu of answers, a long-tailed world of client requests, and a
-// head-office committee that hears whatever the menu cannot answer.
+// Requisite variety: local offices with delegated authority (the kinds of request each may decide on its own),
+// a long-tailed world of client requests, and a head-office committee that hears whatever no office may decide.
 //
 // Request kinds follow Zipf's law: the k-th most common kind is asked for in proportion to 1 / k^EXPONENT.
-// A menu of m answers covers the m most common kinds. Every other request is an exception and goes to a
+// Offices that may decide m kinds decide the m most common. Every other request is an exception and goes to a
 // committee that meets once a week and can hear ROOM of them, oldest first; the rest wait for the next week.
 
 import { makeRng, poisson } from './rng.js';
@@ -14,10 +14,11 @@ export const WORLDS = { today: 60, varied: 120 }; // kinds of request
 export const TARGET_DAYS = 10; // two working weeks
 export const DAYS_A_WEEK = 5;
 export const WEEKS_A_YEAR = 52;
-export const MENU = { min: 5, max: 60, start: 10 };
+export const DELEGATED = { min: 5, max: 60, start: 10 }; // kinds of request an office may decide: the slider
 
 /**
- * Today's sixty kinds of client request, most common first: illustrative names for the bars and the menu.
+ * Today's sixty kinds of client request, most common first: illustrative names for the bars and for the list
+ * of kinds an office may decide.
  * The more varied world keeps these sixty in the same order and adds sixty rarer, newer kinds after them.
  */
 export const KIND_NAMES = [
@@ -97,17 +98,17 @@ export function weeklyRates(world) {
   return SHARES[world].map((s) => s * REQUESTS);
 }
 
-/** Share of requests the menu does not answer. */
-export function unanswered(world, menu) {
-  return SHARES[world].slice(menu).reduce((a, b) => a + b, 0);
+/** Share of requests that no office may decide, when offices may decide the `decided` most common kinds. */
+export function unanswered(world, decided) {
+  return SHARES[world].slice(decided).reduce((a, b) => a + b, 0);
 }
 
 /**
  * Exceptions sent to head office a week. `principles` is the share of unlisted cases an office could
- * settle by applying principles instead of a listed answer (0 for a plain menu).
+ * settle by applying principles instead of a listed delegation (0 for delegations alone).
  */
-export function escalations(world, menu, { principles = 0 } = {}) {
-  return REQUESTS * unanswered(world, menu) * (1 - principles);
+export function escalations(world, decided, { principles = 0 } = {}) {
+  return REQUESTS * unanswered(world, decided) * (1 - principles);
 }
 
 /**
@@ -157,15 +158,15 @@ export function averageWait(lam, room = ROOM) {
   return DAYS_A_WEEK * (0.5 + meanBacklog(lam, room) / lam);
 }
 
-/** Everything the figure shows for one world and one menu. */
-export function outcome(world, menu, opts = {}) {
-  const lam = escalations(world, menu, opts);
+/** Everything the figure shows for one world, with offices that may decide the `decided` most common kinds. */
+export function outcome(world, decided, opts = {}) {
+  const lam = escalations(world, decided, opts);
   const wait = averageWait(lam);
   return {
     world,
     kinds: WORLDS[world],
-    menu,
-    answered: 1 - unanswered(world, menu),
+    decided,
+    answered: 1 - unanswered(world, decided),
     escalated: lam,
     load: lam / ROOM,
     // Cases left waiting after an average meeting (infinite when the queue grows without end).
@@ -178,8 +179,8 @@ export function outcome(world, menu, opts = {}) {
   };
 }
 
-/** The smallest menu whose exceptions wait less than `target` working days on average. */
-export function smallestMenu(world, target = TARGET_DAYS, opts = {}) {
+/** The fewest kinds an office may decide for which exceptions wait less than `target` working days on average. */
+export function fewestDelegated(world, target = TARGET_DAYS, opts = {}) {
   for (let m = 0; m <= WORLDS[world]; m++) if (averageWait(escalations(world, m, opts)) < target) return m;
   return null;
 }

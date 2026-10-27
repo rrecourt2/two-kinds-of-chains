@@ -7,7 +7,7 @@ ships as one file, with no external requests, so it can run inside a locked-down
 
 | # | Chapter | Puzzle and live model |
 |---|---------|------------------------|
-| 0 | Two Kinds of Chains | Guess how many of 100 loans clear six checks the first time, then watch them flow |
+| 0 | Two Kinds of Chains | Guess how many of 100 loans clear six checks the first time, then watch them flow; every run draws its own luck, and runs can be repeated and tallied |
 | | **Part 1 · Two kinds of chains** | |
 | 1 | A riddle about chains | Better attendance or a stand-in per role? A month calendar (AND vs OR) |
 | 2 | Why longer chains get cheaper | The smallest market in which twelve specialists pay off |
@@ -18,7 +18,7 @@ ships as one file, with no external requests, so it can run inside a locked-down
 | 6 | The fast track | One committee with five places a week and an urgent lane: once every deal is marked urgent, the average wait grows from 3.9 to about 19 days |
 | | **Part 3 · When the world pulls on the chain** | |
 | 7 | When the average lies | Ole Peters' coin game: the paper value against the typical player; staking less and pooling |
-| 8 | When links become conditions | The stress test: 48 banks around a few hubs; a capital slider and its cliff, extra capital for the biggest hubs so no landing brings down more than five; then many similar banks |
+| 8 | When links become conditions | The stress test: 48 banks around a few hubs; a capital slider and its cliff, extra capital for the biggest hubs so no landing brings down more than five at an average capital of 6%; then many similar banks |
 | 9 | How to find a black swan | A dollar loan repaid from local-currency tolls, 96 good months: find the year that breaks the claim (both falls at once); Russell's chicken, Popper's swans |
 | 10 | Why species go extinct | Where the generalist overtakes the specialist as the years get more volatile; why islands |
 | | **Part 4 · Chains that bend** | |
@@ -31,7 +31,7 @@ ships as one file, with no external requests, so it can run inside a locked-down
 | | **Part 5 · Chains that learn** | |
 | 17 | A person in the loop | One AI, twenty requests, with a person in the loop or on autopilot; a steady or an erratic AI |
 | 18 | The irony of the reliable machine | A system reads 99% of borrowers' accounts; on the day it fails, analysts out of practice misread the figures; a day by hand each month |
-| 19 | Only variety absorbs variety | Ashby's law of requisite variety: the smallest menu of answers that keeps exceptions waiting under two weeks; then a more varied world |
+| 19 | Only variety absorbs variety | Ashby's law of requisite variety: the fewest kinds of request an office may decide on its own (its delegations) that keep exceptions waiting under two weeks; then a more varied world |
 | 20 | Many short chains | Convex tinkering: one big programme or pilots first, in a world nobody can predict |
 | 21 | Running to stand still | Fraud learns round the checks: what monthly-reviewed checks catch in year three (about one in four); one check at random; never dropping a check |
 | 22 | How fast to forget | A country cushion sized to the worst year remembered: the memory that keeps losses and idle lending in bounds |

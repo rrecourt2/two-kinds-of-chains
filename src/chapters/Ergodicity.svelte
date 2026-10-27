@@ -221,7 +221,7 @@
       expected value misleads when outcomes multiply.
     </p>
     <p>
-      Every round is a link in a chain that multiplies, like the riddle’s chain of ANDs. In such a chain the swings do
+      Every round is a link in a chain that multiplies, like the riddle’s chain of <span class="tkc-and">ANDs</span>. In such a chain the swings do
       not cancel out; they compound, and the longer the chain, the further the typical player falls.
     </p>
     <p>

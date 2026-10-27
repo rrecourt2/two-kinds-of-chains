@@ -333,7 +333,7 @@
       sixth. The fraud in the gate worth keeping stood still for its one check; this one learns.
     </p>
     <p>
-      Two loops are racing. The other side’s turns every month: whatever got through is tried more. The bank’s turns at
+      Two <span class="tkc-idea">loops</span> are racing. The other side’s turns every month: whatever got through is tried more. The bank’s turns at
       each review: wherever fraud turned up is checked. Reviewed once a year, the checks catch {pc(T.yearly)} in year
       three; every month, {pc(T.monthly)}. Neither gets back to the first month’s {pc(T.first)}, because each review aims
       at last month’s fraud, which is already moving on.

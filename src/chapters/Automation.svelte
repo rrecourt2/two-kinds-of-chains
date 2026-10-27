@@ -319,7 +319,7 @@
       contribution of the human operator.”
     </p>
     <p>
-      Reliability starts a loop that feeds itself: the better the system reads, the more reading it is given, the less the analysts practise, and the better the system looks beside them. Every failure is also a
+      Reliability starts a <span class="tkc-idea">loop</span> that feeds itself: the better the system reads, the more reading it is given, the less the analysts practise, and the better the system looks beside them. Every failure is also a
       day of practice, so the rarer the failures, the more each one costs. In the chain, reading is an
       <span class="tkc-or">OR</span>: the system, or the analysts when it fails. Like the riddle’s stand-in who has never
       stood in, the second half of that OR can exist on paper only.

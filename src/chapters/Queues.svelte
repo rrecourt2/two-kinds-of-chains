@@ -312,13 +312,13 @@
       about 85% occupancy, emergency patients start to find no bed.
     </p>
     <p>
-      The curve has a tipping point. Below it, a little more work costs a little more waiting. Past it, from about
+      The curve has a <span class="tkc-idea">tipping point</span>. Below it, a little more work costs a little more waiting. Past it, from about
       {Math.round(TIP_NAMED * 100)}% busy, each further point adds more waiting than the review itself takes, and the
       line runs away from the people serving it.
     </p>
     <p>
       A shared line changes the shape, not the workload. In named lines a request can wait behind a colleague’s backlog
-      while another reviewer sits idle; in one shared line that never happens, and the tipping point moves out to
+      while another reviewer sits idle; in one shared line that never happens, and the <span class="tkc-idea">tipping point</span> moves out to
       {Math.round(TIP_SHARED * 100)}%.
       Bank branches learned this long ago: one line for all the tellers beats a line per teller. It is the riddle’s
       stand-in again: any qualified person may take the work.

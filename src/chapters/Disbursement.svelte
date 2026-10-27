@@ -441,7 +441,7 @@
   {#snippet after()}
     <p>
       Each condition alone is usually in time: every one is met in time for at least {worstEach} clients in 100. All twelve together keep the promise for only {allTogether}. That is the riddle’s arithmetic: a
-      chain of <span class="tkc-and">ANDs</span> holds only when every link holds at once. Side by side, the slowest sets the date,
+      chain of <span class="tkc-and">ANDs</span> holds only when every link holds at once. <span class="tkc-idea">Side by side</span>, the slowest sets the date,
       a different one each time: no condition typically takes more than {slowestTypical} working days, yet the typical
       loan waits {F.start.mid}.
     </p>

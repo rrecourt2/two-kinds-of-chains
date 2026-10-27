@@ -180,7 +180,7 @@
         <div class="tkc-legend">
           <span><span class="tkc-swatch" style:background="var(--tkc-options)" aria-hidden="true"></span>Caught by a breach</span>
           <span><span class="tkc-swatch" style:background="var(--tkc-ink)" aria-hidden="true"></span>Missed</span>
-          <span><span class="tkc-swatch" style:background="var(--tkc-conditions)" aria-hidden="true"></span>False alarm</span>
+          <span><span class="tkc-swatch" style:background="var(--tkc-conditions)" aria-hidden="true"></span>False alarm (a false positive)</span>
           <span><span class="tkc-swatch quiet-key" aria-hidden="true"></span>No breach</span>
         </div>
       </div>
@@ -218,12 +218,12 @@
       Of {PORTFOLIO} borrowers in a normal year, {one.trouble} are in real trouble. {COVENANTS[0].name} alone trips for
       {one.caught} of them and for {one.alarms} of the {one.healthy} healthy ones: {one.caught} of its {one.breaches}
       breaches mean trouble, but {one.missed} in trouble pass unseen. With all {WORDS[MAX]}, every borrower in trouble
-      breaches, and so do {all.alarms} healthy ones: a breach means real trouble {all.caught} times in {all.breaches},
+      breaches, and so do {all.alarms} healthy ones, <span class="tkc-idea">false positives</span> as in the gate worth keeping: a breach means real trouble {all.caught} times in {all.breaches},
       little more than the {pct(all.base)} chance before it. Like the toll road’s {MONTHS} good months, it is evidence
       that would have come either way.
     </p>
     <p>
-      Each covenant is an <strong>IF</strong>: past its line, the loan is in breach. If every breach is a default, the covenants are links in a chain of
+      Each covenant is an <span class="tkc-if">IF</span>: past its line, the loan is in breach. If every breach is a default, the covenants are links in a chain of
       <span class="tkc-and">ANDs</span>, and with {WORDS[MAX]}, noise alone breaks the loan for three healthy borrowers in
       five a year; each breach becomes a waiver. If a breach means a closer look, it is an <span class="tkc-or">OR</span>: the loan goes on
       if the covenants hold or the look finds the borrower sound. The chain bends on noise.
@@ -232,7 +232,7 @@
     <p>
       {WORDS[ANSWER][0].toUpperCase() + WORDS[ANSWER].slice(1)} covenants catch {shown.caught} of the {shown.trouble} in
       trouble; the other {WORDS[MAX - ANSWER]} add {all.caught - shown.caught}, and {all.alarms - shown.alarms} false alarms.
-      That is Ockham’s razor at work: plurality, William of Ockham wrote, should never be posited without necessity.
+      That is Ockham’s razor: plurality, William of Ockham wrote, should never be posited without necessity.
     </p>
     <p>
       The same breach means more when trouble is common. With {WORDS[ANSWER]} covenants, it means real trouble one

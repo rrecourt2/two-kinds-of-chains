@@ -124,15 +124,17 @@ export function byLinks(adj) {
 // 5% capital. One bank loses 8% of its assets on its own loans: it fails only if
 // that is more than its capital, and then its lenders take the loss. The reader
 // chooses where the loss lands, the capital every bank holds (2–10% of assets),
-// and whether the most connected banks hold extra on top (48 percentage points
-// in all). The supervisor may add at most 48 percentage points to today's capital.
+// and whether the most connected banks hold extra on top (one point on the
+// average). The supervisor may raise capital, never cut it below today's, to an
+// average of at most 6%.
 
 export const BANKS = 48;
 export const HUB_LINKS = 4; // about four links per bank on average; each newcomer links to two
 export const CAPITAL = 5; // % of assets, every bank, today
 export const CAPITALS = [2, 3, 4, 5, 6, 7, 8, 9, 10]; // the slider: capital for every bank, % of assets
 export const LOSS = 8; // % of assets the bank where the loss lands loses on its own loans
-export const EXTRA = 48; // percentage points of extra capital for the hubs, in all; also the budget
+export const EXTRA = 48; // percentage points of extra capital for the hubs, summed over them: one point on the average
+export const MAX_AVERAGE = 6; // the puzzle: average capital, % of assets, at most this
 export const LIMIT = 5; // the puzzle: wherever the loss lands, at most this many banks fail
 
 /**
@@ -175,7 +177,8 @@ export const systemOf = (value) => SYSTEMS.find((s) => s.value === value);
 
 /**
  * Extra capital for the hubs, on top of what every bank holds: the `top` most
- * connected banks get EXTRA ÷ top percentage points each (48 in all).
+ * connected banks get EXTRA ÷ top percentage points each (48 in all, so either
+ * choice adds one point to the average).
  */
 export const SHARES = [
   { value: 'none', label: 'None', top: 0 },
@@ -208,17 +211,16 @@ export function everywhere(adj, capital, loss = LOSS) {
 }
 
 /**
- * Percentage points of capital added to today's (CAPITAL for every bank): the
- * change for every bank plus the extra for the hubs. Negative when every bank
- * holds less than today.
+ * Average capital across the banks, in % of assets (the plain average of their
+ * ratios): `base` for every bank, plus the extra for the hubs spread over all.
  */
-export function added(base, top, extra = EXTRA) {
-  return BANKS * (base - CAPITAL) + (top > 0 ? extra : 0);
+export function averageCapital(base, top, extra = EXTRA) {
+  return base + (top > 0 ? extra / BANKS : 0);
 }
 
-/** The puzzle's budget: capital is raised, never cut below today's, by at most EXTRA percentage points. */
+/** The puzzle's limit: no bank below today's capital, and average capital at most MAX_AVERAGE. */
 export function withinBudget(base, top) {
-  return base >= CAPITAL && added(base, top) <= EXTRA;
+  return base >= CAPITAL && averageCapital(base, top) <= MAX_AVERAGE;
 }
 
 /**

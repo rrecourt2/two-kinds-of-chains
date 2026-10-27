@@ -211,6 +211,24 @@
 .tkc-and {
   text-decoration-color: var(--tkc-conditions);
 }
+/* IF, a threshold: the same mark as AND and OR, in ink rather than a hue. */
+.tkc-if {
+  font-weight: 650;
+  text-decoration-line: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: none;
+  text-decoration-color: var(--tkc-ink-2);
+}
+/* The story's other named ideas (a quorum, a tipping point, a loop, one after another or side by side, a false
+   positive): a lighter, dotted mark in grey, at the weight of the text around it. */
+.tkc-idea {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--tkc-muted);
+}
 
 /* ---------- Buttons ---------- */
 

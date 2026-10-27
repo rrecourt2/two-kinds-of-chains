@@ -282,7 +282,7 @@
     </p>
     <p>
       The falls do not add; they multiply. The payment hangs on a chain of two links, cars
-      <span class="tkc-and">AND</span> the currency, each scaling what the other leaves, and is missed <strong>IF</strong> the cash
+      <span class="tkc-and">AND</span> the currency, each scaling what the other leaves, and is missed <span class="tkc-if">IF</span> the cash
       falls short. Fixed running costs
       sharpen it: a {WT}% fall in traffic takes a quarter off the cash for the loan, and a {WC}% fall in the currency
       then takes a fifth of what is left. Like the rounds of the coin game, the links compound.

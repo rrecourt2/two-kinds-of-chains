@@ -10,7 +10,7 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { REQUESTS, ROOM, WORLDS, MENU, WEEKS_A_YEAR, KIND_NAMES, weeklyRates, outcome, smallestMenu } from '../lib/sim/variety.js';
+  import { REQUESTS, ROOM, WORLDS, DELEGATED, WEEKS_A_YEAR, KIND_NAMES, weeklyRates, outcome, fewestDelegated } from '../lib/sim/variety.js';
   import { linear } from '../lib/scales.js';
   import { prefersReducedMotion } from '../lib/motion.js';
 
@@ -18,24 +18,25 @@
   const game = getContext('tkc-game');
   const solved = $derived(!game.isOpen('variety'));
 
-  let menu = $state(MENU.start);
+  // The kinds of request an office may decide on its own: its delegations.
+  let decided = $state(DELEGATED.start);
   let world = $state('today');
   let width = $state(560);
 
   const RATES = { today: weeklyRates('today'), varied: weeklyRates('varied') };
   const kinds = $derived(WORLDS[world]);
   const rates = $derived(RATES[world]);
-  const now = $derived(outcome(world, menu));
-  const off = $derived(kinds - menu);
+  const now = $derived(outcome(world, decided));
+  const off = $derived(kinds - decided);
 
   // ---- Numbers the text quotes, all from the model ----
-  const BEST = smallestMenu('today');
-  const START = outcome('today', MENU.start);
+  const BEST = fewestDelegated('today');
+  const START = outcome('today', DELEGATED.start);
   const AT = outcome('today', BEST);
   const LESS = outcome('today', BEST - 1);
   const MORE = outcome('today', BEST + 10);
   const SAME = outcome('varied', BEST);
-  const VARIED_BEST = smallestMenu('varied');
+  const VARIED_BEST = fewestDelegated('varied');
   const PRINCIPLED = outcome('varied', BEST, { principles: 1 / 3 });
   const NEW_KINDS = RATES.varied.slice(WORLDS.today);
   const newTotal = NEW_KINDS.reduce((a, b) => a + b, 0);
@@ -59,42 +60,42 @@
 
   const rules = [
     `About ${REQUESTS} client requests a week, of ${WORLDS.today} kinds: a few common, most rare.`,
-    'The menu’s products, terms and delegations cover the most common kinds of request.',
+    'Offices may decide the most common kinds of request on their own.',
     `Anything else goes to a head-office committee that hears ${word(ROOM)} a week; the rest wait.`,
   ];
 
   const puzzle = $derived({
-    goal: 'Each answer on the menu needs training in every office. Find the smallest menu that keeps the average wait at head office under two weeks.',
-    met: world === 'today' && now.met && !outcome(world, menu - 1).met,
+    goal: 'Each kind an office may decide needs training there. Find the fewest that keep the average wait at head office under two weeks.',
+    met: world === 'today' && now.met && !outcome(world, decided - 1).met,
     checks: [
       { label: `Average wait at head office under two weeks (now ${waitNow(now)})`, ok: now.met },
-      { label: 'No smaller menu does it', ok: now.met && !outcome(world, menu - 1).met },
+      { label: 'No fewer kinds would do it', ok: now.met && !outcome(world, decided - 1).met },
     ],
     hints: [
-      `Add answers one at a time from ${word(MENU.start)}, and watch the cases left waiting after each meeting.`,
-      'Once the wait is under two weeks, try one answer fewer.',
+      `Delegate one more kind at a time from ${word(DELEGATED.start)}, and watch the cases left waiting after each meeting.`,
+      'Once the wait is under two weeks, try one kind fewer.',
     ],
-    found: `${cap(word(BEST))} answers, a third of the kinds: the cases left after a meeting fall from ${word(Math.round(LESS.left))} to ${word(Math.round(AT.left))}, and the wait to about ${word(Math.round(AT.wait))} days.`,
+    found: `${cap(word(BEST))} kinds, a third of them: the cases left after a meeting fall from ${word(Math.round(LESS.left))} to ${word(Math.round(AT.left))}, and the wait to about ${word(Math.round(AT.wait))} days.`,
   });
   const showAnswer = () => {
     world = 'today';
-    menu = BEST;
+    decided = BEST;
   };
 
-  // ---- The menu, as the office sees it: the first answers, the newest, and how many in between ----
-  const menuList = $derived(
-    menu <= 6
-      ? KIND_NAMES.slice(0, menu).map((t) => ({ t }))
-      : [{ t: KIND_NAMES[0] }, { t: KIND_NAMES[1] }, { t: `${menu - 4} more`, more: true }, { t: KIND_NAMES[menu - 2] }, { t: KIND_NAMES[menu - 1] }],
+  // ---- The delegations, as the office sees them: the first kinds, the newest, and how many in between ----
+  const decidedList = $derived(
+    decided <= 6
+      ? KIND_NAMES.slice(0, decided).map((t) => ({ t }))
+      : [{ t: KIND_NAMES[0] }, { t: KIND_NAMES[1] }, { t: `${decided - 4} more`, more: true }, { t: KIND_NAMES[decided - 2] }, { t: KIND_NAMES[decided - 1] }],
   );
 
   // ---- What the last move changed, in a line under the chart ----
   let before = $state(null);
-  let seen = { menu: MENU.start, world: 'today' };
+  let seen = { decided: DELEGATED.start, world: 'today' };
   $effect(() => {
-    const at = { menu, world };
+    const at = { decided, world };
     untrack(() => {
-      if (at.menu !== seen.menu || at.world !== seen.world) {
+      if (at.decided !== seen.decided || at.world !== seen.world) {
         before = seen;
         seen = at;
       }
@@ -105,23 +106,23 @@
     return p === 'none' ? 'nothing is left waiting after a meeting' : `${p} ${p === '1' ? 'is' : 'are'} left waiting after an average meeting`;
   };
   const change = $derived.by(() => {
-    if (now.escalated === 0) return 'Every kind is on the menu: nothing goes to head office.';
+    if (now.escalated === 0) return 'Every kind is delegated: nothing goes to head office.';
     const flow = `${one(now.escalated)} cases a week reach the committee’s ${word(ROOM)} places`;
     if (!before) return now.jammed ? `${cap(flow)}: the queue grows every week.` : `${cap(flow)}; ${leftAfter(now)}.`;
     if (before.world !== world) {
       const head = world === 'varied' ? 'A more varied world' : 'Today’s world';
-      return `${head}: the same ${menu} answers send ${one(now.escalated)} a week to head office${now.jammed ? ', and the queue grows every week' : `; ${leftAfter(now)}`}.`;
+      return `${head}: the same ${decided} delegated kinds send ${one(now.escalated)} a week to head office${now.jammed ? ', and the queue grows every week' : `; ${leftAfter(now)}`}.`;
     }
-    const d = menu - before.menu;
+    const d = decided - before.decided;
     const head =
       d === 1
-        ? `Added ‘${nameOf(menu - 1)}’, ${often(menu - 1)}`
+        ? `Delegated ‘${nameOf(decided - 1)}’, ${often(decided - 1)}`
         : d === -1
-          ? `Took off ‘${nameOf(menu)}’, ${often(menu)}`
+          ? `Took back ‘${nameOf(decided)}’, ${often(decided)}`
           : d > 0
-            ? `Added ${d} answers, up to ‘${nameOf(menu - 1)}’`
-            : `Took off ${-d} answers`;
-    const was = outcome(world, before.menu);
+            ? `Delegated ${d} more kinds, up to ‘${nameOf(decided - 1)}’`
+            : `Took back ${-d} kinds`;
+    const was = outcome(world, before.decided);
     if (now.jammed) return `${head}: ${flow}, and the queue ${was.jammed ? 'keeps growing' : 'now grows every week'}.`;
     if (was.jammed) return `${head}: the queue stops growing; ${leftAfter(now)}.`;
     if (pile(now) === pile(was)) return `${head}: ${leftAfter(now)}, as before.`;
@@ -188,16 +189,16 @@
   const together = $derived(narrow ? `${one(now.escalated)} a week` : `together, ${one(now.escalated)} a week`);
 
   // Labels under the axis: centred under their bracket when there is room, pushed to the ends when not.
-  // A generous width for 12px text (the menu's label is bold); short forms where the long ones do not fit.
+  // A generous width for 12px text (the delegated kinds' label is bold); short forms where the long ones do not fit.
   const textW = (s, bold = false) => s.length * (bold ? 7.2 : 6.8);
   const labels = $derived.by(() => {
-    const split = bx(menu) - (step - barW) / 2;
-    let menuText = `${menu} on the menu`;
+    const split = bx(decided) - (step - barW) / 2;
+    let decidedText = `${decided} kinds delegated`;
     const offText = `${off} sent up`;
-    if (off > 0 && textW(menuText, true) + textW(offText) + 10 > right - M.left) {
-      menuText = `Menu: ${menu}`;
+    if (off > 0 && textW(decidedText, true) + textW(offText) + 10 > right - M.left) {
+      decidedText = `${decided} delegated`;
     }
-    const mw = textW(menuText, true);
+    const mw = textW(decidedText, true);
     const ow = textW(offText);
     let mx = Math.max(M.left, (M.left + split) / 2 - mw / 2);
     let ox = Math.min(right - ow, (split + right) / 2 - ow / 2);
@@ -205,7 +206,7 @@
       mx = M.left;
       ox = right - ow;
     }
-    return { split, mx, ox, menuText, offText };
+    return { split, mx, ox, decidedText, offText };
   });
 
   // Names on the chart: the three commonest kinds beside their bars, and a few rare ones above theirs,
@@ -230,7 +231,7 @@
       const x1 = x0 + t.length * CHAR;
       if (x1 > right) continue;
       placed.push({ x0, x1, top: yb - 10, bottom: yb + 3 });
-      out.push({ t, x: x0, y: yb, anchor: 'start', on: i < menu });
+      out.push({ t, x: x0, y: yb, anchor: 'start', on: i < decided });
     }
     // Rare kinds: text ending at the bar, a tick down to it, in two rows under the flow arrow.
     const rare =
@@ -251,7 +252,7 @@
         const spot = rows.find((yb) => clear(cx + 3 - w, cx + 3, yb - 10, yb + 3) && clear(cx - 1, cx + 1, yb + 3, base - bh(rates[r.i]) - 2));
         if (spot === undefined) continue;
         placed.push({ x0: cx + 3 - w, x1: cx + 3, top: spot - 10, bottom: spot + 3 });
-        out.push({ t, x: cx + 3, y: spot, anchor: 'end', on: r.i < menu, tick: { x: cx, y0: spot + 4, y1: base - bh(rates[r.i]) - 2 } });
+        out.push({ t, x: cx + 3, y: spot, anchor: 'end', on: r.i < decided, tick: { x: cx, y0: spot + 4, y1: base - bh(rates[r.i]) - 2 } });
         break;
       }
     }
@@ -272,7 +273,7 @@
   const tipX = $derived(tip === null ? 0 : Math.max(0, Math.min(span - 230, bx(tip) + step + 8)));
 
   const aria = $derived(
-    `Bars for the ${kinds} kinds of request, most common first, from “${KIND_NAMES[0]}” to the rarest. The menu answers the ${menu} most common, ${Math.round(now.answered * 100)}% of requests. ` +
+    `Bars for the ${kinds} kinds of request, most common first, from “${KIND_NAMES[0]}” to the rarest. Offices may decide the ${decided} most common, ${Math.round(now.answered * 100)}% of requests. ` +
       (off > 0
         ? `The other ${off} kinds bring ${one(now.escalated)} cases a week to a committee with ${ROOM} places a week; ${now.jammed ? 'the queue grows every week' : `${leftAfter(now)}, and the average wait is ${weeksOrDays(now.wait)}`}.`
         : 'Nothing goes to head office.'),
@@ -285,7 +286,7 @@
   );
   const waitSub = $derived(
     now.escalated === 0
-      ? 'every request is answered in the office'
+      ? 'every request is decided in the office'
       : now.jammed
         ? `the queue grows by about ${Math.round(now.growth)} cases a year`
         : now.wait >= 10
@@ -298,7 +299,7 @@
   n={18}
   kicker="Requisite variety"
   title="Only variety absorbs variety"
-  lede="A rulebook is a menu of answers. Whatever the world asks that the menu cannot answer travels up the chain."
+  lede="An office’s delegations say what it may decide on its own. Whatever the world asks beyond them travels up the chain."
   puzzle="variety"
 >
   {#snippet setup()}
@@ -308,25 +309,26 @@
       guarantee for a local bank, a loan to a cooperative with no audited accounts, a grace period after a drought.
     </p>
     <p>
-      Each office has a menu of answers it may give on its own: its products, terms and delegations. A request the menu cannot answer becomes an exception and travels up the chain to head
-      office, where a committee hears exceptions once a week. Today the menu holds {word(MENU.start)} answers, and the
-      committee’s agenda never clears.
+      Each office has delegated authority: the kinds of request it may decide on its own, within its products, terms
+      and limits. A request outside its delegations becomes an exception and travels up the chain to head office, where
+      a committee hears exceptions once a week. Today an office may decide {word(DELEGATED.start)} kinds of request, and
+      the committee’s agenda never clears.
     </p>
   {/snippet}
 
   {#snippet figure()}
     <Instrument
       title="The week’s requests, kind by kind"
-      sub="The menu: the answers an office may give on its own. Bars: kinds of client request, most common first."
+      sub="Bars: kinds of client request, most common first; blue, those an office may decide on its own."
       {rules}
     >
       <Puzzle id="variety" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls">
         <div class="ctl">
-          <Slider id="v-menu" label="Office may answer" bind:value={menu} min={MENU.min} max={MENU.max} format={(v) => `${v} of ${kinds} kinds`} />
-          <p class="tkc-caption menu-list">
-            On the menu:
-            {#each menuList as item, k (k)}{#if k}<span class="dot" aria-hidden="true">{' · '}</span>{/if}<span class:more={item.more} class:last={k === menuList.length - 1}>{item.t}</span>{/each}
+          <Slider id="v-menu" label="Office may decide" bind:value={decided} min={DELEGATED.min} max={DELEGATED.max} format={(v) => `${v} of ${kinds} kinds`} />
+          <p class="tkc-caption kinds-list">
+            Delegated:
+            {#each decidedList as item, k (k)}{#if k}<span class="dot" aria-hidden="true">{' · '}</span>{/if}<span class:more={item.more} class:last={k === decidedList.length - 1}>{item.t}</span>{/each}
           </p>
         </div>
         {#if solved}
@@ -351,7 +353,7 @@
           <text class="tkc-axis-title" x="0" y={M.top - 16}>Requests a week</text>
 
           {#each rates as r, i (i)}
-            <rect class="bar" class:on={i < menu} class:hover={tip === i} x={bx(i)} y={base - bh(r)} width={barW} height={bh(r)} />
+            <rect class="bar" class:on={i < decided} class:hover={tip === i} x={bx(i)} y={base - bh(r)} width={barW} height={bh(r)} />
           {/each}
           <line class="tkc-base" x1={M.left} x2={right} y1={base} y2={base} />
 
@@ -362,7 +364,7 @@
           {/each}
 
           {#if off > 0}
-            <!-- Everything off the menu, however rare each kind, ends up in one place. -->
+            <!-- Everything no office may decide, however rare each kind, ends up in one place. -->
             <path class="arrow" d="M{labels.split} {arrowY}H{elbowX}V{placesY + TOK / 2}H{colX - 6}" />
             <path class="head" d="M{colX - 1} {placesY + TOK / 2} l-6 -3.5 v7 Z" />
             {#if named.showFlow}<text class="tkc-label-2 tkc-halo" x={elbowX - 4} y={arrowY - 6} text-anchor="end">{together}</text>{/if}
@@ -386,9 +388,9 @@
           <text class="tkc-label-2 tkc-halo" x={span} y={headY + 15} text-anchor="end">{head.b}</text>
           <line class="tkc-base" x1={colX - 4} x2={span - M.right} y1={base} y2={base} />
 
-          <!-- Under the axis: the menu, the kinds sent up, and head office. -->
+          <!-- Under the axis: the kinds delegated, the kinds sent up, and head office. -->
           <path class="brace on" d="M{M.left} {base + 5}v4H{labels.split - 1}v-4" />
-          <text class="under on" x={labels.mx} y={base + 22}>{labels.menuText}</text>
+          <text class="under on" x={labels.mx} y={base + 22}>{labels.decidedText}</text>
           {#if off > 0}
             <path class="brace" d="M{labels.split + 1} {base + 5}v4H{right}v-4" />
             <text class="under" x={labels.ox} y={base + 22}>{labels.offText}</text>
@@ -412,12 +414,12 @@
           <div class="tkc-tip" style:left="{tipX}px" style:top="30px">
             <strong>{nameOf(tip)}</strong>
             <div>{often(tip)}{tip >= WORLDS.today ? ': new markets, climate, technology' : ''}</div>
-            <div>{tip < menu ? 'On the menu: answered in the office' : 'Sent to head office'}</div>
+            <div>{tip < decided ? 'Delegated: decided in the office' : 'Sent to head office'}</div>
           </div>
         {/if}
         <p class="tkc-small change">{change}</p>
         <div class="tkc-legend">
-          <span><span class="tkc-swatch" style:background="var(--tkc-options)"></span>On the menu</span>
+          <span><span class="tkc-swatch" style:background="var(--tkc-options)"></span>Delegated</span>
           <span><span class="tkc-swatch" style:background="var(--tkc-muted)"></span>Sent to head office</span>
           <span><span class="tkc-swatch slot-key"></span>{cap(word(ROOM))} places a week</span>
           <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>Left waiting</span>
@@ -425,12 +427,12 @@
       </div>
 
       <div class="tkc-stats two" use:announce>
-        <Stat label="Answered in the office" value="{Math.round(now.answered * 100)}%" sub={answeredSub} />
+        <Stat label="Decided in the office" value="{Math.round(now.answered * 100)}%" sub={answeredSub} />
         <Stat label="Average wait at head office" value={waitValue} sub={waitSub} />
       </div>
 
       {#snippet model()}
-        <p>Kinds of request follow Zipf’s law: the k-th most common is asked for in proportion to 1/k^1.34. In today’s world of {WORLDS.today} kinds the most common is {Math.round((RATES.today[0] / REQUESTS) * 100)}% of requests, the rarest about {word(Math.round(RATES.today[WORLDS.today - 1] * WEEKS_A_YEAR))} a year; names are illustrative. Requests arrive at random. A menu of m answers covers the m most common kinds; the rest go to a committee that meets weekly and hears up to {word(ROOM)}, oldest first.</p>
+        <p>Kinds of request follow Zipf’s law: the k-th most common is asked for in proportion to 1/k^1.34. In today’s world of {WORLDS.today} kinds the most common is {Math.round((RATES.today[0] / REQUESTS) * 100)}% of requests, the rarest about {word(Math.round(RATES.today[WORLDS.today - 1] * WEEKS_A_YEAR))} a year; names are illustrative. Requests arrive at random. Offices that may decide m kinds decide the m most common; the rest go to a committee that meets weekly and hears up to {word(ROOM)}, oldest first.</p>
         <p>The chart shows the cases left after a meeting, and the wait, as exact long-run averages for this queue, checked against a simulation: half a week to the next meeting, plus a week for each meeting with no room. With {word(ROOM)} or more exceptions a week the queue grows without end. The more varied world spreads the same {REQUESTS} requests over {WORLDS.varied} kinds by the same law. In the text, principles let an office settle one unlisted case in three.</p>
       {/snippet}
     </Instrument>
@@ -438,28 +440,28 @@
 
   {#snippet after()}
     <p>
-      The escalations were never a verdict on the offices. With {word(MENU.start)} answers, one request in five fitted
-      none of them: a menu with less variety than the world sends the difference up the chain. The cybernetician
+      The escalations were never a verdict on the offices. With {word(DELEGATED.start)} kinds delegated, one request in
+      five fitted none of them: delegations with less variety than the world send the difference up the chain. The cybernetician
       W.&nbsp;Ross Ashby called this the law of requisite variety: “only variety can destroy variety”
       (1956). Whatever keeps a system steady needs a response for each kind of disturbance it is
       to absorb.
     </p>
     <p>
-      None of the {word(WORLDS.today - BEST)} kinds left off a {word(BEST)}-answer menu comes up more than about once a
-      month; together they bring {one(AT.escalated)} a week, nine-tenths of the committee’s room. Ten more answers save
-      {word(Math.round(AT.wait - MORE.wait))} days between them. One fewer, and the committee passes its tipping point: {word(Math.round(LESS.left))} cases are left
+      With {word(BEST)} kinds delegated, none of the {word(WORLDS.today - BEST)} still sent up comes up more than about
+      once a month; together they bring {one(AT.escalated)} a week, nine-tenths of the committee’s room. Ten more kinds
+      save {word(Math.round(AT.wait - MORE.wait))} days between them. One fewer, and the committee passes its <span class="tkc-idea">tipping point</span>: {word(Math.round(LESS.left))} cases are left
       after a meeting instead of {word(Math.round(AT.left))}, and the wait grows by
       {word(Math.round(LESS.wait - AT.wait))} days.
     </p>
     <p>
       Then the world grows more varied: {word(WORLDS.varied - WORLDS.today)} new kinds, from new markets, climate shocks
       and new technologies, each asked for fewer than {word(Math.ceil(newMax))} times a year, together
-      {word(Math.round(newTotal))} a week. The same {word(BEST)} answers send {one(SAME.escalated)} a week to
+      {word(Math.round(newTotal))} a week. The same {word(BEST)} delegations send {one(SAME.escalated)} a week to
       {word(ROOM)} places; the queue grows by about {Math.round(SAME.growth)} a year. Nobody in the offices has changed.
     </p>
-    <h3>Answers nobody listed</h3>
+    <h3>Cases nobody listed</h3>
     <p>
-      The menu can grow with the world, here to {word(VARIED_BEST)} answers. Or offices can hold what a menu cannot:
+      Delegations can grow with the world, here to {word(VARIED_BEST)} kinds. Or offices can hold what a list cannot:
       principles, such as what a loan is for and what the bank can afford to lose. If
       principles settled one unlisted case in three, the wait would stay near {word(Math.round(PRINCIPLED.wait))} days.
       Ashby’s homeostat of 1948 kept no list: pushed out of bounds, it tried new settings until one held.
@@ -471,10 +473,10 @@
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="How many of last month’s escalations were cases our menu had no answer for?">
+    <BankNote ask="How many of last month’s escalations were cases our delegations did not cover?">
       <p>
         Escalation figures are usually read as a measure of an office: its skill, its caution, its confidence. They
-        also measure the menu. A request that fits no product, limit or delegation travels up the chain whoever
+        also measure the delegations. A request that fits no product, limit or delegation travels up the chain whoever
         receives it. Delegations are often reviewed by amount, and less often by the kinds of case they cover.
       </p>
     </BankNote>
@@ -487,18 +489,18 @@
     gap: 6px;
     min-width: 0;
   }
-  .menu-list {
+  .kinds-list {
     margin: 0;
     color: var(--tkc-ink-2);
   }
-  .menu-list .more {
+  .kinds-list .more {
     color: var(--tkc-muted);
   }
-  .menu-list .last {
+  .kinds-list .last {
     color: var(--tkc-options-ink);
     font-weight: 600;
   }
-  .menu-list .dot {
+  .kinds-list .dot {
     color: var(--tkc-muted);
   }
   .bar {

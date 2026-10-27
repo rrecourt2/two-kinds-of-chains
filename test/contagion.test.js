@@ -21,7 +21,8 @@ import {
   capitalFor,
   landing,
   everywhere,
-  added,
+  MAX_AVERAGE,
+  averageCapital,
   withinBudget,
   worstCurve,
   tippingPoint,
@@ -103,15 +104,26 @@ test('stress test: the rules, the capital slider and the three choices of extra 
       order.forEach((b, r) => assert.equal(cap[b], r < s.top ? CAPITAL + EXTRA / s.top : CAPITAL));
     }
   }
-  // Capital added counts from today's 5% for every bank.
-  assert.equal(added(5, 0), 0);
-  assert.equal(added(6, 0), 48);
-  assert.equal(added(7, 0), 96);
-  assert.equal(added(8, 0), 144);
-  assert.equal(added(5, 12), 48);
-  assert.equal(added(4, 12), 0);
-  assert.equal(added(2, 0), -144);
-  assert.ok(withinBudget(5, 12) && withinBudget(6, 0) && !withinBudget(7, 0) && !withinBudget(4, 12) && !withinBudget(6, 3));
+  // Average capital: the plain average of the 48 banks' ratios. Either choice of extra adds one point to it
+  // (the caption under the choices), and the slider moves every bank's capital.
+  assert.equal(MAX_AVERAGE, 6);
+  assert.equal(EXTRA / BANKS, 1);
+  for (const s of SHARES) {
+    for (const base of CAPITALS) {
+      const cap = capitalFor(adj, s.top, base);
+      assert.equal(averageCapital(base, s.top), cap.reduce((a, c) => a + c, 0) / BANKS, `${s.label} at ${base}%`);
+      assert.equal(averageCapital(base, s.top), base + (s.top ? 1 : 0));
+    }
+  }
+  assert.equal(averageCapital(5, 0), 5);
+  assert.equal(averageCapital(6, 0), 6);
+  assert.equal(averageCapital(5, 12), 6);
+  assert.equal(averageCapital(5, 3), 6);
+  assert.equal(averageCapital(4, 12), 5);
+  assert.equal(averageCapital(8, 0), 8);
+  // Within the limit: no bank below today's 5%, and an average of 6% or less.
+  assert.ok(withinBudget(5, 0) && withinBudget(5, 12) && withinBudget(5, 3) && withinBudget(6, 0));
+  assert.ok(!withinBudget(7, 0) && !withinBudget(6, 12) && !withinBudget(6, 3) && !withinBudget(4, 12) && !withinBudget(4, 0));
 });
 
 test('stress test: the loss is absorbed only where it does not exceed capital', () => {
@@ -191,16 +203,17 @@ test('stress test curve: the worst place to land at every capital, and where eac
   assert.equal(tip('none'), 7);
   assert.equal(tip('top3'), 5);
   assert.equal(tip('top12'), 4);
-  // After-text: spread evenly, the 48 give every bank 6%, still short of the 8% loss, and changes nothing.
+  // After-text: the same average spread evenly gives every bank 6%, still short of the 8% loss, and changes nothing.
   assert.equal(CAPITAL + EXTRA / BANKS, 6);
+  assert.equal(averageCapital(6, 0), averageCapital(CAPITAL, 12));
   assert.ok(6 < LOSS);
   assert.equal(at('none', 6).worst, 48);
-  assert.equal(added(6, 0), EXTRA);
-  // At 7% a loss at the biggest bank still brings down eight; at 8% the loss stops where it lands, for 144.
+  // At 7% a loss at the biggest bank still brings down eight; at 8% for every bank the loss stops where it lands
+  // (the hint and the found text: "8% for every bank").
   assert.equal(at('none', 7).worst, 8);
   assert.deepEqual(at('none', 7).worstAt.map(rank), [0]);
   assert.equal(CAPITALS.find((c) => at('none', c).worst === 0), LOSS);
-  assert.equal(added(LOSS, 0), 144);
+  assert.equal(averageCapital(LOSS, 0), LOSS);
   assert.ok(curves.none.every((p) => p.capital < LOSS || p.sizes.every((s) => s === 0)));
 });
 
@@ -208,11 +221,11 @@ test('stress test puzzle: 5% for every bank and four more for the 12 biggest is 
   const solutions = [];
   for (const s of SHARES) for (const c of CAPITALS) if (at(s.value, c).worst <= LIMIT && withinBudget(c, s.top)) solutions.push([c, s.value]);
   assert.deepEqual(solutions, [[5, 'top12']]);
-  // Found: the 12 biggest at 9%; at most four fail; 48 percentage points against 144 for 8% everywhere.
+  // Found: the 12 biggest at 9%, an average of 6%; at most four fail; 8% for every bank to stop the loss everywhere.
   const t = at('top12', CAPITAL);
   assert.equal(CAPITAL + EXTRA / 12, 9);
   assert.equal(t.worst, 4);
-  assert.equal(added(CAPITAL, 12), 48);
+  assert.equal(averageCapital(CAPITAL, 12), MAX_AVERAGE);
   order.slice(0, 12).forEach((b) => assert.equal(t.sizes[b], 0));
   assert.equal(t.worstAt.length, 1);
   assert.equal(links(t.worstAt[0]), 4);
@@ -224,12 +237,15 @@ test('stress test puzzle: 5% for every bank and four more for the 12 biggest is 
   assert.equal(t3.worst, 9);
   assert.equal(rank(t3.worstAt[0]), 4);
   assert.equal(links(t3.worstAt[0]), 8);
-  // Near misses: 4% with four more for the 12 biggest keeps this network to five, but cuts every bank below today;
-  // 6% with four more keeps it to four, for twice the budget.
+  // Near misses: 4% with four more for the 12 biggest keeps this network to five at an average of 5%, but cuts
+  // every other bank below today's 5% (the goal's first condition); 6% with four more keeps it to four, at an
+  // average of 7%; 6% for every bank stays at 6% and changes nothing.
   assert.equal(at('top12', 4).worst, 5);
+  assert.equal(averageCapital(4, 12), 5);
   assert.ok(!withinBudget(4, 12));
   assert.equal(at('top12', 6).worst, 4);
-  assert.equal(added(6, 12), 96);
+  assert.equal(averageCapital(6, 12), 7);
+  assert.ok(at('none', 6).worst > LIMIT && withinBudget(6, 0));
 });
 
 test('stress test: the answer is not a fluke of one network', () => {

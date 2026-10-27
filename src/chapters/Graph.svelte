@@ -227,7 +227,7 @@
 
   {#snippet after()}
     <p>
-      When everyone depends on everyone, output peaks at around 25 people and then falls ever faster: past that tipping point, each newcomer adds more coordination than work, because the cost of keeping in touch grows with the square of the group. Fred Brooks saw
+      When everyone depends on everyone, output peaks at around 25 people and then falls ever faster: past that <span class="tkc-idea">tipping point</span>, each newcomer adds more coordination than work, because the cost of keeping in touch grows with the square of the group. Fred Brooks saw
       it in software in 1975: adding people to a late project makes it later. The same holds for systems, where every
       new point-to-point link is one more thing to maintain and one more path for a problem to travel.
     </p>

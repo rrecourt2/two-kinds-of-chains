@@ -145,8 +145,8 @@
 
   {#snippet after()}
     <p>
-      Links can be joined in two ways. One after another, the times add up: sixteen days, five of them spent waiting
-      for handoffs, and every speed-up helps a little. Side by side, the last piece to finish sets the date, along with
+      Links can be joined in two ways. <span class="tkc-idea">One after another</span>, the times add up: sixteen days, five of them spent waiting
+      for handoffs, and every speed-up helps a little. <span class="tkc-idea">Side by side</span>, the last piece to finish sets the date, along with
       anything every piece waits for, such as the client data; making any other piece faster changes nothing.
       Improving a part is not the same as improving the whole.
     </p>
@@ -158,7 +158,7 @@
     <ul>
       <li>
         <strong>The slowest piece sets the pace.</strong> With credit and the E&amp;S review both twice as fast, credit
-        and the legal documents tie at two days. And real work varies: the more pieces run side by side, the more likely one of them is late.
+        and the legal documents tie at two days. And real work varies: the more pieces run <span class="tkc-idea">side by side</span>, the more likely one of them is late.
       </li>
       <li>
         <strong>Bad inputs are cheapest to stop at the start.</strong> Quality engineers call this the 1-10-100 rule: a
