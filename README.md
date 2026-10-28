@@ -22,9 +22,9 @@ ships as one file, with no external requests, so it can run inside a locked-down
 | 9 | How to find a black swan | A dollar loan repaid from local-currency tolls, 96 good months: find the year that breaks the claim (both falls at once); Russell's chicken, Popper's swans |
 | 10 | Why species go extinct | Where the generalist overtakes the specialist as the years get more volatile; why islands |
 | | **Part 4 · Chains that bend** | |
-| 11 | The gate worth keeping | A thousand simulated years of payments: check every change of account above an amount, so that no year loses more than $5m and payments stay on time |
+| 11 | The gate worth keeping | An automatic fraud screen and a call-back above an amount, over one year’s 600 account changes and a thousand simulated years: most flags are false positives; call back every payment above $1m and screen the rest lightly, so that no year loses more than $5m and payments stay on time |
 | 12 | The shape of the network | What sixty fully linked people produce; mesh, hub and small teams |
-| 13 | A chain tied in a knot | Forty named conditions of one power programme waiting for each other: how many can be met at 80 links (about 8); joint closings; Kauffman's complexity catastrophe |
+| 13 | A chain tied in a knot | One power deal, twelve documents, twenty clauses tied in rings: move the fewest clauses after the money so all can be signed in order (two: equity alongside the loan, a provisional tariff); joint closings; random deals tip past one clause per document; Kauffman's complexity catastrophe |
 | 14 | Two watchmakers | Herbert Simon's parable as a live race: one long chain against modules |
 | 15 | Time to disbursement | Twelve conditions precedent, 2,000 loans: keeping a three-month promise for nine clients in ten |
 | 16 | A warning light, not a tripwire | 200 borrowers, 10 in real trouble: two to four strong covenants, not twelve; Bayes in natural frequencies; Occam's razor |

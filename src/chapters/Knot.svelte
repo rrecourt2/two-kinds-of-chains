@@ -1,436 +1,475 @@
 <script>
-  import { getContext, tick } from 'svelte';
+  import { getContext } from 'svelte';
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
-  import Slider from '../lib/ui/Slider.svelte';
-  import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { programme, stateAt, trace, layout, placeLabels, NAMES, SEED, N, JOINT, RUNS, LINKS, CLIFF, START, ASKED } from '../lib/sim/knot.js';
+  import { DOCS, CLAUSES, N, ANSWER, FEWEST, LAYOUTS, DEALS, MAX_CLAUSES, DEAL_TABLE, chain, ringsThrough } from '../lib/sim/knot.js';
   import { linear, line } from '../lib/scales.js';
   import { int } from '../lib/format.js';
 
-  // A prediction. Before the first answer (or a hint) the slider plays up to START links, the part
-  // that does not give the answer away; ASKED and beyond, and the summary over many programmes,
-  // open after it. The joint closing is there from the start.
+  // A target puzzle: the reader moves clauses after the money until all twelve documents can be
+  // signed in order, with as few moved as possible. The summary across many random deals opens
+  // once the puzzle is solved or its answer shown.
   const game = getContext('tkc-game');
-  const live = $derived(game.engaged('knot'));
+  const revealed = $derived(!game.isOpen('knot'));
 
-  const MAX = LINKS[LINKS.length - 1];
-  const named = (name) => NAMES.indexOf(name);
-  const EQUITY = named('Equity paid in');
-  const LOAN = named('Loan ready to disburse');
-  const TARIFF = named('Tariff rise');
-
-  // One programme of forty conditions; the slider adds links to it, never redraws it.
-  const prog = programme(SEED);
-  let links = $state(START);
-  let closing = $state('one');
+  let moved = $state([]);
+  // What the read-out describes: a clause tapped or focused, a document tapped, or nothing.
+  let sel = $state(null);
   let width = $state(560);
 
-  const joint = $derived(closing === 'joint' ? JOINT : 1);
-  const s = $derived(stateAt(links, { prog, joint }));
-  const stuck = $derived(N - s.metCount);
-
-  // The numbers the puzzle and the text quote, from the figure's own programme.
-  const one = stateAt(START, { prog });
-  const two = stateAt(ASKED, { prog });
-  const oneJoint = stateAt(START, { prog, joint: JOINT });
-  const twoJoint = stateAt(ASKED, { prog, joint: JOINT });
-  const behindAt = (st) => st.met.filter((m, v) => !m && !st.inKnot[v]).length;
-  const at = (key, c) => CLIFF[key][LINKS.indexOf(c)];
-  const share = (c) => Math.round((at('one', c) / N) * 100);
-  const full = (c) => (at('full', c) < 0.05 ? 'none' : `${Math.round(at('full', c))}%`);
-
-  // The figure opens on the stuck condition furthest behind the knot, its path traced.
-  const FIRST = one.met
-    .map((m, v) => ({ v, len: trace(one, v).kind === 'behind' ? trace(one, v).path.length : 0 }))
-    .reduce((a, b) => (b.len > a.len ? b : a)).v;
-  let picked = $state(FIRST);
-  const t = $derived(picked === null ? null : trace(s, picked));
-
-  const words = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+  const st = $derived(chain(moved));
+  const isMoved = (k) => moved.includes(k);
+  const LOCKED = CLAUSES.filter((c) => c.lock).length;
+  const words = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
   const say = (k) => (k < words.length ? words[k] : String(k));
-  const list = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
-  const fmtLinks = (v) => (v === 0 ? 'None' : v % 40 === 0 ? `${v} · ${say(v / 40)} each` : `${v}`);
+  const cap = (s) => s[0].toUpperCase() + s.slice(1);
+  const list = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`);
+  const ordinal = (k) => ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth', 'eleventh', 'twelfth'][k];
+  const rings = (k) => `${say(k)} ring${k === 1 ? '' : 's'}`;
+  const who = (k) => `${cap(DOCS[CLAUSES[k].to].the)} waits for ${DOCS[CLAUSES[k].from].the}`;
+  const whoNot = (k) => `${cap(DOCS[CLAUSES[k].to].the)} no longer waits for ${DOCS[CLAUSES[k].from].the}`;
 
-  // ---- The network ----
-  const compact = $derived(width < 480);
-  const H = $derived(compact ? Math.round(Math.min(330, Math.max(260, width * 1.02))) : 310);
-  const r = $derived(compact ? 5.5 : 6.5);
-  const head = $derived(compact ? 5 : 6);
-  // Positions depend only on the shape of the box, in steps, so a resize does not rerun the layout on every pixel.
-  const aspect = $derived(Math.max(0.8, Math.min(2.4, Math.round((width / H) * 5) / 5)));
-  const unit = $derived(layout(prog, { aspect }));
-  const M = 12;
-  const pos = $derived(unit.map((p) => ({ x: M + (p.x / aspect) * (width - 2 * M), y: M + p.y * (H - 2 * M) })));
-  // Left to right, for the arrow keys.
-  const order = $derived([...pos.keys()].sort((a, b) => pos[a].x - pos[b].x || pos[a].y - pos[b].y));
-
-  function toward(p, q, dist) {
-    const ex = q.x - p.x;
-    const ey = q.y - p.y;
-    const l = Math.hypot(ex, ey) || 1;
-    return { x: p.x + (ex / l) * dist, y: p.y + (ey / l) * dist };
+  function toggle(k) {
+    moved = isMoved(k) ? moved.filter((m) => m !== k) : [...moved, k];
   }
-  // A gently curved arrow from the condition that waits to the one it waits for, so that two
-  // conditions waiting for each other show two arrows, not one line.
-  function arrow(a, b) {
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const bend = Math.min(0.14 * len, 22);
-    const c = { x: (a.x + b.x) / 2 - (dy / len) * bend, y: (a.y + b.y) / 2 + (dx / len) * bend };
-    const from = toward(a, c, r + 1.5);
-    const tip = toward(b, c, r + 1.5);
-    const ux = tip.x - c.x;
-    const uy = tip.y - c.y;
-    const ul = Math.hypot(ux, uy) || 1;
-    const hx = ux / ul;
-    const hy = uy / ul;
-    const base = { x: tip.x - hx * head, y: tip.y - hy * head };
-    const w = head * 0.55;
-    const f = (v) => v.toFixed(1);
-    return {
-      line: `M${f(from.x)} ${f(from.y)}Q${f(c.x)} ${f(c.y)} ${f(base.x)} ${f(base.y)}`,
-      head: `M${f(tip.x)} ${f(tip.y)}L${f(base.x - hy * w)} ${f(base.y + hx * w)}L${f(base.x + hy * w)} ${f(base.y - hx * w)}Z`,
-      full: `M${f(a.x)} ${f(a.y)}Q${f(c.x)} ${f(c.y)} ${f(b.x)} ${f(b.y)}`,
-    };
+  // A tap reads a clause and, if it can move, moves it after the money or puts it back.
+  function act(k) {
+    sel = { clause: k };
+    if (!CLAUSES[k].lock) toggle(k);
   }
 
-  // The traced path, and the picked condition's own waits.
-  const onPath = $derived(new Set(t ? t.path.slice(1).map((w, k) => `${t.path[k]}-${w}`) : []));
-  const arrows = $derived(
-    s.links.map(([i, j]) => {
-      const key = `${i}-${j}`;
-      const inside = s.comp[i] === s.comp[j] && s.inKnot[i];
-      const kind = inside ? (s.closed[i] ? 'closed' : 'tied') : s.met[j] ? 'plain' : 'blocked';
-      const mark = onPath.has(key) ? 'path' : i === picked ? 'own' : t && t.kind !== 'met' ? 'dim' : '';
-      return { key, ...arrow(pos[i], pos[j]), kind, mark };
+  // The numbers the text quotes, from the model.
+  const START = chain([]);
+  const SOLVED = chain(ANSWER);
+  // Every ring of the deal as signed has one of the two answer clauses on it.
+  const answerRings = START.rings.filter((r) => r.some((k) => ANSWER.includes(k)));
+  const deal = (m) => DEAL_TABLE.inOrder[m];
+  const pctAt = (m) => `${Math.round(deal(m))}%`;
+  // The ring the card opens on: the loan and the equity, each waiting for the other.
+  const EQ_LOAN = ANSWER[0];
+  const LOAN_EQ = CLAUSES.findIndex((c) => c.from === CLAUSES[EQ_LOAN].to && c.to === CLAUSES[EQ_LOAN].from);
+
+  // ---- The drawing ----
+  const wide = $derived(width >= 520);
+  const lay = $derived(wide ? LAYOUTS.wide : LAYOUTS.tall);
+  const fs = $derived(wide ? 12.5 : 11.5);
+  const PAD = 12;
+  const rowH = $derived(wide ? 92 : 72);
+  const H = $derived(lay.rows * rowH + 2 * PAD);
+  const cw = $derived((width - 2 * PAD) / lay.cols);
+  // Text widths, estimated per character for a semibold sans at the given size.
+  const em = (ch) => (/[ilj.,'’:;!|]/.test(ch) ? 0.28 : /[ftr\- ]/.test(ch) ? 0.36 : /[mwMW]/.test(ch) ? 0.86 : /[A-Z]/.test(ch) ? 0.68 : 0.57);
+  const textW = (s, size) => [...s].reduce((a, ch) => a + em(ch), 0) * size * 1.04;
+  const boxes = $derived(
+    DOCS.map((d) => {
+      const [c, r] = lay.at[d.key];
+      const lines = lay.lines[d.key] ?? [d.name];
+      const w = Math.max(...lines.map((l) => textW(l, fs))) + 18;
+      const h = lines.length * (fs + 2) + 12;
+      const cx = PAD + (c + 0.5) * cw;
+      const cy = PAD + (r + 0.5) * rowH;
+      return { cx, cy, w, h, x0: cx - w / 2, x1: cx + w / 2, y0: cy - h / 2, y1: cy + h / 2, lines };
     }),
   );
-  // Each knot drawn as one soft shape behind it: its members, the links inside it thickened, and
-  // the triangles those links close, so the shape has few holes.
-  const shapes = $derived.by(() => {
-    const out = [];
-    s.sizes.forEach((size, c) => {
-      if (size < 2) return;
-      const members = s.comp.map((k, v) => (k === c ? v : -1)).filter((v) => v >= 0);
-      const inside = s.links.map(([i, j], e) => [i, j, e]).filter(([i, j]) => s.comp[i] === c && s.comp[j] === c);
-      const near = new Set(inside.flatMap(([i, j]) => [`${i}-${j}`, `${j}-${i}`]));
-      const tris = [];
-      for (let a = 0; a < members.length; a++)
-        for (let b = a + 1; b < members.length; b++) {
-          if (!near.has(`${members[a]}-${members[b]}`)) continue;
-          for (let d = b + 1; d < members.length; d++)
-            if (near.has(`${members[a]}-${members[d]}`) && near.has(`${members[b]}-${members[d]}`))
-              tris.push([members[a], members[b], members[d]].map((v) => `${pos[v].x.toFixed(1)},${pos[v].y.toFixed(1)}`).join(' '));
+
+  const HEAD = 7;
+  const inBox = (p, b, m) => Math.abs(p.x - b.cx) <= b.w / 2 + m && Math.abs(p.y - b.cy) <= b.h / 2 + m;
+  // Each clause as a gentle quadratic curve from one document's edge to the other's, its head at
+  // the document that waits. Two clauses between the same pair bend apart.
+  const geoms = $derived(
+    CLAUSES.map((c, k) => {
+      const a = boxes[c.from];
+      const b = boxes[c.to];
+      const P0 = { x: a.cx, y: a.cy };
+      const P2 = { x: b.cx, y: b.cy };
+      const dx = P2.x - P0.x;
+      const dy = P2.y - P0.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const pair = CLAUSES.some((o) => o.from === c.to && o.to === c.from);
+      const bend = lay.bend[`${DOCS[c.from].key}-${DOCS[c.to].key}`] ?? (pair ? 0.13 : 0);
+      const C = { x: (P0.x + P2.x) / 2 - (dy / len) * bend * len, y: (P0.y + P2.y) / 2 + (dx / len) * bend * len };
+      const B = (t) => ({
+        x: (1 - t) ** 2 * P0.x + 2 * t * (1 - t) * C.x + t * t * P2.x,
+        y: (1 - t) ** 2 * P0.y + 2 * t * (1 - t) * C.y + t * t * P2.y,
+      });
+      const dB = (t) => ({ x: 2 * (1 - t) * (C.x - P0.x) + 2 * t * (P2.x - C.x), y: 2 * (1 - t) * (C.y - P0.y) + 2 * t * (P2.y - C.y) });
+      // Where the curve leaves the first box and meets the second, by bisection.
+      const edge = (lo, hi, box, leaving) => {
+        for (let i = 0; i < 30; i++) {
+          const mid = (lo + hi) / 2;
+          if (inBox(B(mid), box, 3) === leaving) lo = mid;
+          else hi = mid;
         }
-      out.push({ c, members, inner: inside.map(([, , e]) => arrows[e].full), tris, closed: s.closed[members[0]] });
-    });
-    return out;
-  });
+        return (lo + hi) / 2;
+      };
+      const t0 = edge(0, 0.5, a, true);
+      const t1 = edge(0.5, 1, b, false);
+      const tip = B(t1);
+      const d1 = dB(t1);
+      const l1 = Math.hypot(d1.x, d1.y) || 1;
+      const ux = d1.x / l1;
+      const uy = d1.y / l1;
+      const base = { x: tip.x - ux * HEAD, y: tip.y - uy * HEAD };
+      const tb = Math.max(t0, t1 - HEAD / l1);
+      // The piece of the curve from t0 to tb, as its own quadratic.
+      const from = B(t0);
+      const end = B(tb);
+      const d0 = dB(t0);
+      const q = { x: from.x + ((tb - t0) / 2) * d0.x, y: from.y + ((tb - t0) / 2) * d0.y };
+      const w = HEAD * 0.55;
+      const f = (v) => v.toFixed(1);
+      const samples = Array.from({ length: 17 }, (_, i) => B(t0 + ((t1 - t0) * i) / 16));
+      return {
+        k,
+        shaft: `M${f(from.x)} ${f(from.y)}Q${f(q.x)} ${f(q.y)} ${f(end.x)} ${f(end.y)}`,
+        head: `M${f(tip.x)} ${f(tip.y)}L${f(base.x - uy * w)} ${f(base.y + ux * w)}L${f(base.x + uy * w)} ${f(base.y - ux * w)}Z`,
+        samples,
+      };
+    }),
+  );
 
-  // Names on the figure: the condition picked, then the equity and the loan, each beside its dot,
-  // clear of the box's edge, of each other, and as far as can be of dots and the highlighted links.
-  const labels = $derived.by(() => {
-    const ids = [...new Set([picked, EQUITY, LOAN].filter((v) => v !== null))];
-    const marks = arrows.flatMap((a, e) => {
-      const [i, j] = s.links[e];
-      const weight = a.mark === 'path' || a.mark === 'own' ? 8 : a.kind === 'tied' || a.kind === 'closed' ? 4 : 1;
-      return [0.3, 0.5, 0.7].map((f) => ({ x: pos[i].x + (pos[j].x - pos[i].x) * f, y: pos[i].y + (pos[j].y - pos[i].y) * f, weight }));
-    });
-    return placeLabels({ ids, pos, text: (v) => NAMES[v], width: (t) => t.length * 6.3 + 4, box: { width, height: H }, r, marks }).map((l) => ({
-      ...l,
-      picked: l.v === picked,
-    }));
-  });
+  // A padlock sits on each clause that cannot move, at the point of its arrow furthest from the
+  // other arrows and the documents.
+  const boxGap = (p, b) => Math.hypot(Math.max(0, Math.abs(p.x - b.cx) - b.w / 2), Math.max(0, Math.abs(p.y - b.cy) - b.h / 2));
+  const locks = $derived(
+    geoms.map((g) => {
+      if (!CLAUSES[g.k].lock) return null;
+      const room = (p) =>
+        Math.min(
+          ...boxes.map((b) => boxGap(p, b) + 2),
+          ...geoms.filter((o) => o.k !== g.k).flatMap((o) => o.samples.map((q) => Math.hypot(q.x - p.x, q.y - p.y))),
+        );
+      // On a short arrow the padlock would hide it: it sits beside the arrow instead.
+      const [a, b] = [g.samples[0], g.samples[16]];
+      const len = Math.hypot(b.x - a.x, b.y - a.y);
+      const cands =
+        len < 46
+          ? [1, -1].map((side) => ({ x: g.samples[8].x - ((b.y - a.y) / len) * 12 * side, y: g.samples[8].y + ((b.x - a.x) / len) * 12 * side }))
+          : g.samples.slice(5, 12);
+      return cands.reduce((best, p) => (room(p) > room(best) + 0.5 ? p : best), cands[Math.floor(cands.length / 2)]);
+    }),
+  );
+  const LOCK_R = $derived(wide ? 7.5 : 6.5);
 
-  // Tap or click: the nearest condition within reach of the pointer; the picked one again clears it.
+  // A document's place in the chain sits in a small badge on the corner of its box that is
+  // furthest from every arrow.
+  const badges = $derived(
+    boxes.map((b) => {
+      const corners = [
+        { x: b.x0 + 5, y: b.y0 },
+        { x: b.x1 - 5, y: b.y0 },
+        { x: b.x0 + 5, y: b.y1 },
+        { x: b.x1 - 5, y: b.y1 },
+      ];
+      const clear = (p) =>
+        Math.min(
+          ...geoms.flatMap((g) => g.samples.map((s) => Math.hypot(s.x - p.x, s.y - p.y))),
+          ...locks.filter(Boolean).map((l) => Math.hypot(l.x - p.x, l.y - p.y) - 4),
+        );
+      return corners.reduce((best, p) => (clear(p) > clear(best) + 0.5 ? p : best));
+    }),
+  );
+
+  // The rings the read-out points at: those through the clause or document picked, or, before
+  // any tap, the loan and the equity waiting for each other.
+  const focus = $derived.by(() => {
+    if (sel?.clause !== undefined) return isMoved(sel.clause) ? [] : ringsThrough(sel.clause, moved);
+    if (sel?.doc !== undefined) return st.rings.filter((r) => r.some((k) => CLAUSES[k].from === sel.doc));
+    if (!sel && !isMoved(EQ_LOAN) && !isMoved(LOAN_EQ)) return st.rings.filter((r) => r.length === 2 && r.includes(EQ_LOAN));
+    return [];
+  });
+  const focusSet = $derived(new Set(focus.flat()));
+  const arrowClass = (k) => {
+    const kind = isMoved(k) ? 'moved' : st.ringsOf[k] ? 'ring' : 'plain';
+    return `arrow ${kind}${focusSet.has(k) ? ' em' : ''}${sel?.clause === k ? ' sel' : ''}`;
+  };
+  const docClass = (d) => {
+    const kind = st.number[d] ? 'signed' : st.onRing[d] ? 'ring' : 'behind';
+    return `doc ${kind}${sel?.doc === d ? ' sel' : ''}`;
+  };
+
+  // Tap or click: a document's box, or else the nearest arrow within reach.
+  let svg = $state();
   function onTap(e) {
-    const box = e.currentTarget.getBoundingClientRect();
-    const mx = e.clientX - box.left;
-    const my = e.clientY - box.top;
+    const box = svg.getBoundingClientRect();
+    const x = e.clientX - box.left;
+    const y = e.clientY - box.top;
+    const d = boxes.findIndex((b) => x >= b.x0 - 2 && x <= b.x1 + 2 && y >= b.y0 - 2 && y <= b.y1 + 2);
+    if (d >= 0) {
+      sel = sel?.doc === d ? null : { doc: d };
+      return;
+    }
     let best = -1;
     let gap = Infinity;
-    pos.forEach((p, v) => {
-      const d = Math.hypot(p.x - mx, p.y - my) - r;
-      if (d < gap) (gap = d), (best = v);
-    });
-    if (best >= 0 && gap <= 16) picked = best === picked ? null : best;
+    for (const g of geoms)
+      for (const p of g.samples) {
+        const dist = Math.hypot(p.x - x, p.y - y);
+        if (dist < gap) (gap = dist), (best = g.k);
+      }
+    if (best >= 0 && gap <= (wide ? 14 : 18)) act(best);
   }
-  let diagram = $state();
-  async function onKey(e) {
-    const k = order.indexOf(picked ?? order[0]);
-    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
-    let next;
-    if (step) next = (k + step + N) % N;
-    else if (e.key === 'Home') next = 0;
-    else if (e.key === 'End') next = N - 1;
-    else if (e.key === ' ' || e.key === 'Enter') next = k;
-    else return;
-    e.preventDefault();
-    picked = order[next];
-    await tick();
-    diagram?.querySelector(`[data-v="${picked}"]`)?.focus();
-  }
-  const stateOf = (v) => (s.closed[v] ? 'signed at a joint closing' : s.met[v] ? 'can be met' : s.inKnot[v] ? 'stuck in a knot' : 'stuck');
 
   // ---- What the figure shows, in words ----
-  const knotsOpen = $derived(s.sizes.filter((size, c) => size > 1 && !s.closed[s.comp.indexOf(c)]));
-  const knotsClosed = $derived(s.sizes.filter((size, c) => size > 1 && s.closed[s.comp.indexOf(c)]).length);
-  const behind = $derived(behindAt(s));
-  const onlyEquityLoan = $derived(s.inKnot[EQUITY] && s.comp[EQUITY] === s.comp[LOAN] && s.sizes[s.comp[EQUITY]] === 2 && s.inKnot.filter(Boolean).length === 2);
-  const more = (k, it) => (k ? `, and ${say(k)} more wait${k === 1 ? 's' : ''} behind ${it}` : '');
+  const ringPath = (r, startDoc) => {
+    const docs = r.map((k) => CLAUSES[k].from);
+    const i = Math.max(0, docs.indexOf(startDoc));
+    const turn = [...docs.slice(i), ...docs.slice(0, i)];
+    return [...turn, turn[0]].map((d) => DOCS[d].name).join(' → ');
+  };
+  const onRingCount = $derived(st.onRing.filter(Boolean).length);
+  const behindNames = $derived(DOCS.filter((_, d) => st.behind[d]).map((d) => d.the));
   const caption = $derived.by(() => {
-    if (!s.links.length) return 'No links: every condition can be met at once.';
-    if (!knotsOpen.length && !knotsClosed) return 'No knots: every condition can be met, one after another.';
-    if (!knotsOpen.length)
-      return onlyEquityLoan
-        ? 'A joint closing signs the equity and the loan together, and then all forty can be met.'
-        : `Joint closings sign each small knot at once: ${s.metCount === N ? 'all forty' : int(s.metCount)} can be met.`;
-    if (onlyEquityLoan) return `The equity waits for the loan; the loan waits for the equity. Neither can go first${more(behind, 'them')}.`;
-    const K = Math.max(...knotsOpen);
-    const lead = knotsOpen.length > 1 ? `${say(knotsOpen.length)} knots, the largest of ${K}` : `A knot of ${K}`;
-    const big = joint > 1 && K > JOINT ? ', too many to sign at one closing' : '';
-    return `${lead[0].toUpperCase()}${lead.slice(1)}${big}: none of it can go first${more(behind, 'it')}.`;
+    if (st.signed === N) return `No rings left: all twelve can be signed in order, with ${say(moved.length)} clause${moved.length === 1 ? '' : 's'} after the money.`;
+    const onRing = DOCS.filter((_, d) => st.onRing[d]).map((d) => d.the);
+    const lead = onRing.length <= 3 ? `${cap(list(onRing))} are on rings` : `${cap(say(onRing.length))} documents are on rings`;
+    const tail = behindNames.length ? `, and ${list(behindNames)} wait${behindNames.length === 1 ? 's' : ''} behind them` : '';
+    return `${lead}${tail}. On a ring each document waits for the one before it, so none can go first.`;
   });
 
+  // The rings a clause in force closes, with the shortest one spelled out from the clause itself.
+  const onRings = (k) => {
+    const rs = ringsThrough(k, moved).sort((p, q) => p.length - q.length);
+    if (!rs.length) return 'on no ring';
+    const path = ringPath(rs[0], CLAUSES[k].from);
+    return rs.length === 1 ? `on one ring: ${path}` : `on ${rings(rs.length)}, such as ${path}`;
+  };
+  // What moving a clause off every ring did: freed what waited only for it, or nothing.
+  const freedBy = (k) => {
+    const before = chain(moved.filter((m) => m !== k));
+    const freed = DOCS.filter((_, d) => st.number[d] && !before.number[d]).map((d) => d.the);
+    return freed.length ? `It was on no ring, but ${list(freed)} no longer wait${freed.length === 1 ? 's' : ''} behind one.` : 'It was on no ring, so nothing more can be signed.';
+  };
   const readout = $derived.by(() => {
-    if (picked === null || !t) return null;
-    const waits = s.out[picked].map((w) => NAMES[w]);
-    const first = waits.length ? `waits for ${list(waits)}.` : 'waits for nothing.';
-    const chain = (path) => path.map((w) => NAMES[w]).join(' → ');
-    let then;
-    if (t.kind === 'met') {
-      const k = waits.length;
-      then = k === 0 ? 'It can be met at once.' : k === 1 ? 'That can be met, so it can too.' : `${k === 2 ? 'Both' : `All ${say(k)}`} can be met, so it can too.`;
-    } else if (t.kind === 'closed') {
-      const others = s.comp.map((c, v) => (c === s.comp[picked] && v !== picked ? NAMES[v] : null)).filter(Boolean);
-      then = `It is in a knot with ${list(others)}: a joint closing signs them together.`;
-    } else if (t.kind === 'knot') {
-      const size = s.sizes[s.comp[picked]];
-      then =
-        size === 2
-          ? `${NAMES[t.path[1]]} waits for it in turn: a knot of two, and neither can go first.`
-          : `It is in a knot of ${size}: ${chain(t.path)}. None of it can go first.`;
-    } else {
-      then = `Stuck: ${chain(t.path.slice(1))}, which is in a knot.`;
+    if (sel?.clause !== undefined) {
+      const k = sel.clause;
+      const c = CLAUSES[k];
+      const n = ringsThrough(k, moved).length;
+      if (c.lock) return { head: who(k), quote: c.text, note: `Cannot move: ${c.lock} It is ${onRings(k)}.` };
+      if (isMoved(k))
+        return {
+          head: whoNot(k),
+          quote: c.after,
+          note: `After the money, the clause is an undertaking with a deadline. ${n ? `It was on ${rings(n)}; ${n === 1 ? 'it is' : n === 2 ? 'both are' : `all ${say(n)} are`} cut.` : freedBy(k)} Tap again to put it back.`,
+        };
+      return { head: who(k), quote: c.text, note: `It is ${onRings(k)}. A tap moves it after the money.` };
     }
-    return { name: NAMES[picked], first, then };
+    if (sel?.doc !== undefined) {
+      const d = sel.doc;
+      const waits = CLAUSES.filter((c, k) => c.to === d && !isMoved(k)).map((c) => DOCS[c.from].the);
+      const what = waits.length ? `It waits for ${list(waits)}.` : 'It waits for nothing.';
+      if (st.number[d]) return { head: DOCS[d].name, note: `${what} It is ${ordinal(st.number[d])} in the chain.` };
+      if (st.onRing[d]) {
+        const r = st.rings.filter((x) => x.some((k) => CLAUSES[k].from === d)).sort((p, q) => p.length - q.length)[0];
+        return { head: DOCS[d].name, note: `${what} It is on a ring, ${ringPath(r, d)}, so it cannot go first.` };
+      }
+      const stuck = CLAUSES.filter((c, k) => c.to === d && !isMoved(k) && !st.number[c.from]).map((c) => DOCS[c.from].the);
+      return { head: DOCS[d].name, note: `${what} ${cap(list(stuck))} cannot be signed, so neither can it.` };
+    }
+    if (st.signed === N && moved.length === FEWEST && ANSWER.every(isMoved))
+      return {
+        head: 'After the money',
+        note: `The sponsors pay in alongside the loan, and the regulator sets a provisional tariff. Between them, the two clauses sat on all ${say(answerRings.length)} rings.`,
+      };
+    if (!isMoved(EQ_LOAN) && !isMoved(LOAN_EQ))
+      return {
+        head: 'A ring of two',
+        note: `${who(EQ_LOAN)}: “${CLAUSES[EQ_LOAN].text}” ${who(LOAN_EQ)}: “${CLAUSES[LOAN_EQ].text}” Neither can go first.`,
+      };
+    return { head: '', note: 'Tap an arrow to read its clause, or a document to see what it waits for.' };
   });
 
   const label = $derived(
-    `Forty conditions of one programme, ${s.links.length} links between them. ${s.metCount} can be met and ${stuck} are stuck. ${caption}`,
+    `One deal: twelve documents and twenty clauses. ${st.signed} can be signed in order${st.signed ? `: ${st.order.map((d) => DOCS[d].name).join(', ')}` : ''}. ${caption} The clauses are listed below the figure.`,
   );
 
-  // ---- Across many programmes ----
-  const CH = 160;
-  const cm = { top: 22, right: 14, bottom: 34, left: 34 };
-  const cx = $derived(linear(0, MAX, cm.left, width - cm.right));
-  const cy = linear(0, N, CH - cm.bottom, cm.top);
-  const curve = (key) => line(LINKS.map((c, k) => [cx(c), cy(CLIFF[key][k])]));
-  const onLine = $derived(joint > 1 ? 'joint' : 'one');
-  const here = $derived({ x: cx(links), y: cy(at(onLine, links)), v: at(onLine, links) });
-  // The label sits above and to the right of the point, clear of the falling curve; without room
-  // there (only far to the right, where the curve is low), in the empty top-right corner.
-  const hereAt = $derived(
-    here.x + 95 < width ? { x: here.x + 8, y: Math.max(cm.top + 10, here.y - 8), anchor: 'start' } : { x: width - cm.right, y: cm.top + 16, anchor: 'end' },
-  );
+  // ---- Across many random deals ----
+  const CH = 178;
+  const cm = { top: 26, right: 14, bottom: 36, left: 40 };
+  const cx = $derived(linear(0, MAX_CLAUSES, cm.left, width - cm.right));
+  const cy = linear(0, 100, CH - cm.bottom, cm.top);
+  const curve = $derived(line(DEAL_TABLE.inOrder.map((v, m) => [cx(m), cy(v)])));
+  const OURS = CLAUSES.length;
+  const TIP = N;
+  // The label for this deal sits to the right of its point, unless the chart is too narrow.
+  // Its label: two short lines above the point, clear of the curve, joined to it by a dotted line;
+  // right of the point where there is room, else ending at the chart's edge.
+  const oursLabel = $derived(cx(OURS) + 8 + 122 < width ? { x: cx(OURS) + 8, anchor: 'start' } : { x: width - 2, anchor: 'end' });
+  // The tipping point's label: one line where it fits, else two.
+  const tipLines = $derived(cx(TIP) + 6 + 200 < width ? ['Tipping point: one per document'] : ['Tipping point:', 'one per document']);
 
   // ---- Puzzle ----
-  const puzzle = {
-    goal: `With ${START} links, ${one.metCount} of the ${N} conditions can be met, and a joint closing frees the other ${say(N - one.metCount)}. With ${ASKED} links, how many can?`,
-    choices: [
-      { value: '28', label: 'About 28' },
-      { value: '16', label: 'About 16' },
-      { value: '8', label: 'About 8' },
-    ],
-    answer: '8',
-    wrong: (v) =>
-      v === '28'
-        ? 'Far fewer. With twice the links, knots begin to share conditions and join.'
-        : 'Fewer still. Knots that share a condition join, and everything waiting behind them is stuck too.',
+  const puzzle = $derived({
+    goal: 'Twenty sensible clauses, and the deal cannot close. Move the fewest clauses after the money so that all twelve can be signed in order.',
+    met: st.signed === N && moved.length <= FEWEST,
+    progress:
+      st.signed === N && moved.length > FEWEST
+        ? `All twelve can be signed in order, with ${say(moved.length)} clauses moved. Can ${say(FEWEST)} do it?`
+        : '',
     hints: [
-      'A condition that waits for a knot is stuck too, however few links it has of its own.',
-      `Two knots that share a condition become one. At ${ASKED} links, two per condition, they share often.`,
+      'Any one clause on a ring cuts it, and a clause that sits on several rings cuts them all at once.',
+      'One ring runs through the tariff decree, the PPA and the loan: only one of its clauses can move. Then look at the loan, the equity and the co-lender.',
     ],
-    found: `About ${two.metCount}: past one link per condition, small knots join into one of ${two.largest}, too big for any joint closing.`,
-  };
-  const showAnswer = () => ((links = ASKED), (closing = 'one'), (picked = TARIFF));
+    found: 'Two clauses, each on several rings: the sponsors pay in alongside the loan, and the regulator sets a provisional tariff.',
+  });
+  const showAnswer = () => ((moved = [...ANSWER]), (sel = null));
 </script>
 
-<Chapter n={14} kicker="Circular conditions" title="A chain tied in a knot" lede="When conditions wait for each other, a chain of them ties itself in a knot. A knot has no first link." puzzle="knot">
+<Chapter n={14} kicker="Circular conditions" title="A chain tied in a knot" lede="When documents wait for each other, a chain of them ties itself in a knot. A knot has no first link." puzzle="knot">
   {#snippet setup()}
     <p>
-      In a co-financed power project, the equity investor pays in only once the loan is ready to disburse, and the loan
-      is ready only once the equity is in. Each condition makes sense on its own. Together, they wait for each other for
-      ever.
+      In a co-financed power plant, the sponsors pay in their equity only once the loan is signed, and the loan disburses
+      only once the equity is in. Each clause makes sense on its own. Together, they wait for each other for ever.
     </p>
     <p>
-      Reforms knot in the same way: the tariff rise waits for a new regulator, the regulator for a law, the law for proof
-      that tariffs cover costs, which needs the tariff rise. Deal teams untie small knots with a joint closing, where
-      everything is signed and paid at once.
+      A plant reaches financial close when a dozen documents are signed, from the land lease to the tariff decree, each
+      drafted by its own team and checked on its own. Each refers to others, and each such clause is a link: this
+      document is signed once that one is. Signed <span class="tkc-idea">one after another</span>, the documents form a
+      chain of <span class="tkc-and">ANDs</span>.
     </p>
-    <p>
-      Each condition waits for everything it lists: a chain of <span class="tkc-and">ANDs</span>. Tied back on itself,
-      the chain does not break; it locks. A power plant, its financing and a utility reform can carry forty such
-      conditions.
-    </p>
+    <p>Tied back on itself, the chain does not break; it locks.</p>
   {/snippet}
 
   {#snippet figure()}
     <Instrument
-      title="Forty conditions of one programme"
-      sub="A power plant, its financing and a utility reform. Tap a condition to see what it waits for."
+      title="One deal, twelve documents"
+      sub="A power plant’s financial close. Tap an arrow to read its clause and move it; padlocked clauses cannot move."
       rules={[
-        'The names are illustrative; the links between them are drawn at random.',
-        'A condition can be met once everything it waits for is met.',
-        'Conditions that wait for each other, directly or not, form a knot.',
+        'Each arrow is one clause: the document it points to waits for the other.',
+        'A document can be signed once everything it waits for is signed.',
+        'A clause moved after the money becomes an undertaking with a deadline, not a wait.',
       ]}
     >
-      <Puzzle id="knot" {...puzzle} predict onshow={showAnswer} />
+      <Puzzle id="knot" {...puzzle} onshow={showAnswer} />
 
-      <div class="tkc-controls">
-        <Slider
-          id="k-links"
-          label="Links between them"
-          bind:value={links}
-          min={0}
-          max={MAX}
-          step={10}
-          format={fmtLinks}
-          limit={live ? null : START}
-          limitNote="{START + 10} to {MAX} links, and the average over many programmes, open after your first answer."
-        />
-        <div class="ctl">
-          <Segmented
-            name="k-small"
-            label="Closing"
-            bind:value={closing}
-            options={[
-              { value: 'one', label: 'One at a time' },
-              { value: 'joint', label: 'Joint closing' },
-            ]}
-          />
-          <p class="tkc-caption">A joint closing signs a knot of up to {say(JOINT)} at once.</p>
-        </div>
-      </div>
-
-      <div class="tkc-chart net" bind:clientWidth={width} bind:this={diagram}>
-        <!-- Each condition is a radio that takes focus and the arrow keys; a tap picks the nearest one. -->
-        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_interactive_supports_focus -->
-        <svg {width} height={H} role="radiogroup" aria-label={label} onclick={onTap}>
+      <div class="tkc-chart net" bind:clientWidth={width}>
+        <!-- A tap picks the nearest arrow or document; keyboard and screen-reader users have the list of clauses below. -->
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+        <svg {width} height={H} role="img" aria-label={label} bind:this={svg} onclick={onTap}>
           <g aria-hidden="true">
-            {#each shapes as k (k.c)}
-              <g class="knot" class:closed={k.closed} style:--w="{2 * (r + 6)}px">
-                {#each k.tris as points}<polygon {points} />{/each}
-                {#each k.inner as d}<path {d} />{/each}
-                {#each k.members as v (v)}<circle cx={pos[v].x} cy={pos[v].y} r={r + 7} />{/each}
+            {#each geoms as g (g.k)}
+              <g class={arrowClass(g.k)}>
+                {#if !isMoved(g.k) && st.ringsOf[g.k]}<path class="glow" d={g.shaft} />{/if}
+                <path class="shaft" d={g.shaft} />
+                <path class="head" d={g.head} />
               </g>
             {/each}
-            {#each arrows as a (a.key)}
-              <g class="arrow {a.kind} {a.mark}">
-                <path class="shaft" d={a.line} />
-                <path class="head" d={a.head} />
-              </g>
+            {#each geoms as g (g.k)}
+              {#if CLAUSES[g.k].lock}
+                <g class="lock" class:on={st.ringsOf[g.k] > 0} transform="translate({locks[g.k].x.toFixed(1)} {locks[g.k].y.toFixed(1)})">
+                  <circle r={LOCK_R} class="lock-bg" />
+                  <path d="M-2.6 -0.6V-2.4A2.6 2.6 0 0 1 2.6 -2.4V-0.6" class="lock-loop" />
+                  <rect x="-3.8" y="-0.8" width="7.6" height="5.4" rx="1.2" class="lock-body" />
+                </g>
+              {/if}
             {/each}
-          </g>
-          {#each pos as p, v (v)}
-            <circle
-              cx={p.x}
-              cy={p.y}
-              {r}
-              class="dot"
-              class:met={s.met[v]}
-              data-v={v}
-              role="radio"
-              aria-checked={v === picked}
-              aria-label="{NAMES[v]}: {stateOf(v)}"
-              tabindex={v === (picked ?? order[0]) ? 0 : -1}
-              onkeydown={onKey}
-            />
-          {/each}
-          {#if picked !== null}<circle cx={pos[picked].x} cy={pos[picked].y} r={r + 3.5} class="ring" aria-hidden="true" />{/if}
-          <g aria-hidden="true">
-            {#each labels as l (l.v)}
-              <text class="tkc-label tkc-halo name" class:quiet={!l.picked} x={l.x} y={l.y} text-anchor={l.anchor}>{NAMES[l.v]}</text>
+            {#each boxes as b, d (d)}
+              <g class={docClass(d)}>
+                <rect x={b.x0} y={b.y0} width={b.w} height={b.h} rx="7" />
+                {#each b.lines as l, i (i)}
+                  <text x={b.cx} y={b.cy + (i - (b.lines.length - 1) / 2) * (fs + 2) + fs * 0.36} text-anchor="middle" style:font-size="{fs}px">{l}</text>
+                {/each}
+                {#if st.number[d]}
+                  <g class="badge" transform="translate({badges[d].x.toFixed(1)} {badges[d].y.toFixed(1)})">
+                    <circle r="8.5" />
+                    <text y="3.6" text-anchor="middle">{st.number[d]}</text>
+                  </g>
+                {/if}
+              </g>
             {/each}
           </g>
         </svg>
         <div class="tkc-legend">
-          <span><span class="tkc-swatch round" style:background="var(--tkc-options)" aria-hidden="true"></span>Can be met</span>
-          <span><span class="tkc-swatch round" style:background="var(--tkc-conditions)" aria-hidden="true"></span>Stuck</span>
-          <span><span class="knot-key" aria-hidden="true"></span>{joint > 1 ? 'A knot (blue: signed together)' : 'A knot'}</span>
-          <span>
-            <svg width="22" height="10" aria-hidden="true"><path d="M1 5H15" class="key-shaft" /><path d="M21 5L15 2V8Z" class="key-head" /></svg>
-            Waits for
-          </span>
+          <span><svg width="18" height="18" aria-hidden="true"><circle cx="9" cy="9" r="8" class="key-badge" /><text x="9" y="12.5" text-anchor="middle" class="key-num">1</text></svg>Signed in this order</span>
+          <span><svg width="24" height="10" aria-hidden="true"><path d="M1 5H16" class="key-ring" /><path d="M23 5L16 1.5V8.5Z" class="key-ring-head" /></svg>On a ring: none can go first</span>
+          <span><span class="key-behind" aria-hidden="true"></span>Waits behind a ring</span>
+          <span><svg width="24" height="10" aria-hidden="true"><path d="M1 5H16" class="key-moved" /><path d="M23 5L16 1.5V8.5Z" class="key-moved-head" /></svg>After the money</span>
         </div>
         <p class="state">{caption}</p>
-        <p class="tkc-small readout">
-          {#if readout}<strong>{readout.name}</strong> {readout.first} {readout.then}{:else}Tap a condition to see what it waits for.{/if}
+        <p class="tkc-small readout" aria-live="polite">
+          {#if readout.head}<strong>{readout.head}</strong>{readout.quote ? ': ' : ' · '}{/if}{#if readout.quote}“{readout.quote}”{' '}{/if}{readout.note}
         </p>
       </div>
 
       <div class="tkc-stats two" use:announce>
-        <Stat label="Conditions that can be met" value={s.metCount} sub="of {N}; {stuck ? `${stuck} stuck` : 'none stuck'}" swatch="var(--tkc-options)" />
         <Stat
-          label="Largest knot"
-          value={s.largest > 1 ? `${s.largest}` : 'None'}
-          sub={s.largest < 2
-            ? 'no conditions wait for each other'
-            : !knotsOpen.length
-              ? 'conditions, signed together'
-              : Math.max(...knotsOpen) === 2
-                ? 'conditions; neither can go first'
-                : 'conditions; none can go first'}
-          swatch="color-mix(in srgb, var({s.largest > 1 && !knotsOpen.length ? '--tkc-options' : '--tkc-conditions'}) 22%, var(--tkc-surface))"
+          label="Can be signed in order"
+          value="{st.signed} of {N}"
+          sub={st.signed === N ? 'documents: the whole chain' : `documents; ${say(onRingCount)} on rings${behindNames.length ? `, ${say(behindNames.length)} behind` : ''}`}
+          swatch="var(--tkc-ink)"
+        />
+        <Stat
+          label="Moved after the money"
+          value={moved.length}
+          sub={moved.length ? `of ${CLAUSES.length} clauses, each now an undertaking with a deadline` : `of ${CLAUSES.length} clauses; ${say(LOCKED)} cannot move`}
+          swatch="var(--tkc-options)"
         />
       </div>
 
-      {#if live}
+      <details class="tkc-note clauses">
+        <summary>The twenty clauses, as a list</summary>
+        <ul>
+          {#each CLAUSES as c, k (k)}
+            <li>
+              <button
+                type="button"
+                class:moved={isMoved(k)}
+                aria-pressed={c.lock ? undefined : isMoved(k)}
+                aria-disabled={c.lock ? 'true' : undefined}
+                onclick={() => act(k)}
+                onfocus={() => (sel = { clause: k })}
+              >
+                <span class="who">{isMoved(k) ? whoNot(k) : who(k)}</span>
+                <span>{isMoved(k) ? c.after : c.text}</span>
+                <span class="tag">{c.lock ? 'Cannot move' : isMoved(k) ? 'After the money' : st.ringsOf[k] ? `On ${rings(st.ringsOf[k])}` : 'On no ring'}</span>
+              </button>
+            </li>
+          {/each}
+        </ul>
+      </details>
+
+      {#if revealed}
         <div class="many">
-          <span class="tkc-fig-title small">Across {int(RUNS)} programmes</span>
-          <svg {width} height={CH} role="img" aria-label="Average conditions that can be met, out of {N}, across {int(RUNS)} random programmes: {share(20)}% at 20 links, {share(40)}% at 40, {share(60)}% at 60, {share(80)}% at 80. The tipping point is at 40 links, one per condition.">
-            {#each [0, 20, 40] as v}
+          <span class="tkc-fig-title small">Across {int(DEALS)} random deals</span>
+          <svg {width} height={CH} role="img" aria-label="Share of {int(DEALS)} random deals of twelve documents that can be signed in order: {pctAt(6)} with 6 clauses, {pctAt(12)} with 12, {pctAt(16)} with 16, {pctAt(20)} with 20. The tipping point is at about one clause per document.">
+            {#each [0, 50, 100] as v}
               <line class={v === 0 ? 'tkc-base' : 'tkc-grid'} x1={cm.left} x2={width - cm.right} y1={cy(v)} y2={cy(v)} />
-              <text class="tkc-axis-label" x={cm.left - 6} y={cy(v) + 4} text-anchor="end">{v}</text>
+              <text class="tkc-axis-label" x={cm.left - 6} y={cy(v) + 4} text-anchor="end">{v}%</text>
             {/each}
-            {#each [0, 40, 80, 120] as v}
-              <text class="tkc-axis-label" x={cx(v)} y={CH - cm.bottom + 16} text-anchor={v === 0 ? 'start' : v === MAX ? 'end' : 'middle'}>{v}</text>
+            {#each [0, 6, 12, 18, 24, 30] as v}
+              <text class="tkc-axis-label" x={cx(v)} y={CH - cm.bottom + 16} text-anchor={v === 0 ? 'start' : v === MAX_CLAUSES ? 'end' : 'middle'}>{v}</text>
             {/each}
-            <text class="tkc-axis-title" x="0" y="12">Conditions that can be met, on average</text>
-            <text class="tkc-axis-title" x={cm.left + (width - cm.left - cm.right) / 2} y={CH - 4} text-anchor="middle">Links between the forty</text>
-            <line class="tip" x1={cx(START)} x2={cx(START)} y1={cy(at('one', START))} y2={cy(0)} />
-            <text class="tkc-label-2 tkc-halo" x={cx(START) - 6} y={cy(6)} text-anchor="end">Tipping point</text>
-            {#if joint > 1}<path d={curve('one')} class="avg faint" />{/if}
-            <path d={curve(onLine)} class="avg" class:joint={joint > 1} />
-            <line class="now" x1={here.x} x2={here.x} y1={cm.top} y2={cy(0)} />
-            <circle cx={here.x} cy={here.y} r="4.5" class="pt" class:joint={joint > 1} />
-            <text class="tkc-label tkc-halo" x={hereAt.x} y={hereAt.y} text-anchor={hereAt.anchor}>{here.v.toFixed(0)} on average</text>
+            <text class="tkc-axis-title" x="0" y="12">Deals that can be signed in order</text>
+            <text class="tkc-axis-title" x={cm.left + (width - cm.left - cm.right) / 2} y={CH - 4} text-anchor="middle">Clauses between the twelve documents</text>
+            <line class="tip" x1={cx(TIP)} x2={cx(TIP)} y1={cm.top} y2={cy(0)} />
+            {#each tipLines as l, i (i)}
+              <text class="tkc-label-2 tkc-halo" x={cx(TIP) + 6} y={cm.top + 10 + i * 14}>{l}</text>
+            {/each}
+            <path d={curve} class="avg" />
+            <circle cx={cx(OURS)} cy={cy(deal(OURS))} r="4.5" class="pt" />
+            <line class="lead" x1={cx(OURS)} x2={cx(OURS)} y1={cy(deal(OURS)) - 6} y2={cy(30) + 4} />
+            <text class="tkc-label tkc-halo" x={oursLabel.x} y={cy(42)} text-anchor={oursLabel.anchor}>{OURS} clauses, as here:</text>
+            <text class="tkc-label tkc-halo" x={oursLabel.x} y={cy(42) + 15} text-anchor={oursLabel.anchor}>{pctAt(OURS)} in order</text>
           </svg>
-          <p class="tkc-caption">
-            The same rules, {int(RUNS)} random programmes of forty.{#if joint > 1}{' '}Blue: small knots signed at
-              joint closings; grey: one at a time.{/if}
-          </p>
+          <p class="tkc-caption">Twelve documents; each clause makes one wait for another, drawn at random.</p>
         </div>
       {/if}
 
       {#snippet model()}
         <p>
-          Each of the 1,560 possible links (one condition waiting for another) gets a random number, and the slider puts
-          the first ones in that order in place, so more links only add to the same programme. A knot is a set of
-          conditions in which each waits, directly or through others, for every other: a strongly connected component.
-          One knot comes to hold most of a random network once there is more than one link per node (Karp; Łuczak, 1990).
-          A joint closing meets a knot of up to {say(JOINT)} at once, once everything else it waits for is met. The figure
-          is one programme; the averages are over {int(RUNS)}.
+          The deal is illustrative: twelve documents and twenty clauses, each simplified to one document waiting for
+          another to be signed first. Documents are numbered in the order they can be signed, the earliest in a fixed list
+          first when several are free. A ring is a cycle of waits. A search of every set of clauses that can move finds
+          that no single clause frees all twelve, and that only one pair does.
         </p>
         <p>
-          Kauffman’s figures: twelve settings of two values each; each setting’s contribution depends on itself and on
-          others through a random table; 400 designs, 40 teams each, starting from random designs.
+          A random deal puts the 132 possible clauses between twelve documents in a random order; its first {OURS} are a
+          deal of {OURS}, so more clauses only add to the same deal. In random networks one knot comes to hold most of the
+          nodes past about one link per node (Karp; Łuczak, 1990). Kauffman’s figures: twelve settings of two values each,
+          each setting’s contribution depending on others through a random table; 400 designs, 40 teams each.
         </p>
       {/snippet}
     </Instrument>
@@ -438,25 +477,32 @@
 
   {#snippet after()}
     <p>
-      Between {START} links and {ASKED}, only the number of links changed. Across {int(RUNS)} programmes like this one, the share of conditions that can be met falls from {share(40)}% at 40 links to {share(80)}% at 80, and the programmes that can be met in full, from {full(40)} to {full(80)}.
+      Follow the arrows from the loan to the tariff decree, on to the PPA and back to the loan: a ring. Each document on it
+      waits for the one before it, so none can be signed first, nor anything that waits for the ring.
+      All {say(START.rings.length)} rings here run through the loan.
     </p>
     <p>
-      That is a tipping point, like the one on the queues chapter’s curve, and it sits at one link per condition. Below it, knots
-      are few and small. Above it, they share conditions and join into one knot that grows until it holds most of the
-      programme: {Math.round(at('largest', ASKED))} of the 40, on average, at {ASKED} links. In this programme, the tariff rise,
-      the regulator, the law and the proof that tariffs cover costs end up in the same knot as the equity and the loan.
-      Software engineers know such a knot as a deadlock.
+      Moving a clause after the money keeps its promise and drops its wait: the sponsors still pay in, alongside each
+      disbursement instead of before the first, and the tariff still reflects the financing cost, once known. A ring
+      holds only while every wait on it holds, so one clause moved gives it a first document. A clause on several rings
+      cuts them all; these two sat on all {say(answerRings.length)}.
     </p>
     <p>
-      A joint closing unties small knots: here it lets all {oneJoint.metCount} be met at {START} links. At {ASKED} it frees
-      {twoJoint.metCount === two.metCount ? 'none' : say(twoJoint.metCount - two.metCount)}, because a knot of {two.largest}
-      can only be met all at once, and a law cannot be passed at a closing table. An undertaking with a deadline also cuts a
-      knot, by letting one condition follow the money, a move the disbursement chapter returns to.
+      Deal teams know another way out, the joint closing: everyone signs in one room at one moment, so nobody goes first.
+      It unties a small ring of private parties, such as the lenders and the sponsors, but not one that runs
+      through a law or a regulator, which does not sign on cue at a closing.
     </p>
     <p>
-      The biologist Stuart Kauffman found the same cliff in design, and called it a complexity catastrophe. When each of
-      twelve design choices depends on every other, a hundred teams improving a design one change at a time almost all
-      stall at one of some 315 dead ends, where any single change makes things worse; one reaches the best. Three dependencies each, kept inside modules of four whose teams try their choices together, let every team reach it. That is the watchmakers’ secret.
+      Across {int(DEALS)} random deals of twelve documents, {pctAt(6)} can be signed in order with six clauses, {pctAt(12)}
+      with twelve and {pctAt(20)} with twenty. The documents did not change; the links did. Past about one clause per
+      document, a <span class="tkc-idea">tipping point</span>, rings start to share documents and join: at twenty, the
+      largest knot holds {say(Math.round(DEAL_TABLE.largest[20]))} documents on average.
+    </p>
+    <p>
+      The biologist Stuart Kauffman found the same cliff in design and called it a complexity catastrophe. When each of
+      twelve design choices depends on every other, teams changing one choice at a time almost all stall, at one of some
+      315 dead ends. Kept inside modules of four, whose teams try their choices together, dependencies let every team reach the
+      best: the watchmakers’ secret.
     </p>
   {/snippet}
 
@@ -464,7 +510,7 @@
     <BankNote ask="Which of our conditions wait for each other, across documents never read side by side?">
       <p>
         Conditions are written one document at a time: the loan agreement, the equity subscription, the PPA, the policy
-        matrix of a reform loan, each drafted by a different team and checked on its own. A knot between them tends to show
+        matrix of a reform loan, each drafted by a different team and checked on its own. A ring between them tends to show
         only at closing, when every party is ready and waiting for another.
       </p>
     </BankNote>
@@ -475,18 +521,16 @@
   .two {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .ctl {
-    display: grid;
-    gap: 6px;
-    min-width: 0;
-  }
   .net {
     display: grid;
     gap: 8px;
     min-width: 0;
   }
-  .net svg {
+  .net > svg {
     display: block;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   .state {
     font-size: 0.875rem;
@@ -502,143 +546,176 @@
   .readout strong {
     color: var(--tkc-ink);
   }
-  /* One opaque colour for every piece, so overlaps do not darken: the shape reads as one. */
-  .knot {
-    --knot: color-mix(in srgb, var(--tkc-conditions) 22%, var(--tkc-surface));
-  }
-  .knot.closed {
-    --knot: color-mix(in srgb, var(--tkc-options) 18%, var(--tkc-surface));
-  }
-  .knot path {
-    fill: none;
-    stroke: var(--knot);
-    stroke-width: var(--w);
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-  .knot circle,
-  .knot polygon {
-    fill: var(--knot);
-    stroke: var(--knot);
-    stroke-width: 2;
-    stroke-linejoin: round;
-  }
+
+  /* Arrows: grey for a clause off every ring, orange on a ring, dashed blue after the money. */
   .shaft {
     fill: none;
-    stroke-width: 1.1;
+    stroke-width: 1.4;
     stroke-linecap: round;
-    transition: opacity 160ms ease;
-  }
-  .head {
-    transition: opacity 160ms ease;
+    transition: stroke 160ms ease, stroke-width 160ms ease;
   }
   .plain .shaft {
     stroke: var(--tkc-muted);
-    opacity: 0.55;
   }
   .plain .head {
     fill: var(--tkc-muted);
-    opacity: 0.7;
   }
-  /* A link to a stuck condition: what holds the waiting one up. */
-  .blocked .shaft {
+  .ring .shaft {
     stroke: var(--tkc-conditions);
-    opacity: 0.55;
+    stroke-width: 2;
   }
-  .blocked .head {
-    fill: var(--tkc-conditions);
-    opacity: 0.65;
-  }
-  .tied .shaft {
-    stroke: var(--tkc-conditions);
-    stroke-width: 1.5;
-  }
-  .tied .head {
+  .ring .head {
     fill: var(--tkc-conditions);
   }
-  .closed .shaft {
+  .glow {
+    fill: none;
+    stroke: var(--tkc-conditions);
+    stroke-opacity: 0.18;
+    stroke-width: 8;
+    stroke-linecap: round;
+  }
+  .moved .shaft {
     stroke: var(--tkc-options);
-    stroke-width: 1.5;
+    stroke-width: 2;
+    stroke-dasharray: 4 3;
   }
-  .closed .head {
+  .moved .head {
     fill: var(--tkc-options);
   }
-  /* The picked condition: its own links in ink, the traced path thick; the rest steps back. */
-  .own .shaft {
-    stroke: var(--tkc-ink);
-    stroke-width: 1.6;
-    opacity: 1;
-  }
-  .own .head {
-    fill: var(--tkc-ink);
-    opacity: 1;
-  }
-  .path .shaft {
-    stroke: var(--tkc-conditions-ink);
-    stroke-width: 2.6;
-    opacity: 1;
-  }
-  .path .head {
-    fill: var(--tkc-conditions-ink);
-    opacity: 1;
-  }
-  .path.closed .shaft {
-    stroke: var(--tkc-options-ink);
-  }
-  .path.closed .head {
-    fill: var(--tkc-options-ink);
-  }
-  .dim .shaft,
-  .dim .head {
-    opacity: 0.2;
-  }
-  .dot {
-    fill: var(--tkc-conditions);
-    stroke: var(--tkc-surface);
-    stroke-width: 1.5;
-    transition: fill 200ms ease;
-    cursor: pointer;
-  }
-  .dot.met {
-    fill: var(--tkc-options);
-  }
-  .dot:focus {
-    outline: none;
-  }
-  .dot:focus-visible {
-    stroke: var(--tkc-focus);
+  .em .shaft {
     stroke-width: 3;
   }
-  .ring {
+  .em .glow {
+    stroke-opacity: 0.32;
+    stroke-width: 10;
+  }
+  .sel .shaft {
+    stroke-width: 3;
+  }
+  .lock-bg {
+    fill: var(--tkc-surface);
+    stroke: var(--tkc-rule);
+    stroke-width: 1;
+  }
+  .lock.on .lock-bg {
+    stroke: var(--tkc-conditions);
+  }
+  .lock-loop {
     fill: none;
-    stroke: var(--tkc-ink);
-    stroke-width: 2;
-    pointer-events: none;
+    stroke: var(--tkc-ink-2);
+    stroke-width: 1.3;
   }
-  .name {
-    pointer-events: none;
-  }
-  .name.quiet {
+  .lock-body {
     fill: var(--tkc-ink-2);
-    font-weight: 550;
   }
-  .round {
-    border-radius: 50%;
+
+  /* Documents: numbered in the chain, tinted on a ring, dashed behind one. */
+  .doc rect {
+    fill: var(--tkc-surface);
+    stroke: var(--tkc-ink-2);
+    stroke-width: 1.25;
+    transition: fill 200ms ease, stroke 200ms ease;
   }
-  .knot-key {
-    display: inline-block;
-    width: 18px;
-    height: 12px;
-    border-radius: 6px;
-    background: color-mix(in srgb, var(--tkc-conditions) 22%, var(--tkc-surface));
+  .doc text {
+    fill: var(--tkc-ink);
+    font-weight: 600;
   }
-  .key-shaft {
+  .doc.ring rect {
+    fill: color-mix(in srgb, var(--tkc-conditions) 16%, var(--tkc-surface));
+    stroke: var(--tkc-conditions);
+    stroke-width: 1.5;
+  }
+  .doc.behind rect {
     stroke: var(--tkc-muted);
-    stroke-width: 1.2;
+    stroke-dasharray: 3 2.5;
   }
-  .key-head {
+  .doc.behind text {
     fill: var(--tkc-muted);
   }
+  .doc.sel rect {
+    stroke-width: 2.6;
+  }
+  .badge circle {
+    fill: var(--tkc-ink);
+    stroke: var(--tkc-surface);
+    stroke-width: 1.5;
+  }
+  .badge text {
+    fill: var(--tkc-surface);
+    font-size: 10.5px;
+    font-weight: 700;
+  }
+
+  /* Legend keys. */
+  .key-badge {
+    fill: var(--tkc-ink);
+  }
+  .key-num {
+    fill: var(--tkc-surface);
+    font-size: 10.5px;
+    font-weight: 700;
+  }
+  .key-ring {
+    stroke: var(--tkc-conditions);
+    stroke-width: 2;
+  }
+  .key-ring-head {
+    fill: var(--tkc-conditions);
+  }
+  .key-moved {
+    stroke: var(--tkc-options);
+    stroke-width: 2;
+    stroke-dasharray: 4 3;
+  }
+  .key-moved-head {
+    fill: var(--tkc-options);
+  }
+  .key-behind {
+    display: inline-block;
+    width: 20px;
+    height: 12px;
+    border-radius: 4px;
+    border: 1.25px dashed var(--tkc-muted);
+  }
+
+  /* The clauses as a list, for the keyboard and screen readers. */
+  .clauses ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 6px;
+  }
+  .clauses button {
+    display: grid;
+    gap: 1px;
+    width: 100%;
+    text-align: left;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--tkc-hair);
+    background: var(--tkc-surface);
+    color: var(--tkc-ink-2);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    cursor: pointer;
+  }
+  .clauses button.moved {
+    border-color: var(--tkc-options);
+    background: var(--tkc-options-wash);
+  }
+  .clauses button[aria-disabled='true'] {
+    cursor: default;
+  }
+  .clauses .who {
+    color: var(--tkc-ink);
+    font-weight: 600;
+  }
+  .clauses .tag {
+    color: var(--tkc-muted);
+  }
+
+  /* Across many random deals. */
   .many {
     display: grid;
     gap: 6px;
@@ -660,29 +737,20 @@
     stroke-linecap: round;
     stroke-linejoin: round;
   }
-  .avg.joint {
-    stroke: var(--tkc-options);
-  }
-  .avg.faint {
-    stroke: var(--tkc-rule);
-  }
   .tip {
     stroke: var(--tkc-ink-2);
     stroke-width: 1.5;
     stroke-dasharray: 1 3;
     stroke-linecap: round;
   }
-  .now {
+  .lead {
     stroke: var(--tkc-muted);
     stroke-width: 1;
-    stroke-dasharray: 3 3;
+    stroke-dasharray: 2 2;
   }
   .pt {
-    fill: var(--tkc-ink-2);
+    fill: var(--tkc-ink);
     stroke: var(--tkc-surface);
     stroke-width: 2;
-  }
-  .pt.joint {
-    fill: var(--tkc-options);
   }
 </style>

@@ -38,9 +38,9 @@
     { title: 'Buffers where the links meet', text: 'Spare capacity sits with the people, committees and systems that everything passes through, and it is big enough to cover what would hit them.', ch: 'contagion' },
     { title: 'Claims tested by what would break them', text: 'A track record counts the years a claim survived; a reverse stress test starts from the missed payment and looks for the years that would cause it, shocks that arrive together included.', ch: 'black-swans' },
     { title: 'Several sources, not one', text: 'A unit that draws on several sources grows a little more slowly in good years and survives the years when one source fails.', ch: 'extinction' },
-    { title: 'Gates sized to the loss', text: 'A check earns its wait where one loss would be too large to survive; on small amounts the same check is mostly a queue.', ch: 'gate' },
+    { title: 'Gates sized to the loss', text: 'Where fraud is rare, most flags are false positives; a check earns its wait where one loss would be too large to survive, and stays light where losses can be borne.', ch: 'gate' },
     { title: 'Small teams, light links', text: 'Work sits in small teams that are fully linked inside and lightly linked to each other, so required links grow with the team, not with the whole organization.', ch: 'graph' },
-    { title: 'Conditions read together', text: 'Conditions in different documents can wait for each other; read side by side, a knot shows while it is small enough to close together. Past about one link per condition, small knots join into one that can only be met all at once.', ch: 'knot' },
+    { title: 'Conditions read together', text: 'Clauses in different documents can wait for each other in rings that no document can go first in. Read side by side, the rings show before closing, and a clause on several rings, moved after the money, cuts them all.', ch: 'knot' },
     { title: 'Modular work', text: 'Work is saved in finished pieces, each with a clear owner and a clear interface, so an interruption costs only the piece in hand and trouble in one part stays there.', ch: 'modules' },
     { title: 'Conditions that bend', text: 'Every condition stays on the list; a late document can be met another way where one exists, and a condition that need not come first follows the money as an undertaking with a deadline.', ch: 'disbursement' },
     { title: 'Warning lights read against the base rate', text: 'What a covenant breach says depends on how many healthy borrowers trip the same covenant; past a few strong covenants, each new one adds mostly noise, and every false alarm becomes a waiver.', ch: 'covenants' },
@@ -140,7 +140,7 @@
     <div class="cell bad" role="cell">
       <span class="cell-tag" aria-hidden="true">A long chain, rough weather</span>
       <span class="cell-name">Stalls all at once</span>
-      <span>Past the tipping point, each extra link costs more than the last. <em>Reviewers at 95%; a programme tied in a knot; the hubs of the stress test; Tempus at his bench.</em></span>
+      <span>Past the tipping point, each extra link costs more than the last. <em>Reviewers at 95%; a deal tied in a knot; the hubs of the stress test; Tempus at his bench.</em></span>
     </div>
   </div>
 
