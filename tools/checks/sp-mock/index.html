@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SharePoint page mock</title>
+<style>
+  body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #ffffff; color: #242424; }
+  .suite { height: 48px; background: #0f548c; color: #fff; display: flex; align-items: center; padding: 0 16px; font-weight: 600; }
+  /* Modern SharePoint pages scroll inside a div, not the window. */
+  .scroll { position: fixed; inset: 48px 0 0 0; overflow-y: auto; }
+  .canvas { max-width: 1236px; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 24px; }
+  .title { font-size: 28px; font-weight: 600; margin: 0 0 16px; }
+  .side { background: #f3f2f1; padding: 16px; border-radius: 4px; }
+</style>
+</head>
+<body>
+  <div class="suite">Intranet (mock)</div>
+  <div class="scroll" id="scroll">
+    <div class="canvas" id="canvas">
+      <div><h1 class="title">Learning hub</h1><div id="webpart"></div></div>
+      <aside class="side">Another web part in a one-third column. <a href="#" id="hostlink">A host link</a> <input id="hostinput" placeholder="Search"></aside>
+    </div>
+  </div>
+  <script type="module">
+    import { mountStory } from './two-chains.js';
+    window.story = mountStory(document.getElementById('webpart'));
+  </script>
+</body>
+</html>

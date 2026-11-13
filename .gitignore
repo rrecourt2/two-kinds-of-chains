@@ -3,3 +3,4 @@ dist/
 dist-lib/
 .DS_Store
 .vercel
+tools/checks/sp-mock/two-chains.js
