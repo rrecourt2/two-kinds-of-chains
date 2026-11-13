@@ -210,9 +210,10 @@ Rules for carrying this out:
 
 - **One introduction, light callbacks.** Each named idea is explained once, where the table says "New", in a sentence
   or two of plain prose. Wherever it returns, a phrase is enough. Never explain an idea twice.
-- **The combination must show on the card, not only in the text.** For example, the gate's two tiles are the worst
-  year (from the coin game) and how busy the reviewers are (from queues); the variety card shows how full the
-  committee is. Each chapter's work order in section 5 says what must be visible.
+- **The combination must show on the card, not only in the text.** For example, the gate's tiles give the worst year
+  beside the average one (from the coin game) and the late payments with how busy the reviewers are (from queues);
+  the variety card shows how full the committee is. Where a work order in section 5 names something that must be
+  visible, check it on the card.
 - **No tags, chips or legends for the ideas on the cards.** The author rejected those. The ideas live in the prose
   (underlined, with a hover note) and in what the card measures.
 - **Do not turn the puzzles into exercises about operators.** The author: "It should not turn into an operator
