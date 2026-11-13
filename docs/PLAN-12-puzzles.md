@@ -62,8 +62,8 @@ The house style (word limits, colours, controls) is in appendix A. The named ide
 | Repository | `rrecourt2/two-kinds-of-chains` on GitHub; Svelte 5 (runes), Vite 8, `vite-plugin-singlefile` |
 | Live site | `https://two-kinds-of-chains.vercel.app`, built from `main` |
 | `main` | commit `4cf890e` plus this plan and `tools/checks/`: the live 22-chapter story |
-| Tag `v22-chapters` | the 22-chapter story as last published, for restoring any cut chapter |
-| Branch `twelve-puzzles` | `main` plus one commit of unfinished work from the round before this one. **Work here.** |
+| Commit `4cf890e` | the 22-chapter story as last published; any cut chapter can be restored from it |
+| Branch `twelve-puzzles` | `main` plus one commit (`4220404`) of unfinished work from the round before this one. **Work here.** |
 | Private artifact | `https://claude.ai/artifact/3vGzcEE9mLkq2JPv3cDGzs` (version 11, the 22-chapter story) |
 
 ### The unfinished work on `twelve-puzzles`
@@ -94,6 +94,7 @@ work.
 - The cloud network blocks `vercel.app`. To confirm a deploy, read the commit status from GitHub:
   `curl -s https://api.github.com/repos/rrecourt2/two-kinds-of-chains/commits/<sha>/status`.
 - `python3 -m http.server <port> --directory dist` is enough to serve a build. Start servers in the background.
+- This environment's git policy accepts pushes of branches and refuses pushes of tags. Refer to commits by hash.
 
 ---
 
@@ -226,7 +227,7 @@ Rules for carrying this out:
 | When systems lean on each other, Don't wait for each other | One short paragraph in the queues chapter: links one after another add their waits; the same reviews side by side wait only for the slowest |
 | The fast track | Its committee is the variety chapter's committee. The loop is now introduced in the stress test |
 | The shape of the network | "Hubs inside organizations", already in the stress test |
-| How to find a black swan, Why species go extinct, A warning light not a tripwire, Running to stand still | Nothing is moved. They are on the bench (section 8) and can be restored from the tag `v22-chapters` |
+| How to find a black swan, Why species go extinct, A warning light not a tripwire, Running to stand still | Nothing is moved. They are on the bench (section 8) and can be restored from commit `4cf890e` |
 
 ---
 
@@ -242,7 +243,7 @@ lists only what changes; everything else in the chapter stays as it is.
 - `CHAPTERS`: `start`, the twelve in the order of section 4 with their new `part` numbers, then `monday`. Keep every
   `id`, `title` and `short` as it is. Remove the imports of the ten cut chapters.
 
-**Files to delete** (they remain in the tag `v22-chapters`)
+**Files to delete** (they remain in commit `4cf890e`)
 - Chapters: `Systems`, `Async`, `Local`, `BlackSwans`, `Extinction`, `Graph`, `Modules`, `Covenants`, `Tools`,
   `RedQueen` (`.svelte`, in `src/chapters/`).
 - Models in `src/lib/sim/`: `systems.js`, `async.js`, `fasttrack.js`, `tollroad.js`, `species.js`, `scale.js`,
@@ -516,13 +517,14 @@ These are judgement calls. The defaults below are what to build; each is cheap t
 1. **The fast track**: Part 2, between queues and variety. It would again be where the loop is introduced.
 2. **A warning light, not a tripwire**: Part 4, before the reliable machine, which already opens on covenants.
 3. **Two watchmakers**: Part 1, third.
-4. **Running to stand still**: Part 4, after the reliable machine. Its recast version is on the branch's first commit.
+4. **Running to stand still**: Part 4, after the reliable machine. Its recast version (procurement red flags) is in
+   commit `4220404` on the branch; the published version is in `4cf890e`.
 5. **How to find a black swan**: Part 3, after the stress test.
 
 To make room for one of these, the chapter I would take out first is "Why longer chains get cheaper" (the weakest
 puzzle of the twelve, though the author likes its story), then "The irony of the reliable machine".
 
-Every cut chapter can be restored from the tag: `git checkout v22-chapters -- src/chapters/<File>.svelte
+Every cut chapter can be restored from the last 22-chapter commit: `git checkout 4cf890e -- src/chapters/<File>.svelte
 src/lib/sim/<model>.js test/<name>.test.js`.
 
 ---
