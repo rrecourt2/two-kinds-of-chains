@@ -65,7 +65,7 @@
   ];
 
   const puzzle = $derived({
-    goal: 'Each kind an office may decide needs training there. Find the fewest that keep the average wait at head office under two weeks.',
+    goal: 'Each kind an office may decide needs a rule and a check there. Find the fewest that keep the average wait at head office under two weeks.',
     met: world === 'today' && now.met && !outcome(world, decided - 1).met,
     checks: [
       { label: `Average wait at head office under two weeks (now ${waitNow(now)})`, ok: now.met },
@@ -75,7 +75,7 @@
       `Delegate one more kind at a time from ${word(DELEGATED.start)}, and watch the cases left waiting after each meeting.`,
       'Once the wait is under two weeks, try one kind fewer.',
     ],
-    found: `${cap(word(BEST))} kinds, a third of them: the cases left after a meeting fall from ${word(Math.round(LESS.left))} to ${word(Math.round(AT.left))}, and the wait to about ${word(Math.round(AT.wait))} days.`,
+    found: `${cap(word(BEST))} kinds, a third of them: ${word(Math.round(AT.left))} cases are left after a meeting, not the ${word(Math.round(LESS.left))} of ${word(BEST - 1)} kinds, and the wait is about ${word(Math.round(AT.wait))} days.`,
   });
   const showAnswer = () => {
     world = 'today';
@@ -450,7 +450,7 @@
     <p>
       With {word(BEST)} kinds delegated, none of the {word(WORLDS.today - BEST)} still sent up comes up more than about
       once a month; together they bring {one(AT.escalated)} a week, nine-tenths of the committee’s room. Ten more kinds
-      save {word(Math.round(AT.wait - MORE.wait))} days between them. One fewer, and the committee passes its <span class="tkc-idea">tipping point</span>: {word(Math.round(LESS.left))} cases are left
+      save {word(Math.round(AT.wait - MORE.wait))} days between them. One fewer, and the committee is {Math.round((LESS.escalated / ROOM) * 100)}% full, past its <span class="tkc-idea">tipping point</span>: {word(Math.round(LESS.left))} cases are left
       after a meeting instead of {word(Math.round(AT.left))}, and the wait grows by
       {word(Math.round(LESS.wait - AT.wait))} days.
     </p>
@@ -465,7 +465,7 @@
       Delegations can grow with the world: here, {word(VARIED_BEST)} kinds would bring the wait under two weeks again. Or offices can hold what a list cannot:
       principles, such as what a loan is for and what the bank can afford to lose. If
       principles settled one unlisted case in three, the wait would stay near {word(Math.round(PRINCIPLED.wait))} days.
-      Ashby’s homeostat of 1948 kept no list: pushed out of bounds, it tried new settings until one held.
+      Ashby built a machine on the idea in 1948, the homeostat. It kept no list: pushed out of bounds, it tried new settings until one held.
     </p>
     <p>
       A rulebook with less variety than the world turns every surprise into an escalation, and every escalation into a

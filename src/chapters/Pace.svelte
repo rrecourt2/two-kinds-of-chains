@@ -180,7 +180,7 @@
     </p>
     <p>
       A lender learns from losses the same way. It sets each country’s limit from the losses it remembers: after bad
-      years the limit comes down, a link added to the chain; in calm years it goes back up. For a development lender
+      years the limit comes down; in calm years it goes back up. For a development lender
       the timing matters: the year after a bad one is often when a country most needs finance, and when other lenders
       pull out.
     </p>
@@ -315,20 +315,19 @@
     <p>
       Remembering long fails the other way. At twenty years the average hardly moves when a country really changes: the
       lender keeps lending into one that has turned ({usd(LONG.losses)} a year) and stays out of one that has reformed.
-      Every old lesson stays on as a link.
     </p>
     <p>
       In between, at about {word(ANSWER)} years, the total is lowest: {usd(AT.total)} a year, against {usd(ONE.total)} and
       {usd(LONG.total)}. Losses lower the limits and calm years raise them again: a <span class="tkc-idea">loop</span> that
-      steadies itself, where the stress test’s fed itself, if it learns at the right pace. Antifragility is a matter of
+      steadies itself, where the stress test’s fed itself, if it learns at the right pace. Learning is a matter of
       pace: enough change to adapt, not so fast that the lesson is forgotten.
     </p>
     <h3>What sets the pace</h3>
     <p>
       Where countries change rarely, about once in forty years, the best memory lengthens to about {word(RARE)} years:
       almost every bad year is noise, and it pays to wait. Where they change every three years or so, it shortens to
-      about {word(OFTEN)}: last year is the best guide there is. The right pace of forgetting is the pace at which the
-      world changes.
+      about {word(OFTEN)}: the last few years are the best guide there is. The right pace of forgetting follows the pace
+      at which the world changes.
     </p>
     <p>
       A chain that learns adds links after a shock and takes them off as the calm returns, at the pace the world sets.

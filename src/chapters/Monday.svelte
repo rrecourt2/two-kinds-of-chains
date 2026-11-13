@@ -28,17 +28,17 @@
   }
 
   const moves = [
-    { title: 'Alternatives everywhere', text: 'Every approval can be given by more than one qualified person, and every critical system has a tested fallback. No link depends on one name.', ch: 'riddle' },
+    { title: 'Alternatives everywhere', text: 'Every approval can be given by more than one qualified person: a standing deputy, or any of a pool. No link depends on one name.', ch: 'riddle' },
     { title: 'Specialists where the volume carries them', text: 'A specialist role pays where there is enough work to keep it busy; below that volume, the extra link is mostly idle time.', ch: 'specialization' },
-    { title: 'Work in pieces that hold', text: 'Long work is saved in finished pieces, each with a clear owner, so an interruption costs only the piece in hand and trouble in one part stays there.', ch: 'modules' },
-    { title: 'Slack and one shared line', text: 'The people that everything waits for run below about 80% of their time, and work waits in one line that any qualified colleague can take from.', ch: 'queues' },
+    { title: 'Work in pieces that hold', text: 'Long work is agreed in finished pieces, each with a clear owner, so a late objection or a lapsed approval costs only the piece in hand.', ch: 'modules' },
+    { title: 'Slack and one shared line', text: 'The people that everything waits for are kept well short of full, and work waits in one line that any qualified colleague can take from.', ch: 'queues' },
     { title: 'Delegations as varied as the world', text: 'Offices may decide the kinds of request they actually meet, and hold principles for the ones nobody listed, so what reaches head office is the truly new rather than the merely unlisted.', ch: 'variety' },
     { title: 'Bets sized to survive a bad run', text: 'Each risk is sized so that a bad run cannot end the game, and risks are pooled across units whose luck is independent of each other.', ch: 'ergodicity' },
-    { title: 'Buffers where the links meet', text: 'Spare capacity sits with the people, committees and systems that everything passes through, and it is big enough to cover what would hit them.', ch: 'contagion' },
+    { title: 'Buffers where the links meet', text: 'Spare capacity sits with the people, committees and counterparties that everything passes through, and it is big enough to cover what would hit them.', ch: 'contagion' },
     { title: 'Gates sized to the loss', text: 'Where fraud is rare, most checks fall on genuine clients; a check earns its wait where one loss would be too large to survive, and is sampled lightly where losses can be borne.', ch: 'gate' },
     { title: 'A person where the AI swings', text: 'Where AI or automation is erratic, a person keeps the good results and drops the bad ones before they move on; autopilot is kept for work that is steady, or whose mistakes are small, visible and easy to undo.', ch: 'tools' },
     { title: 'Pilots that can be stopped', text: 'Where nobody can tell in advance what will work, several small pilots go first, each cheap to stop, and the money follows the one that works.', ch: 'tinkering' },
-    { title: 'Limits that remember at the world’s pace', text: 'A limit set from last year alone swings with every bad year; one set from twenty years misses a country that has changed. The memory that serves best is about as long as the world takes to change.', ch: 'pace' },
+    { title: 'Limits that remember at the world’s pace', text: 'A limit set from last year alone swings with every bad year; one set from twenty years misses a country that has changed. The memory that serves best lengthens and shortens with how often the world changes.', ch: 'pace' },
     { title: 'Conditions that bend', text: 'Every condition stays on the list; a late document can be met another way where one exists, and a condition that need not come first follows the money as an undertaking with a deadline.', ch: 'disbursement' },
   ];
   // The patterns under the story's five parts, each with what the part was about in a bank's terms.
@@ -104,7 +104,7 @@
     <div class="cell" role="cell">
       <span class="cell-tag" aria-hidden="true">A short chain, calm weather</span>
       <span class="cell-name">Barely felt</span>
-      <span>Each link nearly always holds, and so, mostly, does the chain. <em>Six checks at 95%; twelve conditions when every party is prompt; an autopilot while the AI is steady.</em></span>
+      <span>Each link nearly always holds, and so, mostly, does the chain. <em>Hora’s ten parts in a row; twelve conditions when every party is prompt; an autopilot while the AI is steady.</em></span>
     </div>
     <div class="cell bad" role="cell">
       <span class="cell-tag" aria-hidden="true">A long chain, rough weather</span>
@@ -137,7 +137,7 @@
       conditions. Scale multiplies whichever you have.
     </p>
     <p class="tkc-lede">
-      The pencil’s chain is long and strong because each of its links has another way round. A bank needs its checks. Simplicity is not fewer controls; it is fewer conditions.
+      The pencil’s chain is long and strong because each of its links has another way round. A bank needs its checks. Simplicity is not fewer controls; it is fewer things that must all hold at once.
     </p>
   </section>
 

@@ -33,7 +33,7 @@ export const KIND_NAMES = [
   'Swap of collateral',
   'Later disbursement date',
   'Fee waiver',
-  'Change of bank account',
+  'New address for notices',
   'Fixed rate, not floating',
   'Trade finance line',
   'Loan to a subsidiary',

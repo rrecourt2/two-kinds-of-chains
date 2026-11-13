@@ -220,13 +220,13 @@
         </svg>
         <p class="tkc-caption">A row of ten modules is a larger module; ten rows make the watch.</p>
         {#if done}
-          <p class="tkc-caption tkc-twin">Read a watch as a credit paper. Tempus’s is reviewed only once it is complete; Hora’s section by section, and each approved section holds.</p>
+          <p class="tkc-caption tkc-twin">Read a watch as a deal, and the phone as a late objection or an approval that lapses. Tempus’s deal is judged only when complete; Hora’s stage by stage, and what is agreed holds.</p>
         {/if}
         <p class="tkc-caption">
           {#if still}
             The animation is off because this device asks for reduced motion.
           {:else}
-            {int(steps / 60)} working hours so far, at one part a minute.
+            {int(steps / 60)} working {int(steps / 60) === '1' ? 'hour' : 'hours'} so far, at one part a minute.
             <button type="button" class="tkc-btn tkc-btn--small inline" onclick={() => (paused = !paused)}>{paused ? 'Resume' : 'Pause'}</button>
           {/if}
         </p>
@@ -247,7 +247,7 @@
           <p class="tkc-caption">
             Watches finished a month, at one part a minute for 160 working hours. With no interruptions Tempus is
             slightly faster, because modules cost a little extra assembly.
-            {#if interrupt > 0}At {(interrupt / 10).toFixed(1)}% Hora is {w.ratio < 10 ? `${w.ratio.toFixed(1)} times` : w.ratio < 1e6 ? `about ${int(Number(w.ratio.toPrecision(2)))} times` : 'more than a million times'} as productive.{/if}
+            {#if interrupt > 0 && done}At {(interrupt / 10).toFixed(1)}% Hora is {w.ratio < 10 ? `${w.ratio.toFixed(1)} times` : w.ratio < 1e6 ? `about ${int(Number(w.ratio.toPrecision(2)))} times` : 'more than a million times'} as productive.{/if}
           </p>
         </div>
       {/if}
@@ -286,11 +286,11 @@
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Which of our long processes lose their progress when someone is interrupted?">
+    <BankNote ask="Which of our deals start again when one late objection arrives or one approval lapses?">
       <p>
-        A request that has to be finished in one sitting, by one person, is built like Tempus’s watch. One that is saved
-        in finished pieces, each with a clear owner, is built like Hora’s. So is a credit paper whose sections can be
-        reviewed as each is finished, rather than only once the whole is done.
+        A deal that is judged only when every part is in is built like Tempus’s watch: one late objection, or one
+        approval that lapses while the rest is gathered, and the work starts again. One agreed stage by stage, where
+        what is agreed stays agreed, is built like Hora’s. So is a credit paper reviewed section by section.
       </p>
     </BankNote>
   {/snippet}

@@ -59,7 +59,7 @@
 
   <div class="start">
     {#if started && resume > 0}
-      <button type="button" class="tkc-btn tkc-btn--primary big" onclick={() => go(resume)}>Continue: chapter {resume} →</button>
+      <button type="button" class="tkc-btn tkc-btn--primary big" onclick={() => go(resume)}>Continue: {CHAPTERS[resume].title} →</button>
       <span class="tkc-small">Your score so far: {game.score} of {game.max} points. Chapters can be taken in any order.</span>
     {:else}
       <button type="button" class="tkc-btn tkc-btn--primary big" onclick={() => go(1)}>Start the story →</button>

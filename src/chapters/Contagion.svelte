@@ -61,6 +61,7 @@
   const HUBS = DATA.hubs;
   // The drawn similar network's partners per bank, on average (the generator aims at SIMILAR_LINKS).
   const similarMean = Math.round(DATA.similar.edges.length * 2 / N);
+  const hubsMean = Math.round(HUBS.edges.length * 2 / N);
   const hub = HUBS.order[0];
   const ci = (c) => CAPITALS.indexOf(c);
 
@@ -472,7 +473,7 @@
         {#if solved}
           <div class="ctl">
             <Segmented name="c-system" label="The banking system" value={system} onchange={switchSystem} options={SYSTEMS.map(({ value, label }) => ({ value, label }))} />
-            <p class="tkc-small">Many similar banks: the same {N} banks and rules, about {WORDS[similarMean]} partners each, no hubs.</p>
+            <p class="tkc-small">Many similar banks: the same {N} banks and rules, about {WORDS[similarMean]} partners each, not {WORDS[hubsMean]}, and no hubs.</p>
           </div>
         {/if}
       </div>
@@ -598,17 +599,21 @@
     <p>
       At {CAPITAL}% the system looks sound from almost everywhere: of the {N} places the loss can land, {atMostNine}
       bring down nine banks or fewer. The {WORDS[allFall]} biggest hubs each bring down all {N}: robust yet
-      fragile, in the central bankers’ phrase.
+      fragile.
     </p>
     <p>
       Each bank hangs on an <span class="tkc-if">IF</span>: it fails if its losses exceed its capital. Through its loans the IF
       becomes a <span class="tkc-idea">quorum</span>: a small bank falls if {WORDS[smallK]} of its two partners fails, the biggest if {WORDS[hubK]} of
-      its {WORDS[hubLinks]} do. When the hub falls, each round of failures sets up the next. That is a <span class="tkc-idea">loop</span>: an effect that feeds its own cause.
+      its {WORDS[hubLinks]} do. When the hub falls, each round of failures sets up the next. That is a <span class="tkc-idea">loop</span>: an effect that returns to its cause, and here feeds it.
     </p>
     <p>
-      So one bank’s <span class="tkc-if">IF</span> becomes the system’s <span class="tkc-idea">tipping point</span>, the cliff in the curve. Raising every bank to {evenly}% uses the whole allowance and changes nothing: a hub at {evenly}% still cannot absorb an {LOSS}% loss, and the cliff is at {tipNone}%. The same average, as four more each for the 12 biggest, puts the buffer where the links meet: a hub at {hubTop}% absorbs the loss outright, the biggest falls only if {WORDS[hubKTop]} of its {WORDS[hubLinks]} partners do, and the cliff moves to {tipTop12}%. Many similar banks, about
-      {WORDS[SIMILAR_LINKS]} partners each, absorb what the hubs pass on: at {CAPITAL}% no landing brings down more than
-      {WORDS[similarMost]}, and their cliff sits at {tipSimilar}%, unaided. Robust yet fragile belongs to the hubs.
+      So one bank’s <span class="tkc-if">IF</span> becomes the system’s <span class="tkc-idea">tipping point</span>, the cliff in the curve. Raising every bank to {evenly}% uses the whole allowance and changes nothing: a hub at {evenly}% still cannot absorb an {LOSS}% loss, and the cliff is at {tipNone}%. The same average, as four more each for the 12 biggest, puts the buffer where the links meet: a hub at {hubTop}% absorbs the loss, and the cliff moves to {tipTop12}%.
+    </p>
+    <p>
+      Many similar banks, about
+      {WORDS[similarMean]} partners each, hold smaller pieces of each other: one failure costs a lender about
+      {Math.round(INTERBANK_PCT / similarMean)}% of its assets, not the {INTERBANK_PCT / 2}% it costs a bank with two partners. At {CAPITAL}% no landing brings down more than
+      {WORDS[similarMost]}. The first system is fragile because its lending is concentrated, and concentrated on the hubs.
     </p>
     <p>
       September 2008 had this shape. A large investment bank, a hub, was allowed to fail on the 15th. The next day an
@@ -617,7 +622,7 @@
     </p>
     <h3>Hubs inside organizations</h3>
     <p>
-      Organizations grow hubs the same way. Work flows to whoever already handles the most: the expert everyone
+      New banks deal first with the banks everyone deals with, and organizations grow hubs the same way. Work flows to whoever already handles the most: the expert everyone
       asks, or the committee that sees every deal. On a normal day a hub is
       efficient. On a bad day it is where a loss travels furthest, and where a deputy or a second route counts most.
     </p>
@@ -627,7 +632,7 @@
     <BankNote ask="Which partner, supplier or system in our chain would bring down many others if it failed?">
       <p>
         In 2011 the world’s bank supervisors agreed that the banks whose failure would travel furthest should hold more
-        capital than the rest: 1 to 3.5 extra percentage points of risk-weighted assets, set by how large, interlinked, complex, global and hard to replace a
+        capital than the rest: 1 to 2.5 extra percentage points of risk-weighted assets, with a higher step kept in reserve, set by how large, interlinked, complex, global and hard to replace a
         bank is. National supervisors now do the same for the banks that matter most at home.
       </p>
     </BankNote>

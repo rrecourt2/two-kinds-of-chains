@@ -426,7 +426,7 @@
               Spot on: expect about {e} (this run: {first.through}). Each check looks safe on its own, yet one loan in four
               gets stuck: {arithmetic}.
             {:else if first.guess > e}
-              Most people guess higher. Expect about {e} (this run: {first.through}): each check looks safe on its own, yet
+              Too high, as most guesses are. Expect about {e} (this run: {first.through}): each check looks safe on its own, yet
               one loan in four gets stuck, because the chances multiply: {arithmetic}.
             {:else}
               Fewer get stuck than that: expect about {e} (this run: {first.through}), since {arithmetic}. Still, one loan in

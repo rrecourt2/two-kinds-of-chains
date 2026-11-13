@@ -44,7 +44,7 @@
   // (One pin-maker's 10 a day, twelve times faster, through each of twelve stations.)
   const TWELVE_CAN = SOLO_PINS_PER_DAY * 12 * 12;
   const puzzle = $derived({
-    goal: 'Twelve roles make the cheapest pins once the market is big enough. Find the smallest market where they beat every shorter chain.',
+    goal: 'In a town, twelve specialists cost more per pin than a pin-maker working alone. How big must the market be before they are the cheapest?',
     met: best.roles === 12 && demand <= FIRST_TWELVE,
     progress: best.roles === 12 ? `Twelve roles win at ${int(demand)} pins a day. Do they still win in a smaller market?` : '',
     hints: ['Start from a town and drag the market up slowly. The coloured bar marks the cheapest design.', 'It lies between a town and a city, nearer the city.'],
@@ -213,10 +213,10 @@
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Where could one specialist team serve the whole bank, instead of each unit keeping its own?">
+    <BankNote ask="Where could one specialist team serve the whole bank, and what would then wait for it?">
       <p>
         A shared team of specialists, in environmental and social risk, say, or in legal, that serves every deal is
-        specialization: busy because it sees every case, and skilled for the same reason. A sign-off that only one named
+        specialization: kept in work because it sees every case, and skilled for the same reason. A sign-off that only one named
         person can give is dependence.
       </p>
     </BankNote>

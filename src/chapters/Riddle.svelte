@@ -88,17 +88,17 @@
       anybody. The pencil costs less than a coffee.
     </p>
     <p>
-      A loan that needs six colleagues and six systems in one building can take weeks. Both are chains, and the
+      A loan that needs six colleagues in one building can take weeks. Both are chains, and the
       pencil’s chain is far longer. Why does it work so much better?
     </p>
     <p>
-      Some work needs every link on the same day: a credit committee, a joint site visit, a same-day payment cut-off,
-      or simply a working day that needs remote access, sign-in, the client file and the risk model all at once.
+      Some work needs every link on the same day: a credit committee, a joint site visit, a same-day payment
+      cut-off.
     </p>
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={[need === COUNT ? 'A decision needs all six roles covered on the same day.' : `A decision needs any ${WORDS[need]} of the six roles covered on the same day.`, 'Each person is in on 90% of days; absences last about three days.', 'A qualified stand-in can cover a role; nobody’s absences depend on another’s.']} title="Who is in this month?" {sub}>
+    <Instrument rules={[need === COUNT ? 'The committee can decide only on a day when all six roles are covered.' : `The committee can decide on a day when any ${WORDS[need]} of the six roles are covered.`, 'Each person is in on 90% of days; absences last about three days.', 'A qualified stand-in can cover a role; nobody’s absences depend on another’s.']} title="Who is in this month?" {sub}>
       <Puzzle id="riddle" {...puzzle} predict onshow={showAnswer} />
       <!-- Before the first answer, lower attendance can be tried; better attendance and the stand-ins wait. -->
       <div class="tkc-controls">
@@ -151,9 +151,9 @@
       <div class="tkc-stats" use:announce>
         <Stat label="Days this month the decision could be made" value="{month.possibleDays} of {DAYS}" sub="In the long run: {pct(odds.enough)} of days" />
         <Stat
-          label={need === COUNT ? 'Longest wait for everyone to be in' : `Longest wait for any ${WORDS[need]} to be in`}
+          label="Longest run of blocked days"
           value={month.longestWait === 0 ? 'No wait' : `${month.longestWait} working day${month.longestWait === 1 ? '' : 's'}`}
-          sub={month.longestWait === 0 ? 'the decision never had to wait' : need === COUNT ? 'in a row with someone missing' : 'in a row with too few in'}
+          sub={month.longestWait === 0 ? 'the decision never had to wait' : need === COUNT ? 'in a row with a role uncovered' : 'in a row with too few roles covered'}
           swatch={month.longestWait === 0 ? null : 'var(--tkc-conditions)'}
         />
       </div>
@@ -174,7 +174,7 @@
       six hold on 94% of days. Nobody has to be in more often; more people can sign.
     </p>
     <p>
-      The danger is how fast a chain of <span class="tkc-and">ANDs</span> falls apart. With four more named roles, the decision is possible on one
+      The danger is how fast such a chain falls apart. With four more named roles, the decision is possible on one
       day in three, though each of the ten is in on nine days in ten. The blocked days come in stretches, too: one person’s week of holiday stops everything that needs
       them.
     </p>
@@ -185,13 +185,16 @@
     <p>
       That is the answer to the riddle. In the pencil’s chain, every link has many possible suppliers: if one graphite
       mine floods, the factory buys from another. Each link is an <span class="tkc-or">OR</span>. In a chain of named
-      people and single systems, each link is an <span class="tkc-and">AND</span>. ORs let a chain grow long and stay
+      people, each link is an <span class="tkc-and">AND</span>. ORs let a chain grow long and stay
       strong. ANDs weaken it with every link, and past a point it is blocked more often than it is open.
     </p>
     <p>
       Between the two sits the <span class="tkc-idea">quorum</span>, which keeps several judgements without waiting for
       every one of them. Six people, each in on nine days in ten, are all in together on
       {pct(coverageOdds(COUNT, 0, 0.9).enough)} of days; any four of them on {pct(coverageOdds(COUNT, 0, 0.9, 4).enough)}.
+    </p>
+    <p>
+      ORs let a chain grow long. Why it grows at all is the next question.
     </p>
   {/snippet}
 
