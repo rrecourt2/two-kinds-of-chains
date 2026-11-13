@@ -486,7 +486,7 @@ Update this list as work lands, so that an interrupted session can be resumed.
 - [x] 3. The chapters and the hover notes (all checks in section 8 pass: 96 tests, 24 of 24 on the walk-through)
 - [x] 4. Milestone 1 on `main` (merge commit `97bd359`; deployed)
 - [x] 5. Review (two card-first play-throughs as a DFI executive, one read-through for logic, facts and rules; findings applied)
-- [ ] 6. Milestone 2 on `main`, artifact and files delivered
+- [x] 6. Milestone 2 on `main` (merge commit `24b6687`; deployed), artifact republished (version 12), files delivered
 
 ---
 
