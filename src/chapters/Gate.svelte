@@ -3,16 +3,16 @@
   import Chapter from '../lib/ui/Chapter.svelte';
   import Instrument from '../lib/ui/Instrument.svelte';
   import Slider from '../lib/ui/Slider.svelte';
-  import Segmented from '../lib/ui/Segmented.svelte';
   import Stat from '../lib/ui/Stat.svelte';
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { PARAMS, LIMIT, YEARS, SENSITIVITY, CALLBACK, START, ANSWER, cutoff, calledBack, settingIndex, shownYear, meetsLimit, onTime, chapterReady, chapterStep } from '../lib/sim/gate.js';
+  import { PARAMS, LIMIT, YEARS, SHARES, START, ANSWER, shareLabel, cuts, checked, settingIndex, shownYear, meetsLimit, onTime, chapterReady, chapterStep } from '../lib/sim/gate.js';
   import { log10 } from '../lib/scales.js';
 
-  let sens = $state(START.sens); // the screen alone, on Medium, as the bank runs it today
-  let callback = $state(START.callback);
+  // Today the bank checks the most suspicious half at every amount.
+  let large = $state(START.large);
+  let small = $state(START.small);
   let width = $state(560);
 
   // A thousand simulated years at every setting, worked out in short steps the first time the
@@ -29,8 +29,8 @@
     timer = setTimeout(step, 0);
     return () => clearTimeout(timer);
   });
-  const runAt = (s, c) => sims.runs[settingIndex(s, c)];
-  const run = $derived(sims ? runAt(sens, callback) : null);
+  const runAt = (l, s) => sims.runs[settingIndex(l, s)];
+  const run = $derived(sims ? runAt(large, small) : null);
 
   // ---- Words and numbers, all from the model ----
   const money = (v) =>
@@ -43,54 +43,51 @@
     const k = Math.round(v * 10);
     return k === 5 ? 'half' : k === 10 ? 'all' : `${WORDS[k]}-tenth${k === 1 ? '' : 's'}`;
   };
-  const inTen = (v) => `${WORDS[Math.round(v * 10)]} in ten`;
   const frauds = (k) => (k === 1 ? 'fraud' : 'frauds');
   const T = $derived.by(() => {
     if (!sims) return null;
-    const low = runAt(0, 0);
-    const medium = runAt(START.sens, START.callback);
-    const vh = runAt(SENSITIVITY.length - 1, 0);
-    const answer = runAt(ANSWER.sens, ANSWER.callback);
+    const answer = runAt(ANSWER.large, ANSWER.small);
+    const start = runAt(START.large, START.small);
+    const ninety = runAt(SHARES.indexOf(0.9), ANSWER.small); // nine in ten large ones checked
+    const quarter = runAt(ANSWER.large, SHARES.indexOf(0.25)); // a quarter of the small ones
+    const extra = quarter.smallStopped - answer.smallStopped; // small frauds a year stopped by the extra checks
     return {
-      lowGenuine: int(low.genuineCalls),
-      lowFrauds: WORDS[Math.round(low.flagsFraud)],
-      lowOne: int(1 / low.precision),
-      vhOne: int(1 / vh.precision),
-      vhCaught: inTen(vh.caught),
-      vhGenuine: int(vh.genuineCalls),
-      vhBusy: whole(vh.busy),
-      vhLate: share(vh.late),
-      vhWorst: money(vh.worst),
-      half: tenths(answer.bySize),
-      money: tenths(answer.bySizeMoney),
+      smallGenuine: int(answer.smallGenuineCalls),
+      smallCaught: `${WORDS[Math.round(answer.smallCaught * 4)]} small frauds in four`,
+      ninetyMean: money(ninety.mean),
+      ninetyOver: int(ninety.over),
+      ninetyWorst: money(ninety.worst),
+      half: tenths(answer.largeOfRequests),
+      money: tenths(answer.largeOfMoney),
       worst: money(answer.worst),
       late: share(answer.late),
       genuine: int(Math.round(answer.genuineCalls / 10) * 10),
-      more: answer.genuineCalls > medium.genuineCalls,
+      more: tenths(answer.genuineCalls / start.genuineCalls - 1).replace(/^one-tenth$/, 'a tenth'),
+      everyYears: WORDS[Math.round(1 / extra)] ?? int(1 / extra),
+      waitMore: int(quarter.genuineCalls - answer.genuineCalls),
+      quarterBusy: whole(quarter.busy),
+      quarterLate: share(quarter.late),
       named: share(sims.named.late),
     };
   });
 
   const rules = [
-    'About 600 requests a year, $50,000 to $80m; one in 200 is fraud.',
-    'The screen flags signs of fraud; one fraud in four shows none.',
-    'A call-back stops any fraud; it takes one of three reviewers a day.',
+    'About 650 requests a year, $50,000 to $80m; one in 200 is fraud.',
+    'A screen ranks requests by signs of fraud; one fraud in four shows none.',
+    'A check stops any fraud; it takes one of three reviewers a day.',
   ];
 
   // ---- Puzzle ----
   const progress = $derived.by(() => {
     if (!run || (meetsLimit(run) && onTime(run))) return '';
-    const at = CALLBACK[callback].at;
-    if (at === Infinity) {
-      return onTime(run)
-        ? `The screen stops ${inTen(run.caught)} frauds, but the worst year still loses ${money(run.worst)}.`
-        : `${int(run.genuineCalls)} genuine clients a year wait for a call: the reviewers fall behind, and the worst year still loses ${money(run.worst)}.`;
+    if (!meetsLimit(run) && !onTime(run)) {
+      return `${int(run.genuineCalls)} genuine clients a year wait for a check: the reviewers fall behind, and the worst year still loses ${money(run.worst)}.`;
     }
     if (!meetsLimit(run)) return `The average year loses ${money(run.mean)}, under the limit; the worst year loses ${money(run.worst)}.`;
-    return `No year goes over the limit, but ${int(run.genuineCalls)} genuine clients a year wait for a call, and ${share(run.late)} of payments are late.`;
+    return `No year goes over the limit, but ${int(run.genuineCalls)} genuine clients a year wait for a check, and ${share(run.late)} of payments are late.`;
   });
   const puzzle = $derived({
-    goal: 'Set the screen and the call-backs so that no year in 1,000 loses more than $5m, and fewer than 1 payment in 100 is late.',
+    goal: 'Set the two shares so that no year in 1,000 loses more than $5m, and fewer than 1 payment in 100 is late.',
     met: !!run && meetsLimit(run) && onTime(run),
     checks: [
       { label: `No year loses more than $5m${run ? ` (worst now ${money(run.worst)})` : ''}`, ok: !!run && meetsLimit(run) },
@@ -98,16 +95,16 @@
     ],
     progress,
     hints: [
-      'The screen cannot tell a $5m fraud from a $50,000 one, and one fraud in four shows no sign at all.',
-      'A call-back costs a reviewer a day whatever the amount. Where would a single fraud break the board’s limit?',
+      'One fraud in four shows no sign, so the screen may rank it anywhere: only checking all is sure to stop it.',
+      'A check costs a reviewer a day whatever the amount. Where would one missed fraud break the board’s limit?',
     ],
     found: T
-      ? `Call back every payment above $1m and screen the rest lightly: the worst year in 1,000 loses ${T.worst}, with ${T.late} of payments late.`
-      : 'Call back every payment above $1m and screen the rest lightly.',
+      ? `Every disbursement above $1m and the most suspicious tenth below: the worst year loses ${T.worst}, and that tenth catches ${T.smallCaught}.`
+      : 'Every disbursement above $1m and the most suspicious tenth below.',
   });
-  const showAnswer = () => ((sens = ANSWER.sens), (callback = ANSWER.callback));
+  const showAnswer = () => ((large = ANSWER.large), (small = ANSWER.small));
 
-  // ---- The chart: one year's requests as dots by amount, those called back above the axis ----
+  // ---- The chart: one year's requests as dots by amount, those checked above the axis ----
   const YEAR = shownYear();
   const LO = PARAMS.floor;
   const HI = PARAMS.cap;
@@ -116,9 +113,9 @@
   const narrow = $derived(span < 440);
   const x = $derived(log10(LO, HI, PAD, span - PAD));
   const BAND = $derived(narrow ? 84 : 96); // room for the tallest column, whichever side it falls
-  const TOP = 20; // a row for the call-back line's label
+  const TOP = 20; // a row for the two shares' labels
   const GAP = 24; // the amount axis, between the two sides
-  const FLOOR = $derived(TOP + BAND); // called back: stacks grow up from here
+  const FLOOR = $derived(TOP + BAND); // checked: stacks grow up from here
   const CEIL = $derived(TOP + BAND + GAP); // paid at once: stacks grow down from here
   const H = $derived(CEIL + BAND + 6);
 
@@ -130,7 +127,7 @@
     return { p, cols, centre: (c) => x0 + (c + 0.5) * p, colOf: (v) => Math.min(cols - 1, Math.max(0, Math.floor((x(v) - x0) / p))) };
   };
   // Stack genuine requests in their columns, in the order they arrive; a dot whose column is taller than a neighbour by a dot or
-  // more goes on the neighbour instead (never across the call-back line), so chance spikes even out.
+  // more goes on the neighbour instead (never across the $1m line), so chance spikes even out.
   // Returns each one's column and height from its axis, and every column's final height.
   function stack(g, side, line) {
     const heights = [new Float64Array(g.cols), new Float64Array(g.cols)];
@@ -162,27 +159,26 @@
   const r = $derived(Math.max(1, grid.p / 2 - 0.3));
   const rf = $derived(Math.max(5, r + 2.6)); // a fraud's dot, larger and at the tip of its column
 
-  const threshold = $derived(CALLBACK[callback].at);
-  const cut = $derived(cutoff(SENSITIVITY[sens].flags));
-  const lineX = $derived(threshold === Infinity ? Infinity : x(threshold));
+  const bars = $derived(cuts(large, small));
+  const lineX = $derived(x(PARAMS.line));
   const dots = $derived.by(() => {
     const g = grid;
-    const called = (i) => calledBack(YEAR, i, threshold, cut);
-    const { placed, heights } = stack(g, (i) => (called(i) ? 0 : 1), lineX);
+    const up = (i) => checked(YEAR, i, bars);
+    const { placed, heights } = stack(g, (i) => (up(i) ? 0 : 1), lineX);
     const out = new Array(YEAR.n);
     for (let i = 0; i < YEAR.n; i++) {
-      const up = called(i);
+      const called = up(i);
       const fraud = !!YEAR.fraud[i];
       let col = 0;
       let off = 0;
       if (fraud) {
         // A fraud sits on its own column, at the tip of the stack.
         col = g.colOf(YEAR.size[i]);
-        const h = heights[up ? 0 : 1];
+        const h = heights[called ? 0 : 1];
         off = h[col] + rf + 1;
         h[col] += 2 * rf + 2;
       } else ({ col, off } = placed[i]);
-      out[i] = { cx: g.centre(col), cy: up ? FLOOR - off : CEIL + off, called: up, fraud, size: YEAR.size[i] };
+      out[i] = { key: i, cx: g.centre(col), cy: called ? FLOOR - off : CEIL + off, called, fraud, size: YEAR.size[i] };
     }
     return out;
   });
@@ -197,15 +193,18 @@
   const ticks = [0.1, 1, 10];
   const tickLabel = (t) => (t < 1 ? '$100,000' : `$${t}m`);
 
-  // Direct labels: the call-back line's, then each fraud's, each where it collides with nothing placed before it.
+  // Direct labels: the two shares', either side of the $1m line, then each fraud's, each where it collides with
+  // nothing placed before it.
   const CHAR = 7; // a little wider than a 12px bold character
-  const box = (text, tx, ty, anchor, cls) => {
+  const box = (text, tx, ty, anchor, cls, key) => {
     const w = text.length * CHAR;
     const x0 = anchor === 'end' ? tx - w : anchor === 'middle' ? tx - w / 2 : tx;
-    return { text, x: tx, y: ty, anchor, cls, x0, x1: x0 + w, y0: ty - 11, y1: ty + 3 };
+    return { key, text, x: tx, y: ty, anchor, cls, x0, x1: x0 + w, y0: ty - 11, y1: ty + 3 };
   };
   const clash = (a, b) => a.x0 < b.x1 + 4 && b.x0 < a.x1 + 4 && a.y0 < b.y1 + 2 && b.y0 < a.y1 + 2;
   const orders = (a) => (a.length <= 1 ? [a] : a.flatMap((v, i) => orders([...a.slice(0, i), ...a.slice(i + 1)]).map((o) => [v, ...o])));
+  const checkedWords = (k) => (SHARES[k] >= 1 ? 'all checked' : `${shareLabel(k)} checked`);
+  const capital = (t) => t[0].toUpperCase() + t.slice(1);
   const labels = $derived.by(() => {
     // Each fraud is named with its amount and fate, or where that will not fit, its amount alone. The frauds
     // are labelled in whichever order leaves the fewest labels clashing, then the fewest shortened.
@@ -219,20 +218,22 @@
         cost += k < 0 ? 100 : k >= short ? 1 : 0;
         placed.push(options[Math.max(k, 0)]);
       };
-      if (threshold !== Infinity) {
-        const words = [`Every payment above ${CALLBACK[callback].label} called back`, `Above ${CALLBACK[callback].label}: all called back`, `Above ${CALLBACK[callback].label}: called`];
-        place(words.flatMap((t) => [box(t, lineX + 6, 13, 'start', 'line'), box(t, lineX - 6, 13, 'end', 'line')]));
-      }
+      const left = checkedWords(small);
+      const right = checkedWords(large);
+      const below = (t) => box(t, lineX - 6, 13, 'end', 'line', 'small');
+      const above = (t) => box(t, lineX + 6, 13, 'start', 'line', 'large');
+      place([below(`Below $1m: ${left}`), below(capital(left)), below(shareLabel(small))]);
+      place([above(`Above $1m: ${right}`), above(capital(right)), above(shareLabel(large))]);
       for (const d of order) {
         const cls = d.called ? 'stop' : 'miss';
         const side = d.called ? -1 : 1; // away from the axis
         const around = (t) => [
-          box(t, d.cx + rf + 4, d.cy + 4, 'start', cls),
-          box(t, d.cx - rf - 4, d.cy + 4, 'end', cls),
-          box(t, d.cx, d.cy + side * (rf + (side > 0 ? 13 : 5)), 'middle', cls),
-          box(t, d.cx + rf + 4, d.cy + 4 + side * 14, 'start', cls),
-          box(t, d.cx - rf - 4, d.cy + 4 + side * 14, 'end', cls),
-          box(t, d.cx, d.cy + side * (rf + (side > 0 ? 27 : 19)), 'middle', cls),
+          box(t, d.cx + rf + 4, d.cy + 4, 'start', cls, d.key),
+          box(t, d.cx - rf - 4, d.cy + 4, 'end', cls, d.key),
+          box(t, d.cx, d.cy + side * (rf + (side > 0 ? 13 : 5)), 'middle', cls, d.key),
+          box(t, d.cx + rf + 4, d.cy + 4 + side * 14, 'start', cls, d.key),
+          box(t, d.cx - rf - 4, d.cy + 4 + side * 14, 'end', cls, d.key),
+          box(t, d.cx, d.cy + side * (rf + (side > 0 ? 27 : 19)), 'middle', cls, d.key),
         ];
         const long = around(`${money(d.size)} ${d.called ? 'stopped' : 'paid out'}`);
         place([...long, ...around(money(d.size))], long.length);
@@ -244,7 +245,7 @@
   });
 
   const describe = $derived(
-    `One year of ${YEAR.n} requests to pay a new account, by amount. ${year.called} wait for a call-back: ${year.stopped} ${frauds(year.stopped)} stopped and ${year.genuine} genuine clients. ` +
+    `One year of ${YEAR.n} requests to pay a new account, by amount. ${year.called} are checked by a call-back: ${year.stopped} ${frauds(year.stopped)} stopped and ${year.genuine} genuine clients. ` +
       `${year.paid} are paid at once${year.missed ? `, including ${year.missed} ${frauds(year.missed)}: ${money(year.lost)} lost` : ', none of them a fraud'}.`,
   );
 </script>
@@ -258,15 +259,15 @@
 >
   {#snippet setup()}
     <p>
-      A development lender pays out every working day. About 600 times a year, a payment comes with a request to send
-      it to a new bank account. Almost all are genuine; one in 200 is a fraudster’s, and money paid to a fraudster rarely
-      comes back.
+      A development lender disburses every working day. About 650 times a year, a disbursement comes with a request to
+      pay it into a new bank account. Almost all are genuine; one in 200 is a fraudster’s, and money paid to a
+      fraudster rarely comes back.
     </p>
     <p>
-      An automatic screen scores each request for signs of fraud: a new country, a request by email, a letterhead that
-      does not match. A flagged payment waits for one more link: a call-back to the client, on a number on file,
-      which no fraudster can answer. It takes one of three qualified reviewers a day, and payment is promised within
-      three working days.
+      A call-back to the client, on a number already on file, stops any fraud: no fraudster can answer it. But each call
+      takes one of three qualified reviewers a day, and payment is promised within three working days, so the bank
+      checks only a share: today, half, at every amount. An automatic screen picks which, the most suspicious first, by
+      signs such as a new country, a request by email or a letterhead that does not match.
     </p>
     <p>
       The board has set one limit: no year may lose more than $5m to fraud, however good the years around it.
@@ -274,16 +275,16 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="An automatic screen for account changes" sub="One year’s requests by amount: above the axis, waiting for a call-back; below it, paid at once." {rules}>
+    <Instrument title="Checks on new bank accounts" sub="One year’s requests by amount: above the axis, checked by a call-back; below it, paid at once." {rules}>
       <Puzzle id="gate" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls">
-        <Slider id="g-sens" label="Screen sensitivity" bind:value={sens} min={0} max={SENSITIVITY.length - 1} format={(i) => SENSITIVITY[i].label} ends={['Few flags', 'Many flags']} />
-        <Segmented name="g-call" label="Call back every payment above" bind:value={callback} options={CALLBACK.map((c, i) => ({ value: i, label: c.label }))} />
+        <Slider id="g-small" label="Below $1m, check" bind:value={small} min={0} max={SHARES.length - 1} format={shareLabel} ends={['A tenth', 'All']} />
+        <Slider id="g-large" label="Above $1m, check" bind:value={large} min={0} max={SHARES.length - 1} format={shareLabel} ends={['A tenth', 'All']} />
       </div>
 
       <div class="tkc-chart" bind:clientWidth={width}>
         <p class="side">
-          <strong class="tkc-num">Waiting for a call-back: {year.called}</strong>
+          <strong class="tkc-num">Checked: {year.called}</strong>
           <span>
             · <span class="stop-ink">{year.stopped} {frauds(year.stopped)} stopped</span>, {year.genuine} genuine clients: false positives
           </span>
@@ -295,18 +296,16 @@
           {/each}
           <line class="tkc-base" x1={PAD} x2={span - PAD} y1={FLOOR + 0.5} y2={FLOOR + 0.5} />
           <line class="tkc-base" x1={PAD} x2={span - PAD} y1={CEIL - 0.5} y2={CEIL - 0.5} />
-          {#if threshold !== Infinity}
-            <!-- The call-back line crosses both sides but leaves the amount axis clear. -->
-            <line class="cut" x1={lineX} x2={lineX} y1={4} y2={FLOOR} />
-            <line class="cut" x1={lineX} x2={lineX} y1={CEIL} y2={H - 2} />
-          {/if}
+          <!-- The $1m line between the two shares crosses both sides but leaves the amount axis clear. -->
+          <line class="cut" x1={lineX} x2={lineX} y1={TOP} y2={FLOOR} />
+          <line class="cut" x1={lineX} x2={lineX} y1={CEIL} y2={H - 2} />
           {#each dots as d, i (i)}
             {#if !d.fraud}<circle class="dot" class:wait={d.called} {r} style:transform="translate({d.cx}px, {d.cy}px)" />{/if}
           {/each}
           {#each dots as d, i (i)}
             {#if d.fraud}<circle class="fraud" class:stopped={d.called} r={rf} style:transform="translate({d.cx}px, {d.cy}px)" />{/if}
           {/each}
-          {#each labels as l (l.text)}
+          {#each labels as l (l.key)}
             <text class="tkc-label tkc-halo lab-{l.cls}" x={l.x} y={l.y} text-anchor={l.anchor}>{l.text}</text>
           {/each}
         </svg>
@@ -347,11 +346,11 @@
         </p>
         <p>
           The screen scores every request. Genuine scores follow a bell curve; three frauds in four score {WORDS[PARAMS.signal]}
-          standard deviations higher on average, and one in four exactly like a genuine request. Low, Medium, High and Very
-          high flag {SENSITIVITY.map((s) => `${Math.round(s.flags * 100)}%`).join(', ').replace(/, (?=[^,]*$)/, ' and ')} of genuine requests.
+          standard deviations higher on average, and one in four exactly like a genuine request. To check a share of one
+          side of $1m, the screen sets its bar so that this share of genuine requests scores above it.
         </p>
         <p>
-          Call-backs wait in one line, first come first served, for any reviewer who is in (each nine days in ten, away in
+          Checks wait in one line, first come first served, for any reviewer who is in (each nine days in ten, away in
           spells of about {WORDS[PARAMS.spell]} days); a call made one day pays the next. Every setting meets the same
           {YEARS.toLocaleString('en-US')} years.
         </p>
@@ -362,28 +361,32 @@
   {#snippet after()}
     {#if T}
       <p>
-        Whatever the setting, most flags fall on genuine clients, each a <span class="tkc-idea">false positive</span>: an
-        alarm with nothing behind it. Fraud is so rare that on Low the screen flags {T.lowGenuine} genuine clients a year
-        for about {T.lowFrauds} frauds: one flag in {T.lowOne} is real, and on Very high one in {T.vhOne}.
+        Fraud is rare, so most checks fall on genuine clients, each a <span class="tkc-idea">false positive</span>: an
+        alarm with nothing behind it. Yet the screen’s ranking is worth a great deal. A clumsy fraud shows its signs and
+        rises to the top of the order, so below $1m the most suspicious tenth holds {T.smallCaught}, at the cost of
+        {T.smallGenuine} genuine clients a year.
       </p>
       <p>
-        Turning it up stops more fraud, about {T.vhCaught} on Very high, but {T.vhGenuine} genuine clients a year then wait.
-        The reviewers are busy {T.vhBusy} of their days and, past a <span class="tkc-idea">tipping point</span> like the
-        queues chapter’s, the line runs away: {T.vhLate} of payments are late. And a fraud with no sign, such as a
-        request from a client’s own mailbox, taken over, can pass any setting: the worst year still loses {T.vhWorst}.
+        What no ranking can see is a fraud with no sign, such as a request from a client’s own mailbox, taken over. It may
+        sit anywhere in the order, so checking nine in ten large disbursements lets one in ten of these through. That is
+        rare: the average year then loses only {T.ninetyMean}. But the bank lives its years one after another, like the
+        player in the coin game, and the limit applies to each one: {T.ninetyOver} years in 1,000 lose more than $5m, the worst
+        {T.ninetyWorst}.
       </p>
       <p>
-        The way out is to size the gate to the loss. A call-back costs a reviewer a day whatever the amount, but what it
-        saves grows with the amount. So the gate becomes an <span class="tkc-and">AND</span> behind an
-        <span class="tkc-if">IF</span>: above $1m, no payment goes out unchecked: {T.half} the payments, {T.money} of
-        the money. Below $1m the screen stays, turned down: its few flags fit in the reviewers’ days, and what
-        it misses the bank can survive. The worst year now loses {T.worst}.
+        So the check is sized to the loss. A call costs a reviewer a day whatever the amount, and what it saves grows with
+        the amount. Above $1m the gate becomes an <span class="tkc-and">AND</span> behind an
+        <span class="tkc-if">IF</span>: no disbursement goes out unchecked, {T.half} the payments and {T.money} of the
+        money. Below $1m a tenth is checked, the most suspicious, and what slips through the bank can survive. The worst
+        year now loses {T.worst}. False positives remain, about {T.genuine} genuine clients a year, only {T.more} more
+        than with half of every amount checked, but now where a wait buys the most.
       </p>
       <p>
-        False positives remain: about {T.genuine} genuine clients a year still wait, {T.more ? 'more than' : 'about as many as'} the
-        Medium screen alone, but now where a wait buys the most. Inside the gate sits an
-        <span class="tkc-or">OR</span>: any one of three qualified reviewers may call, a <span class="tkc-idea">quorum</span>
-        of one; with a named reviewer for each payment, {T.named} would be late.
+        Checking more of the small ones buys little. A quarter instead of a tenth stops one more small fraud every
+        {T.everyYears} years, but {T.waitMore} more clients a year wait; the reviewers are busy {T.quarterBusy} of their days
+        and, past a <span class="tkc-idea">tipping point</span> like the queues chapter’s, {T.quarterLate} of payments are
+        late. Inside the gate sits an <span class="tkc-or">OR</span>: any one of three qualified reviewers may call, a
+        <span class="tkc-idea">quorum</span> of one; with a named reviewer for each payment, {T.named} would be late.
       </p>
       <p>
         A lizard caught by the tail sheds it and grows another, but guards its head. A chain that bends does the same: it
@@ -398,8 +401,8 @@
     <BankNote ask="Which of our checks are sized to what we cannot afford to lose, and which make every amount wait alike?">
       <p>
         Operational-risk capital rules long asked banks to hold enough for the worst year in a thousand, not the average
-        one. Payment teams call back on a number already on file, never on one given in the request. And dual control,
-        the four-eyes rule, is a <span class="tkc-idea">quorum</span> as well: any two qualified people, not two named ones.
+        one. Auditors test every item above a set amount and sample the rest. And dual control, the four-eyes rule, is a
+        <span class="tkc-idea">quorum</span> as well: any two qualified people, not two named ones.
       </p>
     </BankNote>
   {/snippet}

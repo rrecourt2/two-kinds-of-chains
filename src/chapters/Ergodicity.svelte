@@ -225,10 +225,11 @@
       not cancel out; they compound, and the longer the chain, the further the typical player falls.
     </p>
     <p>
-      Two remedies follow: <strong>staking less</strong>, so that smaller swings give up some of the paper return but stop
-      the slide; or <strong>pooling</strong>, so that players whose coins are independent share their luck, as insurance and
-      a portfolio spread over many countries do. Pooling is interdependence of the good kind, but a shock that hits
-      everyone at once cannot be pooled away, as the stress test shows next.
+      Two remedies follow. <strong>Staking less</strong> makes the swings smaller and gives up some of the paper return
+      with them. <strong>Pooling</strong> keeps the return: five independent coins seldom land the same way, so the pool’s
+      result swings far less than one player’s, and less is lost to the compounding. Insurance and a portfolio spread
+      over many countries work the same way. Pooling is interdependence of the good kind, but a shock that hits everyone
+      at once cannot be pooled away, as the stress test shows next.
     </p>
   {/snippet}
 

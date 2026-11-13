@@ -156,8 +156,8 @@
 >
   {#snippet setup()}
     <p>
-      Kauffman’s teams escaped their dead ends by working inside modules. Herbert Simon, a Nobel economist and one of the
-      founders of artificial intelligence, had shown why in a parable of 1962. Tempus and Hora both make fine watches of
+      Some chains lose only time when they break; others lose the work already done. Herbert Simon, a Nobel economist
+      and one of the founders of artificial intelligence, told a parable about the difference in 1962. Tempus and Hora both make fine watches of
       1,000 parts, and both are often interrupted by customers calling.
     </p>
     <p>
@@ -258,8 +258,8 @@
   {#snippet after()}
     <p>
       Tempus is no worse at making watches than Hora. His work is one chain of a thousand steps, and every interruption
-      sends him back to the start. Hora’s is a hundred and eleven short chains, each of which ends in something that
-      holds. At one interruption in a hundred, ten steps in a row happen nine times in ten; a thousand in a row almost
+      sends him back to the start. Hora’s is a hundred and eleven short chains of ten steps each: a hundred modules,
+      ten larger ones and the watch itself, and each ends in something that holds. At one interruption in a hundred, ten steps in a row happen nine times in ten; a thousand in a row almost
       never happen. Simon’s own, rougher arithmetic gave Hora about 4,000 watches for each of Tempus’s.
     </p>
     <p>

@@ -230,8 +230,10 @@
   {#snippet after()}
     <p>
       In a calm world the specialist wins: it grows faster and fills its islands first. As the years get more variable,
-      its one plant fails it again and again, and it disappears from island after island. The generalist is not better
-      at anything; it just never depends on a single plant. The crossing is a <span class="tkc-idea">tipping point</span>: past it, each extra bit of variability costs the specialist more than the last.
+      it disappears from island after island: as in the coin game, a bad year takes more than a good one gives. The
+      generalist is not better at anything; its four plants seldom fail together, so its food swings half as much. The
+      crossing is a <span class="tkc-idea">tipping point</span>: past it, each extra bit of variability costs the
+      specialist more than the last.
     </p>
     <p>
       This is not Adam Smith’s specialist: its trouble is not its skill but its single source of food. A chain of named
@@ -239,21 +241,23 @@
       at once.
     </p>
     <p>
-      A changing climate makes many years more variable, and punishes whoever depends on one crop, one region or one
-      supplier. A smallholder who grows one cash crop is the specialist: a better income in a normal year, nothing to
-      fall back on in a drought. One who also keeps a second crop and a few animals earns less in a good year, and is
-      still farming after a bad one.
-    </p>
-    <p>
-      Small populations also die of bad luck. In this model, even in a calm world, ten generalists on an island die out
-      about one time in three within a century; a hundred almost never do.
+      A changing climate punishes whoever depends on one crop, one region or one supplier. A smallholder who grows one
+      cash crop is the specialist: a better income in a normal year, nothing to fall back on in a drought. One who also
+      keeps a second crop and a few animals earns less in a good year, and is still farming after a bad one.
     </p>
     <h3>Why islands</h3>
     <p>
-      A larger area holds more species in all, but fewer for its size. Globalization joins the world into one large
-      area, where a few winners spread at the expense of local variety. The islands here never swap animals, so a
-      collapse on one stays there: each is a firebreak, as the banks in the stress test were not. Each island is
-      fragile; the archipelago lasts while any one of its forty does: a <span class="tkc-idea">quorum</span> of one.
+      A larger area holds more species, but not in proportion. Forty islands kept apart can hold more kinds
+      than one land as large as all forty: chance and local conditions favour different species on each, and no stronger
+      rival arrives to push them out. Globalization joins islands into one large area, where the strongest competitor
+      anywhere can reach everywhere: a few winners spread, and local variety is lost.
+    </p>
+    <p>
+      The islands here never swap animals or share their weather, so a collapse on one stays there: the sea is a
+      firebreak, as the loans between the banks in the stress test were not. Each island is fragile: even in a calm world, ten
+      generalists on one die out about one time in three within a century. But islands that fail on their own seldom
+      fail together, and the archipelago lasts while any one of its forty does: a <span class="tkc-idea">quorum</span>
+      of one.
     </p>
   {/snippet}
 

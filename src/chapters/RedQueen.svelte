@@ -7,10 +7,12 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { simulate, curveOf, yearOf, allCheckedFrom, PATTERNS, P, MONTHS, ATTEMPTS, CHECKS, PARAMS, EVERY, SEED, RUNS, NUMBERS } from '../lib/sim/redqueen.js';
+  import { simulate, curveOf, yearOf, allCheckedFrom, onReviewed, PATTERNS, P, MONTHS, ATTEMPTS, CHECKS, PARAMS, EVERY, SEED, RUNS, NUMBERS } from '../lib/sim/redqueen.js';
 
-  // A prediction about monthly reviews. Never and Yearly can be played from the start; Monthly shows locked until the
-  // first answer or a hint (and the chart stays on yearly if it is somehow chosen); "The checks" once the puzzle is closed.
+  // Procurement schemes across a lender's projects against integrity reviews that move. In the model's words a pattern
+  // is a red flag, a check is a review, an attempt is a rigged contract and a review is a move of the reviews.
+  // A prediction about monthly moves. Never and Yearly can be played from the start; Monthly shows locked until the
+  // first answer or a hint (and the chart stays on yearly if it is somehow chosen); "The reviews" once the puzzle is closed.
   const game = getContext('tkc-game');
   const live = $derived(game.engaged('redqueen'));
   const revealed = $derived(!game.isOpen('redqueen'));
@@ -29,6 +31,7 @@
   const grown = $derived(m === 'grow' && r !== 'never');
 
   const pc = (v) => `${Math.round(v)}%`;
+  const LEARN = { 0.25: 'a quarter', 0.5: 'half' }[PARAMS.learn] ?? `${Math.round(PARAMS.learn * 100)}%`;
   const ORD = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth', 'eleventh', 'twelfth'];
 
   // ---- What the text quotes: the averages over 400 runs, from the model ----
@@ -39,6 +42,7 @@
     never: yearOf(curveOf('never'), 2),
     yearly: yearOf(curveOf('yearly'), 2),
     monthly: yearOf(curveOf('monthly'), 2),
+    neverRandom: yearOf(curveOf('never', 'random'), 2),
     yearlyRandom: yearOf(curveOf('yearly', 'random'), 2),
     grow: yearOf(curveOf('monthly', 'grow'), 2),
     growFrom: allCheckedFrom('monthly'),
@@ -49,27 +53,27 @@
     const c = curve;
     if (r === 'never')
       return m === 'random'
-        ? `Two checks stay where they began; the third, drawn at random each month, keeps the catch near ${pc(y3)}.`
-        : `The checks stay where they began; within six months the attempts have moved round them, and the catch falls to ${pc(y3)}.`;
+        ? `Two reviews stay where they began; the third, drawn at random each month, keeps the catch near ${pc(y3)}.`
+        : `The reviews stay where they began; within a year the schemes have moved round them, and the catch falls to ${pc(y3)}.`;
     if (r === 'yearly')
       return m === 'random'
-        ? `With one check at random, the first month catches less (${pc(c[0])}), but no pattern stays safe for long: ${pc(y3)} in year three.`
+        ? `With one review at random, the first month catches less (${pc(c[0])}), but no red flag stays safe for long: ${pc(y3)} in year three.`
         : m === 'grow'
-          ? `Each yearly review adds one check and drops none; the old checks guard patterns the fraud has left: ${pc(y3)} in year three.`
-          : `Each review moves the checks to last month’s worst: the catch jumps to ${pc(c[12])}, then ${pc(c[24])}, and falls again as the attempts move on.`;
+          ? `Each yearly move adds one review and drops none; the old reviews guard flags the schemes have left: ${pc(y3)} in year three.`
+          : `Each move puts the reviews on last month’s worst: the catch jumps to ${pc(c[12])}, then ${pc(c[24])}, and falls again as the schemes move on.`;
     if (m === 'grow') {
       const from = run.findIndex((x) => x.checked.length === P) + 1;
-      return `A check added every month and none dropped: from month ${from}, all ${P} patterns are checked and the catch holds at ${pc(c[from - 1])}.`;
+      return `A review added every month and none dropped: from month ${from}, all ${P} red flags are reviewed and the catch holds at ${pc(c[from - 1])}.`;
     }
     return m === 'random'
-      ? `With a review every month, the random check adds nothing: the catch levels off at ${pc(y3)} either way.`
-      : `A review every month chases the attempts, and the catch levels off at ${pc(y3)}: running to stand still.`;
+      ? `Moved every month, the reviews gain nothing from the random one: the catch levels off at ${pc(y3)} either way.`
+      : `Moved every month, the reviews chase the schemes, and the catch levels off at ${pc(y3)}: running to stand still.`;
   });
   const MODE_NOTE = {
-    review: 'All three checks move at each review, to last month’s worst.',
-    random: 'Two checks follow the review; the third is drawn at random each month from the rest.',
+    review: 'At each move, all three reviews go to last month’s three worst flags.',
+    random: 'Two reviews follow the findings; the third is drawn at random each month from the rest.',
   };
-  const modeNote = $derived(m === 'grow' ? `Each review adds a check on last month’s worst and none is dropped: ${checksEnd} checks by month 36.` : MODE_NOTE[m]);
+  const modeNote = $derived(m === 'grow' ? `Each move adds a review on last month’s worst and none is dropped: ${checksEnd} reviews by month 36.` : MODE_NOTE[m]);
 
   // ---- Both views share one month axis: the catch above, one run's attempts by pattern below ----
   const wide = $derived(width >= 480);
@@ -99,19 +103,21 @@
     const y = yOf(Math.max(y3, ...curve.slice(24))) - 7;
     return { y, lead: yOf(y3) - y > 12 };
   });
-  // The drift in year one, labelled where the line falls (not where the random check or the growing chain changes it).
+  // The drift in year one, labelled where the line falls (not where the random review or the growing chain changes
+  // it): at month five, low enough for the label to clear the first month's line.
   const showDrift = $derived(m === 'review' || (m === 'grow' && r === 'yearly'));
-  const drift = $derived({ x: xMid(2), y: yOf(curve[2]), tx: xMid(3) + 6, ty: yOf(curve[2]) - (wide ? 40 : 34) });
+  const DM = 4;
+  const drift = $derived({ x: xMid(DM), y: yOf(curve[DM]), tx: xMid(DM + 1) + 6, ty: yOf(curve[DM]) - (wide ? 40 : 34) });
 
-  // One run's attempts: a row per pattern, a column per month.
+  // One run's rigged contracts: a row per red flag, a column per month.
   const HCH = $derived(wide ? 9 : 7);
   const HP = $derived(wide ? 12 : 10);
   const hy = (p) => 3 + p * HP;
   const HH = $derived(P * HP + 4);
-  // Five steps of colour, from a pattern barely tried to one used by fifteen attempts or more.
+  // Five steps of colour, from a red flag barely seen to one on fifteen rigged contracts or more.
   const level = (n) => (n === 0 ? 0 : n <= 2 ? 1 : n <= 5 ? 2 : n <= 9 ? 3 : n <= 14 ? 4 : 5);
   const cells = $derived(run.flatMap((month, mo) => month.n.map((n, p) => ({ key: `${p}-${mo}`, x: xOf(mo), y: hy(p), lvl: level(n), on: month.checked.includes(p) }))));
-  // Each spell of checking one pattern, outlined as one box.
+  // Each spell of reviewing one red flag, outlined as one box.
   const spells = $derived.by(() => {
     const out = [];
     for (let p = 0; p < P; p++) {
@@ -127,26 +133,22 @@
     }
     return out;
   });
-  const onChecked = (from, to) => {
-    let met = 0;
-    for (let mo = from; mo < to; mo++) met += run[mo].checked.reduce((s, p) => s + run[mo].n[p], 0);
-    return (100 * met) / ((to - from) * ATTEMPTS);
-  };
+  const onChecked = (from, to) => 100 * onReviewed(run, from, to);
 
-  const HOW = { never: 'never reviewed', yearly: 'reviewed once a year', monthly: 'reviewed every month' };
-  const MODE_WORDS = { review: '', random: ', with one check drawn at random each month', grow: ', adding a check at each review and dropping none' };
+  const HOW = { never: 'never moved', yearly: 'moved once a year', monthly: 'moved every month' };
+  const MODE_WORDS = { review: '', random: ', with one review drawn at random each month', grow: ', adding a review at each move and dropping none' };
   const label = $derived(
-    `Share of attempts caught each month over three years, averaged over ${RUNS} runs, with the checks ${HOW[r]}${MODE_WORDS[m]}: ` +
+    `Share of rigged contracts caught each month over three years, averaged over ${RUNS} runs, with the reviews ${HOW[r]}${MODE_WORDS[m]}: ` +
       `${pc(first)} in the first month and ${pc(y3)} in year three. ${story}`,
   );
   const mapLabel = $derived(
-    `One run: where fifty attempts a month fall among twelve patterns, and which are checked. ${pc(onChecked(0, 1))} of the first month’s attempts ` +
-      `meet a check, and ${pc(onChecked(24, 36))} of year three’s.`,
+    `One run: where fifty rigged contracts a month fall among twelve red flags, and which flags are reviewed. ${pc(onChecked(0, 1))} of the first month’s ` +
+      `rigged contracts carry a reviewed flag, and ${pc(onChecked(24, 36))} of year three’s.`,
   );
 
   // ---- Puzzle ----
   const puzzle = {
-    goal: 'The team reviews its checks every month, twelve times as often as once a year. What do they catch in year three?',
+    goal: 'The team moves its reviews every month, twelve times as often as once a year. What do they catch in year three?',
     choices: [
       { value: '3/4', label: 'About three in four' },
       { value: '1/2', label: 'About half' },
@@ -156,15 +158,15 @@
     answer: '1/4',
     wrong: (v) =>
       v === '3/4'
-        ? `Far fewer. Each review aims at last month’s fraud, which has already moved on; the first month’s ${pc(T.first)} never comes back.`
+        ? `Far fewer. Each move aims at last month’s schemes, which are already moving on; the first month’s ${pc(T.first)} never comes back.`
         : v === '1/2'
-          ? `Fewer. Even the month right after a yearly review catches only ${pc(T.jumps[0])} and ${pc(T.jumps[1])}.`
-          : 'More than that: one in ten is about what yearly reviews manage. Monthly ones do better, though not twelve times better.',
+          ? `Fewer. Even the month right after a yearly move catches only ${pc(T.jumps[0])}, and ${pc(T.jumps[1])} a year later.`
+          : `More than that: moved once a year, the reviews already catch ${pc(T.yearly)}. Monthly moves do better, though not twelve times better.`,
     hints: [
-      `Even right after a yearly review the checks catch only ${pc(T.jumps[0])}, then ${pc(T.jumps[1])}, never the first month’s ${pc(T.first)}; and reviews every month leave the attempts less time to pile up anywhere.`,
-      'Three checks cover three patterns of twelve, and attempts chased every month never pile up where the checks are.',
+      `Even right after a yearly move the reviews catch only ${pc(T.jumps[0])}, then ${pc(T.jumps[1])}, never the first month’s ${pc(T.first)}; moved every month, they leave the schemes less time to pile up anywhere.`,
+      'Three reviews cover three red flags of twelve, and schemes chased every month never pile up where the reviews are.',
     ],
-    found: `About one in four: reviewing twelve times as often, the team holds the catch near ${pc(T.monthly)}; each review aims at last month’s fraud.`,
+    found: `About one in four: moving its reviews twelve times as often, the team holds the catch near ${pc(T.monthly)}; each move aims at last month’s schemes.`,
   };
   const showAnswer = () => {
     review = 'monthly';
@@ -173,35 +175,36 @@
 </script>
 
 <Chapter
-  kicker="Adversaries"
+  kicker="Co-evolution"
   title="Running to stand still"
-  lede="Most links in this story fail by accident. Some are tested every day, by someone looking for the weakest."
+  lede="Most links in this story fail by accident. Some are tested on every tender, and what gets through is passed on."
   puzzle="redqueen"
 >
   {#snippet setup()}
     <p>
-      Payments leave a development lender every day, and some people work full time at getting round its checks.
-      Fraudsters and sanctions evaders use a changed bank account, a lookalike supplier invoice, a route through a third
-      country, a new intermediary, or a payment split to stay below a threshold. The bank knows twelve such patterns.
+      A development lender’s clients buy most of what it finances through tenders, and across hundreds of projects a few
+      contracts are rigged. Twelve kinds of rigging each leave a red flag: a contract split to stay under the
+      prior-review threshold, a single bid, a price padded after award, a subcontract to an official’s cousin.
     </p>
     <p>
-      Its compliance team can check three thoroughly each month, and starts with the three in use most. At each review it
-      moves the checks to wherever most fraud turned up.
+      Its integrity team can review three flags thoroughly: first the three seen most, then, whenever it moves its
+      reviews, wherever most turned up.
     </p>
     <p>
-      Each check is a link that every payment passes. The other side tests every link, every month, and needs no review:
-      it copies whatever gets through.
+      Nobody works full time against the lender. But contractors and officials see what the reviews catch: a scheme that
+      was caught is dropped; one that went through is used again on the next tender, and copied on other projects. Each
+      review is a link, and the schemes test them all.
     </p>
   {/snippet}
 
   {#snippet figure()}
     <Instrument
-      title="Checks against fraud that learns"
-      sub="Fraud and sanctions-evasion attempts against payment checks: what is caught each month, and where the attempts go."
+      title="Reviews against schemes that spread"
+      sub="Rigged contracts across a lender’s projects: what its integrity reviews catch each month, and which red flags they carry."
       rules={[
-        'Fifty attempts a month across twelve patterns; a check stops nine in ten.',
-        'Three patterns are checked; a review moves the checks to last month’s three worst.',
-        'Each month, attempts copy what got through; a few try new patterns.',
+        'Fifty rigged contracts a month, over twelve red flags; a review catches nine in ten.',
+        'Three flags are reviewed; moving the reviews puts them on last month’s three worst.',
+        'What got through is used again on other tenders; a few try something new.',
       ]}
     >
       <Puzzle id="redqueen" {...puzzle} predict onshow={showAnswer} />
@@ -210,7 +213,7 @@
         <div class="ctl">
           <Segmented
             name="rq-review"
-            label="Checks reviewed"
+            label="Reviews moved"
             bind:value={review}
             options={[
               { value: 'never', label: 'Never' },
@@ -224,10 +227,10 @@
           <div class="ctl">
             <Segmented
               name="rq-check"
-              label="The checks"
+              label="The reviews"
               bind:value={mode}
               options={[
-                { value: 'review', label: 'Follow review' },
+                { value: 'review', label: 'Follow findings' },
                 { value: 'random', label: 'One at random' },
                 { value: 'grow', label: 'Never dropped' },
               ]}
@@ -239,7 +242,7 @@
 
       <div class="tkc-chart views" bind:clientWidth={width}>
         <svg width={span} height={H} role="img" aria-label={label} class:narrow={!wide}>
-          <text class="tkc-axis-title" x="0" y="12">{wide ? `Share of attempts caught each month, average of ${RUNS} runs` : `Caught each month (${RUNS}-run average)`}</text>
+          <text class="tkc-axis-title" x="0" y="12">{wide ? `Rigged contracts caught each month, average of ${RUNS} runs` : `Caught each month (${RUNS}-run average)`}</text>
           {#each yTicks as t (t)}
             <line class={t === 0 ? 'tkc-base' : 'tkc-grid'} x1={LABEL} x2={span} y1={yOf(t)} y2={yOf(t)} />
             <text class="tkc-axis-label" x={LABEL - 6} y={yOf(t) + 4} text-anchor="end">{t}%</text>
@@ -258,11 +261,11 @@
           {/if}
           {#if showDrift}
             <line class="lead" x1={drift.tx - 3} y1={drift.ty + 4} x2={drift.x + 3} y2={drift.y - 4} />
-            <text class="note tkc-halo" x={drift.tx} y={drift.ty - 12}>the attempts move</text>
-            <text class="note tkc-halo" x={drift.tx} y={drift.ty + 1}>round the checks</text>
+            <text class="note tkc-halo" x={drift.tx} y={drift.ty - 12}>the schemes move</text>
+            <text class="note tkc-halo" x={drift.tx} y={drift.ty + 1}>round the reviews</text>
           {/if}
 
-          <text class="tkc-axis-label" x={LABEL - 6} y={y0 + 20} text-anchor="end">Reviews</text>
+          <text class="tkc-axis-label" x={LABEL - 6} y={y0 + 20} text-anchor="end">Moves</text>
           {#each reviews as mo (mo)}
             <line class="tick" x1={xMid(mo)} x2={xMid(mo)} y1={y0 + 9} y2={y0 + 19} />
           {/each}
@@ -274,7 +277,7 @@
         <p class="tkc-caption story">{story}</p>
 
         <div class="map">
-          <span class="map-title">One of the runs: where the attempts go{wide ? ' (darker: more)' : ''}</span>
+          <span class="map-title">One of the runs: where the schemes go{wide ? ' (darker: more)' : ''}</span>
           <svg width={span} height={HH} role="img" aria-label={mapLabel} class:narrow={!wide}>
             {#each PATTERNS as name, p (name)}
               <text class="name" x={LABEL - 6} y={hy(p) + HCH / 2 + (wide ? 4 : 3)} text-anchor="end">{name}</text>
@@ -287,9 +290,9 @@
             {/each}
           </svg>
           <div class="tkc-legend">
-            <span><span class="tkc-swatch" style:background="var(--tkc-options)" aria-hidden="true"></span>At a checked pattern</span>
-            <span><span class="tkc-swatch" style:background="var(--tkc-conditions)" aria-hidden="true"></span>Meeting no check</span>
-            <span><span class="tkc-swatch box" aria-hidden="true"></span>Checked that month</span>
+            <span><span class="tkc-swatch" style:background="var(--tkc-options)" aria-hidden="true"></span>On a reviewed flag</span>
+            <span><span class="tkc-swatch" style:background="var(--tkc-conditions)" aria-hidden="true"></span>Meeting no review</span>
+            <span><span class="tkc-swatch box" aria-hidden="true"></span>Reviewed that month</span>
           </div>
         </div>
       </div>
@@ -298,29 +301,29 @@
         <Stat
           label="Caught, first month"
           value={pc(first)}
-          sub={m === 'random' ? 'two where the fraud is, one at random' : 'checks on the three patterns used most'}
+          sub={m === 'random' ? 'two on the flags seen most, one at random' : 'reviews on the three flags seen most'}
           swatch="var(--tkc-options)"
         />
         <Stat
           label="Caught, year three"
           value={pc(y3)}
-          sub={grown ? `with ${checksEnd} checks on every payment` : `about ${Math.round((y3 / 100) * 12 * ATTEMPTS)} of ${12 * ATTEMPTS} attempts`}
+          sub={grown ? `with ${checksEnd} reviews on every contract` : `about ${Math.round((y3 / 100) * 12 * ATTEMPTS)} of ${12 * ATTEMPTS} rigged contracts`}
           swatch="var(--tkc-options)"
         />
       </div>
 
       {#snippet model()}
         <p>
-          Each month {ATTEMPTS} attempts fall at random on the twelve patterns, in proportion to the other side’s current
-          mix, which starts with {Math.round(PARAMS.start * 100)}% on the three patterns checked first. A check stops each
-          attempt on its pattern with a chance of nine in ten. The bank learns of every catch and of half the attempts that
-          got through, and a review moves the {CHECKS} checks to the patterns with the most found in the latest month.
+          Each month {ATTEMPTS} rigged contracts fall on the twelve red flags at random, in proportion to the schemes’ mix,
+          which starts with {Math.round(PARAMS.start * 100)}% on the three reviewed first. A review catches nine in ten of
+          the rigged contracts carrying its flag. The lender learns of every catch and, later, of half of those that got
+          through; a move puts the {CHECKS} reviews on the flags with the most found in the latest month.
         </p>
         <p>
-          After each month the mix moves towards what paid: each pattern’s share grows by half its payoff above the average,
-          and {Math.round(PARAMS.innovate * 100)}% of the mix is spread evenly, for new tries. At random, two checks follow
-          the review and the third is drawn each month from the other ten; never dropped, each review adds a check on the
-          worst unchecked pattern. The line averages {RUNS} runs; the map shows one of them.
+          After each month the mix moves towards what paid: each flag’s share grows by {LEARN} of its payoff above the
+          average (slowly, as a scheme waits for the next tender), and {Math.round(PARAMS.innovate * 100)}% of the mix is
+          spread evenly, as new tries. At random, the third review is drawn each month from the other ten; never dropped,
+          each move adds a review on the worst unreviewed flag. The line averages {RUNS} runs; the map shows one.
         </p>
       {/snippet}
     </Instrument>
@@ -328,43 +331,47 @@
 
   {#snippet after()}
     <p>
-      The checks never got worse: each still stops nine attempts in ten. The attempts moved. Left where they began, the
-      checks meet {NUMBERS.onFirstThree[1]}% of the attempts in the first month and {NUMBERS.onFirstThree[6]}% by the
-      sixth. The fraud in the gate worth keeping stood still for its one check; this one learns.
+      The reviews never got worse: each still catches nine rigged contracts in ten. The schemes moved. Left where they
+      began, the reviews cover {NUMBERS.onFirstThree[1]}% of the rigged contracts in the first month and
+      {NUMBERS.onFirstThree[12]}% by the twelfth. Nobody planned it: a firm caught splitting contracts stopped, one whose
+      padded variation went through padded the next, and others heard, on other projects.
     </p>
     <p>
-      Two <span class="tkc-idea">loops</span> are racing. The other side’s turns every month: whatever got through is tried more. The bank’s turns at
-      each review: wherever fraud turned up is checked. Reviewed once a year, the checks catch {pc(T.yearly)} in year
-      three; every month, {pc(T.monthly)}. Neither gets back to the first month’s {pc(T.first)}, because each review aims
-      at last month’s fraud, which is already moving on.
+      Two <span class="tkc-idea">loops</span> are racing. The schemes’ turns with every tender: what got through is used
+      again. The lender’s turns each time the reviews move: wherever most turned up is reviewed. Moved once a year, the
+      reviews catch {pc(T.yearly)} in year three; every month, {pc(T.monthly)}. Neither gets back to the first month’s
+      {pc(T.first)}. Each move aims at last month’s schemes, and schemes chased every month spread almost evenly, so three
+      reviews of twelve cover only {NUMBERS.onReviewedYear3.monthly}% of them.
     </p>
     <p>
       In Lewis Carroll’s <i>Through the Looking-Glass</i>, the Red Queen tells Alice that “it takes all the running you can
       do, to keep in the same place”. The biologist Leigh Van Valen (1973) gave her name to evolution’s version, in which
-      every species must keep changing just to keep up with its rivals.
+      species must keep changing to keep up with their rivals. Nobody directs that race either: what works leaves more
+      copies.
     </p>
     <p>
-      One way out of the race is to add a check at every review and never drop one. Reviewed monthly, the checks catch
-      {pc(T.grow)} from the {ORD[T.growFrom]} month, when all twelve patterns are checked. That takes four times the team,
-      and every genuine payment passes twelve checks: the riddle’s long chain of <span class="tkc-and">ANDs</span>, grown
-      one sensible link at a time.
+      One way out is to add a review at every move and never drop one. Moved monthly, the reviews catch {pc(T.grow)} from
+      the {ORD[T.growFrom]} month, when all twelve flags are reviewed. That takes four times the team, and every honest
+      tender then waits on twelve reviews: the riddle’s long chain of <span class="tkc-and">ANDs</span>, grown one sensible
+      link at a time.
     </p>
-    <h3>A check they cannot predict</h3>
+    <h3>A review they cannot predict</h3>
     <p>
-      The other side learns what it can predict. With one of the three checks drawn at random each month, the first month
-      catches less, {pc(T.firstRandom)} instead of {pc(T.first)}; but with yearly reviews, year three catches
-      {pc(T.yearlyRandom)} instead of {pc(T.yearly)}, because no pattern stays safe for long. When someone tests every
-      link, a chain is kept strong less by its strongest links than by being hard to learn.
+      Copying beats only what it can predict. With one of the three reviews drawn at random each month, the first month
+      catches less, {pc(T.firstRandom)} instead of {pc(T.first)}; but year three catches {pc(T.yearlyRandom)} instead of
+      {pc(T.yearly)} with yearly moves, and {pc(T.neverRandom)} instead of {pc(T.never)} with none, because no red flag
+      stays safe for long. When every tender tests the links, a chain is kept strong less by its strongest links than by
+      being hard to learn.
     </p>
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Which of our controls are judged by whether they were performed, and which by what they caught?">
+    <BankNote ask="Which of our procurement reviews are judged by whether they were done, and which by what they found?">
       <p>
-        Controls are often tested by whether they were performed: the screening ran, the call-back was made and logged.
-        Fraud and sanctions evasion change with what gets through, and a control can be performed perfectly while
-        guarding a pattern nobody uses any more. A falling count of catches can be the first sign that the other side has
-        moved.
+        Procurement reviews are often judged by whether they were done: the prior review signed off, the red-flag
+        checklist run on every contract. Schemes change with what gets through, and a review can be done perfectly while
+        guarding a red flag nobody uses any more. A falling count of findings can mean the schemes have moved, not that
+        they have gone.
       </p>
     </BankNote>
   {/snippet}

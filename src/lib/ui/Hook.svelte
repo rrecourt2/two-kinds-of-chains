@@ -21,6 +21,9 @@
   let runs = $state([]); // history of { gates, backups, through, guess }
   let width = $state(560);
   let stripW = $state(320);
+  // Two columns from 860px, as the container query below: there the tally of runs sits under the picture.
+  let gridW = $state(0);
+  const wide = $derived(gridW >= 860);
   let t = $state(0);
   let announce = $state('');
   let raf = 0;
@@ -292,8 +295,104 @@
   );
 </script>
 
+<!-- The picture of the run, and what to expect from runs like it: under the picture on a wide card, inside the result
+     on a narrow one. On a wide card the picture follows the result in the page, so a screen reader that lands on the
+     result reads on into the tally. -->
+{#snippet picture()}
+  <div class="pic tkc-chart" bind:clientWidth={width} bind:this={picEl}>
+    <svg {width} height={H} role="img" aria-label={picLabel}>
+      <rect x={inboxX} y={laneY - 5 * ip - 4} width={ip * 10 + 4} height={ip * 10 + 8} rx="6" class="inbox" />
+      <text class="tkc-axis-label" x={inboxX} y={laneY - 5 * ip - 12}>{REQUESTS} loans</text>
+      <line x1={laneStart} x2={endX} y1={laneY} y2={laneY} class="lane" />
+      {#each Array(gates) as _, k}
+        {@const x = gateX(k)}
+        {#if backups}
+          <rect x={x - gateW / 2 + 4} y={laneY - 27} width={gateW} height="44" rx={Math.min(6, gateW / 3)} class="gate twin" />
+        {/if}
+        <rect x={x - gateW / 2} y={laneY - 22} width={gateW} height="44" rx={Math.min(6, gateW / 3)} class="gate" />
+        <text class="tkc-axis-label" x={x} y={laneY - 32} text-anchor="middle">{showNames ? NAMES[k] : k + 1}</text>
+        {#if phase === 'done' && backups && flow.saved[k] > 0 && showCounts}
+          <text class="tkc-label saved-n" x={x} y={laneY + 38} text-anchor="middle">{showNames ? `${flow.saved[k]} saved` : flow.saved[k]}</text>
+        {/if}
+        {#if phase === 'done' && stuckCounts[k] > 0 && showCounts}
+          <text class="tkc-label stuck-n" x={x} y={trayY + 22} text-anchor="middle">−{stuckCounts[k]}</text>
+          {#if showReasons}<text class="tkc-axis-label" x={x} y={trayY + 36} text-anchor="middle">{REASONS[k]}</text>{/if}
+        {/if}
+      {/each}
+      <!-- Two trays: the loans stuck at a check, and the loans that get through. -->
+      <line x1={gateFrom} x2={endX - 6} y1={trayY + 6} y2={trayY + 6} class="tray" />
+      <text class="tkc-axis-label" x={gateFrom} y={H - 4}>{phase === 'done' ? `Stuck: ${REQUESTS - flow.through}` : 'Stuck at a check'}</text>
+      <line x1={endX + 4} x2={width - 2} y1={trayY + 6} y2={trayY + 6} class="tray" />
+      {#if showGuess}
+        {#each Array(guess) as _, slot}
+          <circle cx={pileX(slot)} cy={pileY(slot)} r={dotR} class="ghost" />
+        {/each}
+      {/if}
+      {#if phase === 'done'}
+        <text class="tkc-label through-n" x={width - 2} y={trayY + 22} text-anchor="end">{flow.through} through</text>
+      {:else}
+        <text class="tkc-axis-label" x={width - 2} y={trayY + 22} text-anchor="end">Through</text>
+      {/if}
+      {#if showGuess}
+        <!-- Before the run the guess is labelled on top of its pile; once loans arrive, under the tray. -->
+        {#if phase === 'ask'}
+          <text class="tkc-axis-label tkc-halo" x={width - 2} y={Math.max(laneY + 28, pileY(Math.max(0, guess - 1)) - (guess ? 9 : 0))} text-anchor="end">Your guess: {guess}</text>
+        {:else}
+          <text class="tkc-axis-label" x={width - 2} y={trayY + 38} text-anchor="end">Your guess: {guess}</text>
+        {/if}
+      {/if}
+      {#each Array(REQUESTS) as _, i}
+        {@const p = position(i)}
+        <circle cx={p.x} cy={p.y} r={p.state === 'saved' ? dotR * 1.5 : dotR} class="dot {p.state}" />
+      {/each}
+    </svg>
+    {#if backups}
+      <div class="tkc-legend backup-key">
+        <span><span class="tkc-swatch sw-twin"></span>Blue outline: a backup, a second person or system. A loan is stuck only when both fail.</span>
+        <span><span class="tkc-swatch sw-saved"></span>{showCounts ? 'Blue figures under the checks: loans a backup saved there' : 'A loan flashes blue where a backup saves it'}</span>
+      </div>
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet range()}
+  <div class="runs" class:under={wide}>
+    <p class="tkc-small tally">
+      {#if groups.length > 1}<span class="group g-name">Your runs</span>{/if}
+      {#each groups as g (g.kind)}
+        {@const shown = g.counts.slice(-SHOWN)}
+        <span class="group">
+          <span class="g-name">{groups.length > 1 ? `${g.gates === 6 ? 'Six' : 'Twelve'} checks${g.backups ? ' with backups' : ''}` : 'Your runs'}:</span>
+          {g.counts.length > SHOWN ? '… · ' : ''}{#each shown as v, k (k)}{k ? ' · ' : ''}<span class="tkc-num" class:now={g.kind === kindOf(latest) && k === shown.length - 1}>{v}</span>{/each}
+        </span>
+      {/each}
+    </p>
+    <div class="strip" bind:clientWidth={stripW}>
+      <svg width={stripW} height={SH} role="img" aria-label={stripLabel}>
+        <rect class="band" x={sx(spread.lo)} y="4" width={Math.max(2, sx(spread.hi) - sx(spread.lo))} height="30" rx="3" />
+        <line class="axis" x1={sx(from)} x2={sx(from + WINDOW)} y1="34" y2="34" />
+        <line class="expect" x1={sx(expected)} x2={sx(expected)} y1="4" y2="38" />
+        {#each stripDots as d, k (k)}
+          <circle cx={d.x} cy={d.y} r={d.last ? 4.5 : 3.5} class="run" class:last={d.last} />
+        {/each}
+        {#if expectLabel.x0 > 28}<text class="tkc-axis-label" x={sx(from)} y={SH - 4}>{from}</text>{/if}
+        {#if expectLabel.x1 < stripW - 34}<text class="tkc-axis-label" x={sx(from + WINDOW)} y={SH - 4} text-anchor="end">{from + WINDOW}</text>{/if}
+        <text class="tkc-axis-label" x={expectLabel.x} y={SH - 4} text-anchor="middle">{expectLabel.text}</text>
+      </svg>
+    </div>
+    <p class="tkc-small range">In 1,000 runs of 100 loans, between {spread.lo} and {spread.hi} get through nine times in ten.</p>
+  </div>
+{/snippet}
+
+{#snippet side()}
+  <div class="side">
+    {@render picture()}
+    {#if wide && phase === 'done' && latest}{@render range()}{/if}
+  </div>
+{/snippet}
+
 <div class="hook tkc-fig">
-  <div class="grid">
+  <div class="grid" bind:clientWidth={gridW}>
     <div class="tkc-eyebrow head">Before you start: a quick guess</div>
     <!-- The question follows the run on show: six checks, twelve, or twelve with a backup each. -->
     <p class="q" id="{prefix}-hook-q">
@@ -326,60 +425,7 @@
       </p>
     {/if}
 
-    <div class="pic tkc-chart" bind:clientWidth={width} bind:this={picEl}>
-      <svg {width} height={H} role="img" aria-label={picLabel}>
-        <rect x={inboxX} y={laneY - 5 * ip - 4} width={ip * 10 + 4} height={ip * 10 + 8} rx="6" class="inbox" />
-        <text class="tkc-axis-label" x={inboxX} y={laneY - 5 * ip - 12}>{REQUESTS} loans</text>
-        <line x1={laneStart} x2={endX} y1={laneY} y2={laneY} class="lane" />
-        {#each Array(gates) as _, k}
-          {@const x = gateX(k)}
-          {#if backups}
-            <rect x={x - gateW / 2 + 4} y={laneY - 27} width={gateW} height="44" rx={Math.min(6, gateW / 3)} class="gate twin" />
-          {/if}
-          <rect x={x - gateW / 2} y={laneY - 22} width={gateW} height="44" rx={Math.min(6, gateW / 3)} class="gate" />
-          <text class="tkc-axis-label" x={x} y={laneY - 32} text-anchor="middle">{showNames ? NAMES[k] : k + 1}</text>
-          {#if phase === 'done' && backups && flow.saved[k] > 0 && showCounts}
-            <text class="tkc-label saved-n" x={x} y={laneY + 38} text-anchor="middle">{showNames ? `${flow.saved[k]} saved` : flow.saved[k]}</text>
-          {/if}
-          {#if phase === 'done' && stuckCounts[k] > 0 && showCounts}
-            <text class="tkc-label stuck-n" x={x} y={trayY + 22} text-anchor="middle">−{stuckCounts[k]}</text>
-            {#if showReasons}<text class="tkc-axis-label" x={x} y={trayY + 36} text-anchor="middle">{REASONS[k]}</text>{/if}
-          {/if}
-        {/each}
-        <!-- Two trays: the loans stuck at a check, and the loans that get through. -->
-        <line x1={gateFrom} x2={endX - 6} y1={trayY + 6} y2={trayY + 6} class="tray" />
-        <text class="tkc-axis-label" x={gateFrom} y={H - 4}>{phase === 'done' ? `Stuck: ${REQUESTS - flow.through}` : 'Stuck at a check'}</text>
-        <line x1={endX + 4} x2={width - 2} y1={trayY + 6} y2={trayY + 6} class="tray" />
-        {#if showGuess}
-          {#each Array(guess) as _, slot}
-            <circle cx={pileX(slot)} cy={pileY(slot)} r={dotR} class="ghost" />
-          {/each}
-        {/if}
-        {#if phase === 'done'}
-          <text class="tkc-label through-n" x={width - 2} y={trayY + 22} text-anchor="end">{flow.through} through</text>
-        {:else}
-          <text class="tkc-axis-label" x={width - 2} y={trayY + 22} text-anchor="end">Through</text>
-        {/if}
-        {#if showGuess}
-          <!-- Before the run the guess is labelled on top of its pile; once loans arrive, under the tray. -->
-          {#if phase === 'ask'}
-            <text class="tkc-axis-label tkc-halo" x={width - 2} y={Math.max(laneY + 28, pileY(Math.max(0, guess - 1)) - (guess ? 9 : 0))} text-anchor="end">Your guess: {guess}</text>
-          {:else}
-            <text class="tkc-axis-label" x={width - 2} y={trayY + 38} text-anchor="end">Your guess: {guess}</text>
-          {/if}
-        {/if}
-        {#each Array(REQUESTS) as _, i}
-          {@const p = position(i)}
-          <circle cx={p.x} cy={p.y} r={p.state === 'saved' ? dotR * 1.5 : dotR} class="dot {p.state}" />
-        {/each}
-      </svg>
-      {#if backups}
-        <div class="tkc-legend backup-key">
-          <span><span class="tkc-swatch sw-twin"></span>Blue outline: a backup, a second person or system. A loan is stuck only when both fail.</span>
-          <span><span class="tkc-swatch sw-saved"></span>{showCounts ? 'Blue figures under the checks: loans a backup saved there' : 'A loan flashes blue where a backup saves it'}</span>
-        </div>
-      {/if}
-    </div>
+    {#if !wide}{@render side()}{/if}
 
     {#if phase === 'done' && latest}
       <div class="result" tabindex="-1" bind:this={resultEl}>
@@ -417,32 +463,7 @@
         {:else}
           <p class="lead">Twice the checks, and almost half the loans can be expected to get stuck: {arithmetic}. Every new condition multiplies in another 95%.</p>
         {/if}
-        <div class="runs">
-          <p class="tkc-small tally">
-            {#if groups.length > 1}<span class="group g-name">Your runs</span>{/if}
-            {#each groups as g (g.kind)}
-              {@const shown = g.counts.slice(-SHOWN)}
-              <span class="group">
-                <span class="g-name">{groups.length > 1 ? `${g.gates === 6 ? 'Six' : 'Twelve'} checks${g.backups ? ' with backups' : ''}` : 'Your runs'}:</span>
-                {g.counts.length > SHOWN ? '… · ' : ''}{#each shown as v, k (k)}{k ? ' · ' : ''}<span class="tkc-num" class:now={g.kind === kindOf(latest) && k === shown.length - 1}>{v}</span>{/each}
-              </span>
-            {/each}
-          </p>
-          <div class="strip" bind:clientWidth={stripW}>
-            <svg width={stripW} height={SH} role="img" aria-label={stripLabel}>
-              <rect class="band" x={sx(spread.lo)} y="4" width={Math.max(2, sx(spread.hi) - sx(spread.lo))} height="30" rx="3" />
-              <line class="axis" x1={sx(from)} x2={sx(from + WINDOW)} y1="34" y2="34" />
-              <line class="expect" x1={sx(expected)} x2={sx(expected)} y1="4" y2="38" />
-              {#each stripDots as d, k (k)}
-                <circle cx={d.x} cy={d.y} r={d.last ? 4.5 : 3.5} class="run" class:last={d.last} />
-              {/each}
-              {#if expectLabel.x0 > 28}<text class="tkc-axis-label" x={sx(from)} y={SH - 4}>{from}</text>{/if}
-              {#if expectLabel.x1 < stripW - 34}<text class="tkc-axis-label" x={sx(from + WINDOW)} y={SH - 4} text-anchor="end">{from + WINDOW}</text>{/if}
-              <text class="tkc-axis-label" x={expectLabel.x} y={SH - 4} text-anchor="middle">{expectLabel.text}</text>
-            </svg>
-          </div>
-          <p class="tkc-small range">In 1,000 runs of 100 loans, between {spread.lo} and {spread.hi} get through nine times in ten.</p>
-        </div>
+        {#if !wide}{@render range()}{/if}
         <div class="tkc-row">
           <button type="button" class="tkc-btn tkc-btn--small" onclick={() => send({ gates: latest.gates, backups: latest.backups })}>Run it again</button>
           {#if !(latest.gates === 12 && !latest.backups)}
@@ -459,6 +480,8 @@
         </div>
       </div>
     {/if}
+
+    {#if wide}{@render side()}{/if}
   </div>
   <p class="tkc-sr" aria-live="polite">{announce}</p>
 </div>
@@ -480,7 +503,7 @@
       grid-template-rows: auto auto auto 1fr;
       column-gap: clamp(24px, 4cqi, 48px);
     }
-    .pic {
+    .side {
       align-self: start;
       padding-top: 8px;
     }
@@ -519,8 +542,11 @@
   .running:focus {
     outline: none;
   }
-  .pic {
+  .side {
     grid-area: pic;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
   }
   .result {
     grid-area: result;
@@ -705,6 +731,13 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 4px;
     max-width: 30rem;
+  }
+  /* Under the picture on a wide card: set off by a hairline, as wide as the picture. */
+  .runs.under {
+    max-width: none;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--tkc-hair);
   }
   .strip {
     min-width: 0;

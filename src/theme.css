@@ -230,6 +230,164 @@
   text-decoration-color: var(--tkc-muted);
 }
 
+/* An underlined idea with a note (src/lib/ui/IdeaNotes.svelte): a quiet wash under the word on hover and while its
+   note is open, in the idea's own hue. The wash spreads as a shadow, so the line never reflows. */
+.tkc [data-tkc-idea] {
+  --tkc-idea-wash: var(--tkc-sunken);
+  cursor: help;
+  border-radius: 3px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 120ms ease, box-shadow 120ms ease, text-decoration-color 120ms ease;
+}
+.tkc .tkc-and[data-tkc-idea] {
+  --tkc-idea-wash: var(--tkc-conditions-wash);
+}
+.tkc .tkc-or[data-tkc-idea] {
+  --tkc-idea-wash: var(--tkc-options-wash);
+}
+.tkc [data-tkc-idea][aria-expanded='true'] {
+  background: var(--tkc-idea-wash);
+  box-shadow: 0 0 0 2px var(--tkc-idea-wash);
+}
+.tkc .tkc-idea[data-tkc-idea][aria-expanded='true'] {
+  text-decoration-color: var(--tkc-ink-2);
+}
+@media (hover: hover) {
+  .tkc [data-tkc-idea]:hover {
+    background: var(--tkc-idea-wash);
+    box-shadow: 0 0 0 2px var(--tkc-idea-wash);
+  }
+  .tkc .tkc-idea[data-tkc-idea]:hover {
+    text-decoration-color: var(--tkc-ink-2);
+  }
+}
+
+/* The note itself: placed in the text right after its word, lifted out of the line and set over the text already
+   read, with a small pointer to the word. Every inherited style is set afresh, so a note in a bold phrase, a
+   heading or a host page's paragraph looks the same. */
+.tkc .tkc-gloss {
+  position: absolute;
+  z-index: 12;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  max-width: none;
+  margin: 0;
+  padding: 10px 12px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--tkc-rule);
+  background: var(--tkc-surface);
+  box-shadow: var(--tkc-shadow);
+  color: var(--tkc-ink-2);
+  font-family: var(--tkc-font-body);
+  font-size: 0.875rem;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: normal;
+  text-align: left;
+  text-indent: 0;
+  text-transform: none;
+  text-decoration: none;
+  white-space: normal;
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+  cursor: auto;
+  animation: tkc-gloss-in 140ms ease-out;
+}
+.tkc .tkc-gloss[data-side='below'] {
+  animation-name: tkc-gloss-in-below;
+}
+@keyframes tkc-gloss-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+@keyframes tkc-gloss-in-below {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+.tkc .tkc-gloss::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--tkc-gloss-x, 50%) - 5px);
+  width: 9px;
+  height: 9px;
+  background: var(--tkc-surface);
+  border: 1px solid var(--tkc-rule);
+  transform: rotate(45deg);
+}
+.tkc .tkc-gloss[data-side='above']::after {
+  bottom: -5.5px;
+  border-top: 0;
+  border-left: 0;
+}
+.tkc .tkc-gloss[data-side='below']::after {
+  top: -5.5px;
+  border-bottom: 0;
+  border-right: 0;
+}
+/* The idea's name, underlined as it is in the text. */
+.tkc .tkc-gloss-name {
+  justify-self: start;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--tkc-ink);
+  text-decoration-line: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: none;
+  text-decoration-color: var(--tkc-muted);
+}
+.tkc .tkc-gloss[data-mark='and'] .tkc-gloss-name {
+  text-decoration-color: var(--tkc-conditions);
+}
+.tkc .tkc-gloss[data-mark='or'] .tkc-gloss-name {
+  text-decoration-color: var(--tkc-options);
+}
+.tkc .tkc-gloss[data-mark='if'] .tkc-gloss-name {
+  text-decoration-color: var(--tkc-ink-2);
+}
+.tkc .tkc-gloss[data-mark='idea'] .tkc-gloss-name {
+  text-decoration-style: dotted;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+.tkc .tkc-gloss-keys,
+.tkc .tkc-gloss-first {
+  font-size: 0.8125rem;
+  color: var(--tkc-muted);
+}
+.tkc .tkc-gloss-first {
+  margin-top: 3px;
+  padding-top: 7px;
+  border-top: 1px solid var(--tkc-hair);
+}
+.tkc .tkc-gloss-link {
+  display: inline;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  box-shadow: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--tkc-options-ink);
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.tkc .tkc-gloss-link:hover {
+  text-decoration-thickness: 2px;
+}
+
 /* ---------- Buttons ---------- */
 
 .tkc-btn {

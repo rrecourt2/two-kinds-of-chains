@@ -10,7 +10,7 @@
   import { linear, line } from '../lib/scales.js';
   import { int } from '../lib/format.js';
 
-  // A target puzzle: the reader moves clauses after the money until all twelve documents can be
+  // A target puzzle: the reader moves clauses after the money until all nine documents can be
   // signed in order, with as few moved as possible. The summary across many random deals opens
   // once the puzzle is solved or its answer shown.
   const game = getContext('tkc-game');
@@ -24,7 +24,7 @@
   const st = $derived(chain(moved));
   const isMoved = (k) => moved.includes(k);
   const LOCKED = CLAUSES.filter((c) => c.lock).length;
-  const words = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+  const words = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen'];
   const say = (k) => (k < words.length ? words[k] : String(k));
   const cap = (s) => s[0].toUpperCase() + s.slice(1);
   const list = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`);
@@ -48,17 +48,19 @@
   // Every ring of the deal as signed has one of the two answer clauses on it.
   const answerRings = START.rings.filter((r) => r.some((k) => ANSWER.includes(k)));
   const deal = (m) => DEAL_TABLE.inOrder[m];
-  const pctAt = (m) => `${Math.round(deal(m))}%`;
-  // The ring the card opens on: the loan and the equity, each waiting for the other.
+  const pctAt = (m) => (deal(m) > 0 && deal(m) < 0.5 ? 'under 1%' : `${Math.round(deal(m))}%`);
+  // The ring the card opens on: the loan and the equity, each waiting for the other. The lenders'
+  // equity-first clause also sits on the co-lender's ring; the sponsors' own clause does not.
   const EQ_LOAN = ANSWER[0];
   const LOAN_EQ = CLAUSES.findIndex((c) => c.from === CLAUSES[EQ_LOAN].to && c.to === CLAUSES[EQ_LOAN].from);
+  const TARIFF = ANSWER[1];
 
   // ---- The drawing ----
   const wide = $derived(width >= 520);
   const lay = $derived(wide ? LAYOUTS.wide : LAYOUTS.tall);
-  const fs = $derived(wide ? 12.5 : 11.5);
+  const fs = $derived(wide ? 12.5 : width < 300 ? 11 : 11.5);
   const PAD = 12;
-  const rowH = $derived(wide ? 92 : 72);
+  const rowH = $derived(wide ? 96 : 84);
   const H = $derived(lay.rows * rowH + 2 * PAD);
   const cw = $derived((width - 2 * PAD) / lay.cols);
   // Text widths, estimated per character for a semibold sans at the given size.
@@ -223,10 +225,11 @@
   const onRingCount = $derived(st.onRing.filter(Boolean).length);
   const behindNames = $derived(DOCS.filter((_, d) => st.behind[d]).map((d) => d.the));
   const caption = $derived.by(() => {
-    if (st.signed === N) return `No rings left: all twelve can be signed in order, with ${say(moved.length)} clause${moved.length === 1 ? '' : 's'} after the money.`;
+    if (st.signed === N) return `No rings left: all ${say(N)} can be signed in order, with ${say(moved.length)} clause${moved.length === 1 ? '' : 's'} after the money.`;
+    const n = st.rings.length;
     const onRing = DOCS.filter((_, d) => st.onRing[d]).map((d) => d.the);
-    const lead = onRing.length <= 3 ? `${cap(list(onRing))} are on rings` : `${cap(say(onRing.length))} documents are on rings`;
-    const tail = behindNames.length ? `, and ${list(behindNames)} wait${behindNames.length === 1 ? 's' : ''} behind them` : '';
+    const lead = `${cap(rings(n))} ${n === 1 ? 'holds' : 'hold'} ${onRing.length <= 3 ? list(onRing) : `${say(onRing.length)} documents`}`;
+    const tail = behindNames.length ? `, and ${list(behindNames)} wait${behindNames.length === 1 ? 's' : ''} behind ${n === 1 ? 'it' : 'them'}` : '';
     return `${lead}${tail}. On a ring each document waits for the one before it, so none can go first.`;
   });
 
@@ -272,7 +275,7 @@
     if (st.signed === N && moved.length === FEWEST && ANSWER.every(isMoved))
       return {
         head: 'After the money',
-        note: `The sponsors pay in alongside the loan, and the regulator sets a provisional tariff. Between them, the two clauses sat on all ${say(answerRings.length)} rings.`,
+        note: `The regulator sets a provisional tariff, and the sponsors pay in alongside the loan. Between them, the two clauses sat on all ${say(answerRings.length)} rings.`,
       };
     if (!isMoved(EQ_LOAN) && !isMoved(LOAN_EQ))
       return {
@@ -283,7 +286,7 @@
   });
 
   const label = $derived(
-    `One deal: twelve documents and twenty clauses. ${st.signed} can be signed in order${st.signed ? `: ${st.order.map((d) => DOCS[d].name).join(', ')}` : ''}. ${caption} The clauses are listed below the figure.`,
+    `One deal: ${say(N)} documents and ${say(CLAUSES.length)} clauses. ${st.signed} can be signed in order${st.signed ? `: ${st.order.map((d) => DOCS[d].name).join(', ')}` : ''}. ${caption} The clauses are listed below the figure.`,
   );
 
   // ---- Across many random deals ----
@@ -294,26 +297,34 @@
   const curve = $derived(line(DEAL_TABLE.inOrder.map((v, m) => [cx(m), cy(v)])));
   const OURS = CLAUSES.length;
   const TIP = N;
-  // The label for this deal sits to the right of its point, unless the chart is too narrow.
-  // Its label: two short lines above the point, clear of the curve, joined to it by a dotted line;
-  // right of the point where there is room, else ending at the chart's edge.
-  const oursLabel = $derived(cx(OURS) + 8 + 122 < width ? { x: cx(OURS) + 8, anchor: 'start' } : { x: width - 2, anchor: 'end' });
+  // This deal's label: short lines above its point, clear of the curve (which falls to the right),
+  // joined to it by a dotted line; right of the point where there is room, else ending at the
+  // chart's edge, on three lines where two would run into the tipping point's line.
+  const LABEL_W = 126;
+  const oursLabel = $derived.by(() => {
+    const two = [`${OURS} clauses, as here:`, `${pctAt(OURS)} in order`];
+    if (cx(OURS) + 8 + LABEL_W < width) return { x: cx(OURS) + 8, anchor: 'start', lines: two };
+    const lines = width - 2 - LABEL_W > cx(TIP) + 6 ? two : [`${OURS} clauses,`, 'as here:', `${pctAt(OURS)} in order`];
+    return { x: width - 2, anchor: 'end', lines };
+  });
+  // The last line's baseline sits 22 px above the point.
+  const oursY = $derived(cy(deal(OURS)) - 22);
   // The tipping point's label: one line where it fits, else two.
   const tipLines = $derived(cx(TIP) + 6 + 200 < width ? ['Tipping point: one per document'] : ['Tipping point:', 'one per document']);
 
   // ---- Puzzle ----
   const puzzle = $derived({
-    goal: 'Twenty sensible clauses, and the deal cannot close. Move the fewest clauses after the money so that all twelve can be signed in order.',
+    goal: `${cap(say(CLAUSES.length))} sensible clauses, and the deal cannot close. Move the fewest clauses after the money so that all ${say(N)} documents can be signed in order.`,
     met: st.signed === N && moved.length <= FEWEST,
     progress:
       st.signed === N && moved.length > FEWEST
-        ? `All twelve can be signed in order, with ${say(moved.length)} clauses moved. Can ${say(FEWEST)} do it?`
+        ? `All ${say(N)} can be signed in order, with ${say(moved.length)} clauses moved. Can ${say(FEWEST)} do it?`
         : '',
     hints: [
-      'Any one clause on a ring cuts it, and a clause that sits on several rings cuts them all at once.',
-      'One ring runs through the tariff decree, the PPA and the loan: only one of its clauses can move. Then look at the loan, the equity and the co-lender.',
+      'One clause moved cuts every ring it sits on: a clause on two rings cuts both.',
+      `On the tariff decree’s ring only one clause can move. The other ${say(START.rings.length - 1)} rings share one arrow.`,
     ],
-    found: 'Two clauses, each on several rings: the sponsors pay in alongside the loan, and the regulator sets a provisional tariff.',
+    found: `${cap(say(FEWEST))}: the regulator sets a provisional tariff, and the sponsors pay in alongside the loan, one clause cutting ${say(START.ringsOf[EQ_LOAN])} rings at once.`,
   });
   const showAnswer = () => ((moved = [...ANSWER]), (sel = null));
 </script>
@@ -325,7 +336,7 @@
       only once the equity is in. Each clause makes sense on its own. Together, they wait for each other for ever.
     </p>
     <p>
-      A plant reaches financial close when a dozen documents are signed, from the land lease to the tariff decree, each
+      A plant reaches financial close when all its documents are signed, from the land lease to the tariff decree, each
       drafted by its own team and checked on its own. Each refers to others, and each such clause is a link: this
       document is signed once that one is. Signed <span class="tkc-idea">one after another</span>, the documents form a
       chain of <span class="tkc-and">ANDs</span>.
@@ -335,8 +346,8 @@
 
   {#snippet figure()}
     <Instrument
-      title="One deal, twelve documents"
-      sub="A power plant’s financial close. Tap an arrow to read its clause and move it; padlocked clauses cannot move."
+      title="One deal, nine documents"
+      sub="A power plant’s financial close. Tap an arrow to read its clause and move it after the money, unless padlocked."
       rules={[
         'Each arrow is one clause: the document it points to waits for the other.',
         'A document can be signed once everything it waits for is signed.',
@@ -398,7 +409,7 @@
         <Stat
           label="Can be signed in order"
           value="{st.signed} of {N}"
-          sub={st.signed === N ? 'documents: the whole chain' : `documents; ${say(onRingCount)} on rings${behindNames.length ? `, ${say(behindNames.length)} behind` : ''}`}
+          sub={st.signed === N ? 'documents: the whole chain' : `documents; ${say(onRingCount)} on ${rings(st.rings.length)}${behindNames.length ? `, ${say(behindNames.length)} behind` : ''}`}
           swatch="var(--tkc-ink)"
         />
         <Stat
@@ -410,7 +421,7 @@
       </div>
 
       <details class="tkc-note clauses">
-        <summary>The twenty clauses, as a list</summary>
+        <summary>The {say(CLAUSES.length)} clauses, as a list</summary>
         <ul>
           {#each CLAUSES as c, k (k)}
             <li>
@@ -434,42 +445,43 @@
       {#if revealed}
         <div class="many">
           <span class="tkc-fig-title small">Across {int(DEALS)} random deals</span>
-          <svg {width} height={CH} role="img" aria-label="Share of {int(DEALS)} random deals of twelve documents that can be signed in order: {pctAt(6)} with 6 clauses, {pctAt(12)} with 12, {pctAt(16)} with 16, {pctAt(20)} with 20. The tipping point is at about one clause per document.">
+          <svg {width} height={CH} role="img" aria-label="Share of {int(DEALS)} random deals of {say(N)} documents that can be signed in order: {pctAt(5)} with 5 clauses, {pctAt(TIP)} with {TIP}, {pctAt(OURS)} with {OURS}, as here, {pctAt(MAX_CLAUSES)} with {MAX_CLAUSES}. The tipping point is at about one clause per document.">
             {#each [0, 50, 100] as v}
               <line class={v === 0 ? 'tkc-base' : 'tkc-grid'} x1={cm.left} x2={width - cm.right} y1={cy(v)} y2={cy(v)} />
               <text class="tkc-axis-label" x={cm.left - 6} y={cy(v) + 4} text-anchor="end">{v}%</text>
             {/each}
-            {#each [0, 6, 12, 18, 24, 30] as v}
+            {#each [0, 3, 6, 9, 12, 15, 18] as v}
               <text class="tkc-axis-label" x={cx(v)} y={CH - cm.bottom + 16} text-anchor={v === 0 ? 'start' : v === MAX_CLAUSES ? 'end' : 'middle'}>{v}</text>
             {/each}
             <text class="tkc-axis-title" x="0" y="12">Deals that can be signed in order</text>
-            <text class="tkc-axis-title" x={cm.left + (width - cm.left - cm.right) / 2} y={CH - 4} text-anchor="middle">Clauses between the twelve documents</text>
+            <text class="tkc-axis-title" x={cm.left + (width - cm.left - cm.right) / 2} y={CH - 4} text-anchor="middle">Clauses between the {say(N)} documents</text>
             <line class="tip" x1={cx(TIP)} x2={cx(TIP)} y1={cm.top} y2={cy(0)} />
             {#each tipLines as l, i (i)}
               <text class="tkc-label-2 tkc-halo" x={cx(TIP) + 6} y={cm.top + 10 + i * 14}>{l}</text>
             {/each}
             <path d={curve} class="avg" />
             <circle cx={cx(OURS)} cy={cy(deal(OURS))} r="4.5" class="pt" />
-            <line class="lead" x1={cx(OURS)} x2={cx(OURS)} y1={cy(deal(OURS)) - 6} y2={cy(30) + 4} />
-            <text class="tkc-label tkc-halo" x={oursLabel.x} y={cy(42)} text-anchor={oursLabel.anchor}>{OURS} clauses, as here:</text>
-            <text class="tkc-label tkc-halo" x={oursLabel.x} y={cy(42) + 15} text-anchor={oursLabel.anchor}>{pctAt(OURS)} in order</text>
+            <line class="lead" x1={cx(OURS)} x2={cx(OURS)} y1={cy(deal(OURS)) - 6} y2={oursY + 5} />
+            {#each oursLabel.lines as l, i (i)}
+              <text class="tkc-label tkc-halo" x={oursLabel.x} y={oursY - (oursLabel.lines.length - 1 - i) * 15} text-anchor={oursLabel.anchor}>{l}</text>
+            {/each}
           </svg>
-          <p class="tkc-caption">Twelve documents; each clause makes one wait for another, drawn at random.</p>
+          <p class="tkc-caption">{cap(say(N))} documents; each clause makes one wait for another, drawn at random.</p>
         </div>
       {/if}
 
       {#snippet model()}
         <p>
-          The deal is illustrative: twelve documents and twenty clauses, each simplified to one document waiting for
-          another to be signed first. Documents are numbered in the order they can be signed, the earliest in a fixed list
-          first when several are free. A ring is a cycle of waits. A search of every set of clauses that can move finds
-          that no single clause frees all twelve, and that only one pair does.
+          The deal is illustrative: {say(N)} documents and {say(CLAUSES.length)} clauses, each simplified to one document
+          waiting for another to be signed first. Documents are numbered in the order they can be signed, the earliest in a
+          fixed list first when several are free. A ring is a cycle of waits. A search of every set
+          of clauses that can move finds that no single clause frees all {say(N)}, and that only one pair does.
         </p>
         <p>
-          A random deal puts the 132 possible clauses between twelve documents in a random order; its first {OURS} are a
-          deal of {OURS}, so more clauses only add to the same deal. In random networks one knot comes to hold most of the
-          nodes past about one link per node (Karp; Łuczak, 1990). Kauffman’s figures: twelve settings of two values each,
-          each setting’s contribution depending on others through a random table; 400 designs, 40 teams each.
+          A random deal puts the {N * (N - 1)} possible clauses between {say(N)} documents in a random order; its first
+          {OURS} are a deal of {OURS}, so more clauses only add to the same deal. In random networks one knot comes to hold
+          most of the nodes past about one link per node (Karp; Łuczak, 1990). Kauffman’s figures: twelve settings of two
+          values each, each setting’s contribution depending on others through a random table; 400 designs, 40 teams each.
         </p>
       {/snippet}
     </Instrument>
@@ -478,25 +490,29 @@
   {#snippet after()}
     <p>
       Follow the arrows from the loan to the tariff decree, on to the PPA and back to the loan: a ring. Each document on it
-      waits for the one before it, so none can be signed first, nor anything that waits for the ring.
-      All {say(START.rings.length)} rings here run through the loan.
+      waits for the one before it, so none can be signed first, nor anything behind it, such as the hedge. All
+      {say(START.rings.length)} rings run through the loan, tying {say(START.onRing.filter(Boolean).length)} documents
+      into one knot.
     </p>
     <p>
-      Moving a clause after the money keeps its promise and drops its wait: the sponsors still pay in, alongside each
-      disbursement instead of before the first, and the tariff still reflects the financing cost, once known. A ring
-      holds only while every wait on it holds, so one clause moved gives it a first document. A clause on several rings
-      cuts them all; these two sat on all {say(answerRings.length)}.
+      Moving a clause after the money keeps its promise and drops its wait: the tariff still follows the financing cost,
+      once known, and the sponsors still pay in, alongside each disbursement instead of before the first. A ring is a
+      chain of <span class="tkc-and">ANDs</span> closed on itself: every wait on it must hold, so one clause moved gives
+      it a first document. On the tariff ring only the regulator’s clause could move. The other
+      {say(START.rings.length - 1)} rings shared one: the sponsors’ condition, the loan first, would have cut only the ring
+      of two; the lenders’, the equity first, cut both.
     </p>
     <p>
       Deal teams know another way out, the joint closing: everyone signs in one room at one moment, so nobody goes first.
-      It unties a small ring of private parties, such as the lenders and the sponsors, but not one that runs
-      through a law or a regulator, which does not sign on cue at a closing.
+      Here it could untie the two rings among the lenders and the sponsors, but not the tariff ring: a regulator does not
+      sign on cue at a closing.
     </p>
     <p>
-      Across {int(DEALS)} random deals of twelve documents, {pctAt(6)} can be signed in order with six clauses, {pctAt(12)}
-      with twelve and {pctAt(20)} with twenty. The documents did not change; the links did. Past about one clause per
-      document, a <span class="tkc-idea">tipping point</span>, rings start to share documents and join: at twenty, the
-      largest knot holds {say(Math.round(DEAL_TABLE.largest[20]))} documents on average.
+      Across {int(DEALS)} random deals of {say(N)} documents, {pctAt(5)} can be signed in order with {say(5)} clauses,
+      {pctAt(TIP)} with {say(TIP)} and {pctAt(OURS)} with {say(OURS)}, as here. The documents did not change; the links did.
+      Past about one clause per document, a <span class="tkc-idea">tipping point</span>, rings start to share documents
+      and join: at {say(MAX_CLAUSES)}, the largest knot holds about {say(Math.round(DEAL_TABLE.largest[MAX_CLAUSES]))} of
+      the {say(N)} on average.
     </p>
     <p>
       The biologist Stuart Kauffman found the same cliff in design and called it a complexity catastrophe. When each of

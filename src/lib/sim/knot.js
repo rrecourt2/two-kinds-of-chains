@@ -1,27 +1,29 @@
-// A chain tied in a knot. One power deal: twelve documents and twenty clauses between them.
+// A chain tied in a knot. One power deal: nine documents and twelve clauses between them.
 // A clause makes one document wait for another to be signed first. Documents are signed one at a
 // time, each once everything it waits for is signed; that order is the chain. Clauses that close a
 // ring (the PPA waits for the decree, the decree for the loan, the loan for the PPA) leave no first
 // document, so nothing on the ring can be signed, nor anything that waits for it. A clause moved
 // after the money becomes an undertaking with a deadline: it still binds, but nothing waits for it.
 //
-// Also random deals of twelve documents (how often a deal can be signed in order, against the
+// The deal has three rings, all through the loan: the tariff ring (two of its three clauses are
+// padlocked), the loan and the equity waiting for each other (a ring of two), and the co-lender's
+// ring (loan, co-lender, equity). The last two share one clause, the lenders' equity-first clause,
+// so moving it cuts both: two moves, and only one pair of them, frees the whole deal.
+//
+// Also random deals of nine documents (how often a deal can be signed in order, against the
 // number of clauses), and Kauffman's NK model, for the complexity catastrophe the chapter ends on.
 import { makeRng } from './rng.js';
 
 /**
- * The twelve documents, in the order the chain takes when it has a choice (land first, the loan's
- * own circle last). `the` is the name in a sentence.
+ * The nine documents, in the order the chain takes when it has a choice (land first, the hedge
+ * last). `the` is the name in a sentence.
  */
 export const DOCS = [
   { key: 'land', name: 'Land lease', the: 'the land lease' },
   { key: 'permit', name: 'Permit', the: 'the permit' },
   { key: 'epc', name: 'EPC contract', the: 'the EPC contract' },
-  { key: 'insurance', name: 'Insurance', the: 'the insurance' },
   { key: 'tariff', name: 'Tariff decree', the: 'the tariff decree' },
   { key: 'ppa', name: 'PPA', the: 'the PPA' },
-  { key: 'guarantee', name: 'Guarantee', the: 'the guarantee' },
-  { key: 'security', name: 'Security', the: 'the security' },
   { key: 'loan', name: 'Loan', the: 'the loan' },
   { key: 'colender', name: 'Co-lender', the: 'the co-lender' },
   { key: 'equity', name: 'Equity', the: 'the equity' },
@@ -31,23 +33,24 @@ export const N = DOCS.length;
 const at = Object.fromEntries(DOCS.map((d, i) => [d.key, i]));
 
 /**
- * The twenty clauses. `from` is signed first and `to` waits for it. A clause that can move after
- * the money has `after`, its new wording as an undertaking with a deadline; one that cannot has
- * `lock`, the reason.
+ * The twelve clauses, in the order the list shows them: the plain chain first, then the three
+ * rings, then the hedge. `from` is signed first and `to` waits for it. A clause that can move
+ * after the money has `after`, its new wording as an undertaking with a deadline; one that cannot
+ * has `lock`, the reason.
  */
 const C = (from, to, text, rest) => ({ from: at[from], to: at[to], text, ...rest });
 export const CLAUSES = [
-  C('equity', 'loan', 'The loan disburses only once the sponsors’ equity is paid in.', {
-    after: 'The sponsors pay in alongside the loan, within 30 days of each disbursement, backed by a letter of credit.',
+  C('land', 'permit', 'The environmental permit is issued only for a site the project holds.', {
+    after: 'The permit is issued for the site now, and lapses if the lease is not signed within 60 days of the first disbursement.',
   }),
-  C('loan', 'equity', 'The sponsors pay in their equity only once the loan is signed.', {
-    after: 'The sponsors pay in now, and may take it back if the first disbursement has not come within 90 days.',
+  C('permit', 'epc', 'The EPC contract takes effect only once the permit is issued.', {
+    after: 'The EPC contract takes effect now; works wait for the permit, due within 90 days of the first disbursement.',
   }),
-  C('loan', 'colender', 'The co-lender signs only once the lead loan is signed, on the same terms.', {
-    after: 'The co-lender signs now; its terms are matched to the loan’s within 30 days of the first disbursement.',
+  C('land', 'ppa', 'The PPA names the site, so it waits for the land lease.', {
+    after: 'The PPA is signed now, and lapses if the lease is not signed within 60 days of the first disbursement.',
   }),
-  C('colender', 'equity', 'The sponsors pay in only once all the debt is signed, the co-lender’s included.', {
-    after: 'The sponsors pay in now, and may stop if the co-lender has not signed within 30 days of the first disbursement.',
+  C('epc', 'loan', 'The loan disburses only once the EPC contract is signed, at a fixed price.', {
+    after: 'The EPC contract is signed within 30 days of the first disbursement, at the price agreed now.',
   }),
   C('loan', 'tariff', 'The regulator sets the tariff only once the plant’s financing cost is known.', {
     after: 'The regulator sets a provisional tariff, adjusted to the financing cost within 90 days of the first disbursement.',
@@ -58,44 +61,20 @@ export const CLAUSES = [
   C('ppa', 'loan', 'The loan disburses only once the PPA is signed.', {
     lock: 'the PPA is what repays the loan; no lender pays out without it.',
   }),
-  C('ppa', 'guarantee', 'The government guarantees the utility’s payments only once the PPA is signed.', {
-    lock: 'until the PPA is signed, there is nothing to guarantee.',
+  C('equity', 'loan', 'The loan disburses only once the sponsors’ equity is paid in.', {
+    after: 'The sponsors pay in alongside the loan, within 30 days of each disbursement, backed by a letter of credit.',
   }),
-  C('guarantee', 'loan', 'The loan disburses only once the government guarantee is issued.', {
-    after: 'The guarantee is issued within 90 days of the first disbursement.',
+  C('loan', 'equity', 'The sponsors pay in their equity only once the loan is signed.', {
+    after: 'The sponsors pay in now, and may take it back if the first disbursement has not come within 90 days.',
   }),
-  C('ppa', 'security', 'The PPA is pledged to the lenders, so the security waits for it.', {
-    after: 'The PPA joins the security within 30 days of the first disbursement.',
+  C('loan', 'colender', 'The co-lender signs only once the lead loan is signed, on the same terms.', {
+    lock: 'the co-lender lends on the lead loan’s terms; until those are signed, there is nothing to join.',
   }),
-  C('security', 'loan', 'The loan disburses only once the security is registered.', {
-    lock: 'money paid out before the security is registered is unsecured.',
-  }),
-  C('land', 'permit', 'The environmental permit is issued only for land the project holds.', {
-    lock: 'by law, a permit needs a site.',
-  }),
-  C('permit', 'epc', 'The EPC contract takes effect only once the permit is issued.', {
-    lock: 'by law, no works start without a permit.',
-  }),
-  C('land', 'security', 'The mortgage over the site waits for the land lease.', {
-    lock: 'until the lease is signed, there is nothing to mortgage.',
-  }),
-  C('epc', 'insurance', 'The works are insured only once the EPC contract defines them.', {
-    after: 'A provisional cover now, and the full policy within 30 days of the first disbursement.',
-  }),
-  C('insurance', 'loan', 'The loan disburses only once the works are insured.', {
-    after: 'The works are insured within 30 days of the first disbursement, before they start.',
+  C('colender', 'equity', 'The sponsors pay in only once all the debt is signed, the co-lender’s included.', {
+    after: 'The sponsors pay in now, and may stop if the co-lender has not signed within 30 days of the first disbursement.',
   }),
   C('loan', 'hedge', 'The rate hedge is struck only once the loan is signed, to match it.', {
     after: 'The hedge is struck on the expected loan, and matched to it within 30 days of the first disbursement.',
-  }),
-  C('guarantee', 'colender', 'The co-lender signs only once the government guarantee is issued.', {
-    after: 'The co-lender signs now, and may withdraw if the guarantee is not issued within 90 days of the first disbursement.',
-  }),
-  C('land', 'ppa', 'The PPA names the site, so it waits for the land lease.', {
-    after: 'The PPA is signed now, and lapses if the lease is not signed within 60 days of the first disbursement.',
-  }),
-  C('epc', 'security', 'The EPC contract is pledged to the lenders, so the security waits for it.', {
-    after: 'The EPC contract joins the security within 30 days of the first disbursement.',
   }),
 ];
 export const MOVABLE = CLAUSES.map((c, k) => k).filter((k) => !CLAUSES[k].lock);
@@ -173,7 +152,7 @@ export function chain(moved = []) {
   return { number, order, signed: order.length, onRing, behind, rings: all, ringsOf, moved: [...moved] };
 }
 
-/** Every set of `size` movable clauses that, moved after the money, lets all twelve be signed. */
+/** Every set of `size` movable clauses that, moved after the money, lets all nine be signed. */
 export function solutions(size) {
   const out = [];
   const pick = (start, chosen) => {
@@ -203,52 +182,31 @@ export function ringsThrough(k, moved = []) {
 // Unit positions on a grid of `cols` by `rows` cells; each document sits at the centre of a cell
 // (fractions allowed). `bend` curves an arrow (a fraction of its length, to its left as drawn);
 // two clauses between the same pair of documents bend apart. `lines` splits a long name.
+// The same three by three grid on a desk and a phone: the plain chain across the top, the loan in
+// the middle, the tariff ring below it on the left and the co-lender's ring on the right, with the
+// ring of two between them.
+const GRID = {
+  land: [0, 0],
+  permit: [1, 0],
+  epc: [2, 0],
+  ppa: [0, 1],
+  loan: [1, 1],
+  hedge: [2, 1],
+  tariff: [0, 2],
+  equity: [1, 2],
+  colender: [2, 2],
+};
+// The ring of two bends wide, so its two arrows read as two; the lenders' clause bends towards the
+// co-lender's ring, which it also closes.
+const PAIR = { 'equity-loan': 0.24, 'loan-equity': 0.24 };
 export const LAYOUTS = {
-  wide: {
-    cols: 5,
-    rows: 3,
-    at: {
-      land: [0, 0],
-      permit: [0, 1],
-      epc: [0, 2],
-      ppa: [1, 0],
-      security: [1, 1],
-      insurance: [1, 2],
-      tariff: [2, 1],
-      loan: [2, 2],
-      guarantee: [3, 0],
-      colender: [4, 0],
-      equity: [3.6, 1.15],
-      hedge: [4, 2],
-    },
-    bend: {},
-    lines: {},
-  },
-  tall: {
-    cols: 3,
-    rows: 5,
-    at: {
-      land: [0, 0],
-      permit: [1, 0],
-      epc: [2, 0],
-      ppa: [0, 1],
-      security: [1, 1],
-      insurance: [2, 1],
-      tariff: [1, 2],
-      loan: [2, 2],
-      guarantee: [0, 3],
-      colender: [0, 4],
-      equity: [1.15, 3.6],
-      hedge: [2, 4],
-    },
-    bend: {},
-    lines: { land: ['Land', 'lease'], epc: ['EPC', 'contract'], tariff: ['Tariff', 'decree'] },
-  },
+  wide: { cols: 3, rows: 3, at: GRID, bend: PAIR, lines: {} },
+  tall: { cols: 3, rows: 3, at: GRID, bend: PAIR, lines: { land: ['Land', 'lease'], epc: ['EPC', 'contract'], tariff: ['Tariff', 'decree'] } },
 };
 
 // ---- Random deals ----
 
-/** A random deal: every possible clause between twelve documents in a random order; the first m make a deal of m clauses. */
+/** A random deal: every possible clause between nine documents in a random order; the first m make a deal of m clauses. */
 export function randomDeal(seed, n = N) {
   const rng = makeRng(seed);
   const pairs = [];
@@ -331,22 +289,22 @@ export function fewestCuts(n, clauses) {
   return best[full - 1];
 }
 
-/** Random deals in the summary, and the most clauses on its axis. */
+/** Random deals in the summary, and the most clauses on its axis (two per document). */
 export const DEALS = 1000;
-export const MAX_CLAUSES = 30;
+export const MAX_CLAUSES = 18;
 
 /**
- * The summary, computed once by `randomDeals()` (test/knot.test.js recomputes it): for 0…30
- * clauses, the percentage of deals that can be signed in order, and the average size of the
- * largest knot, in documents.
+ * The summary, computed once by `randomDeals()` (test/knot.test.js recomputes it): for 0…18
+ * clauses between nine documents, the percentage of deals that can be signed in order, and the
+ * average size of the largest knot, in documents.
  */
 export const DEAL_TABLE = {
-  inOrder: [100, 100, 98.9, 97.8, 95.5, 91.1, 84.1, 78.1, 70.8, 64.1, 55.2, 46.1, 37.1, 28.8, 21.2, 16.5, 12.6, 9.4, 6.1, 4.1, 2.3, 1.4, 0.8, 0.7, 0.5, 0.2, 0.2, 0.1, 0.1, 0.1, 0],
-  largest: [1, 1, 1.01, 1.02, 1.05, 1.1, 1.2, 1.29, 1.42, 1.57, 1.77, 2.01, 2.3, 2.66, 3.06, 3.51, 3.98, 4.5, 5.02, 5.55, 6.14, 6.77, 7.25, 7.8, 8.26, 8.72, 9.09, 9.49, 9.82, 10.07, 10.37],
+  inOrder: [100, 100, 98.7, 95.9, 90.1, 82.2, 71.3, 60.1, 51.6, 40.4, 29.1, 19.8, 13.4, 9.1, 5.4, 3.2, 1.7, 0.7, 0.4],
+  largest: [1, 1, 1.01, 1.04, 1.11, 1.22, 1.38, 1.57, 1.79, 2.09, 2.47, 2.9, 3.42, 3.91, 4.5, 5.05, 5.6, 6.14, 6.58],
 };
 
 /**
- * Across `runs` random deals of twelve documents: for each number of clauses 0…max, the share of
+ * Across `runs` random deals of nine documents: for each number of clauses 0…max, the share of
  * deals that can be signed in order, the average share of documents that can be signed, and the
  * average size of the largest knot.
  */

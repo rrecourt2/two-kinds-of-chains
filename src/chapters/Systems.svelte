@@ -6,7 +6,7 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { simulateSystems, histogram, SYSTEMS, HORIZON, DEADLINE, SPOT_END, ENTER, FIX, AWAY, QUEUED, OK, STOP, IDLE } from '../lib/sim/systems.js';
+  import { simulateSystems, histogram, SYSTEMS, HORIZON, DEADLINE, SPOT_EACH, SPOT_END, ENTER, FIX, AWAY, QUEUED, OK, STOP, IDLE } from '../lib/sim/systems.js';
   import { linear, ticks, barUp } from '../lib/scales.js';
   import { pct, shortDays } from '../lib/format.js';
 
@@ -263,8 +263,9 @@
     <h3>Same checks, different shape</h3>
     <p>
       With one shared record, the data is entered once and a problem is fixed in one place. Every approver sees the
-      whole request, so the approvals can run at the same time. Every gate stays, and the request is both faster and
-      safer.
+      whole request, so the approvals can run at the same time, and every problem meets all six approvers, not
+      only those after it: six who each catch half miss it about one time in {Math.round(1 / (1 - SPOT_EACH) ** systems)}.
+      Every gate stays, and the request is both faster and safer.
     </p>
     <p>
       One approval at the end, on a shared record, is the fastest design, but it lets about 4 requests in 100 through,

@@ -412,11 +412,11 @@
       against {T.below1} for one big programme.
     </p>
     <p>
-      The pilots make no approach better. They turn the spread of results into a choice, and a choice is worth more the
-      wider the spread, even when the readings mislead: in the opened future, pilot {O12.pick.n} read best but was worth
-      {SHARE} of pilot {O12.best.n}, and its {O12.rest} still returned {int(O12.result)} against one big programme’s
-      {int(O1.result)}. When results are predictable, the approaches barely differ, and twelve pilots leave a typical
-      {T.pred12}. When results are wild, {words(T.wildN)} pilots do best, at a typical {T.wildT}. Unpredictability is
+      The pilots make no approach better. They turn the spread of results into a choice, and the wider the spread, the
+      further the best of {words(ANSWER)} stands above the typical one. The choice pays even when the readings mislead: in the
+      opened future, pilot {O12.pick.n} read best but was worth {SHARE} of pilot {O12.best.n}, and the {O12.rest} left
+      after the pilots, put behind it, still returned {int(O12.result)} against one big programme’s {int(O1.result)}. When results are predictable, the approaches barely differ, so
+      the choice is worth less than the {ANSWER * PILOT} that {words(ANSWER)} pilots cost: they leave a typical {T.pred12}. When results are wild, {words(T.wildN)} pilots do best, at a typical {T.wildT}. Unpredictability is
       what pilots are paid in.
     </p>
     <p>

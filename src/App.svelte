@@ -8,6 +8,7 @@
   import { CHAPTERS } from './chapters/index.js';
   import { prefersReducedMotion } from './lib/motion.js';
   import { createGame } from './lib/game.svelte.js';
+  import IdeaNotes from './lib/ui/IdeaNotes.svelte';
 
   let { theme = 'auto', syncHash = false, startAt } = $props();
 
@@ -335,6 +336,9 @@
     </nav>
     <p class="nogates tkc-caption">Jump to any chapter from the top of the page.</p>
   </main>
+
+  <!-- A short note on every underlined idea in the text (AND, OR, IF, a quorum …), with the chapter it comes from. -->
+  <IdeaNotes {root} chapters={CHAPTERS} current={current.id} {go} />
 </div>
 
 <style>

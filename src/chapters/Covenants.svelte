@@ -219,7 +219,7 @@
       {one.caught} of them and for {one.alarms} of the {one.healthy} healthy ones: {one.caught} of its {one.breaches}
       breaches mean trouble, but {one.missed} in trouble pass unseen. With all {WORDS[MAX]}, every borrower in trouble
       breaches, and so do {all.alarms} healthy ones, <span class="tkc-idea">false positives</span> as in the gate worth keeping: a breach means real trouble {all.caught} times in {all.breaches},
-      little more than the {pct(all.base)} chance before it. Like the toll road’s {MONTHS} good months, it is evidence
+      little more than the {pct(all.base)} chance any borrower had before it. Like the toll road’s {MONTHS} good months, it is evidence
       that would have come either way.
     </p>
     <p>
@@ -235,8 +235,10 @@
       That is Ockham’s razor: plurality, William of Ockham wrote, should never be posited without necessity.
     </p>
     <p>
-      The same breach means more when trouble is common. With {WORDS[ANSWER]} covenants, it means real trouble one
-      time in five in a calm year, two in five in a normal one and about three in four in a crisis.
+      The same breach means more when trouble is common: the healthy majority sends about a dozen false alarms
+      whatever the year, and only the real breaches grow with the trouble. With {WORDS[ANSWER]} covenants, a breach
+      means real trouble one time in five in a calm year, two in five in a normal one and about three in four in a
+      crisis.
     </p>
     <p>
       Thomas Bayes laid the ground for this arithmetic in an essay published in 1763, two years after his death: a belief before

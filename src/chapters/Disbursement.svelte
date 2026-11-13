@@ -446,7 +446,8 @@
       loan waits {F.start.mid}.
     </p>
     <p>
-      The spread decides. Predictable or not, the parties take the same typical time, but the wider spread makes
+      The spread decides, because the loan waits for whichever condition comes last: what counts is how late each can
+      be, not how long it usually takes. Predictable or not, the parties take the same typical time, but the wider spread makes
       deliveries about {meanStretch}% longer on average and the slowest loans much later: nine in ten are paid by day
       {F.start.p90}, against {F.pred.p90} with predictable parties, who keep the promise as things stand.
     </p>

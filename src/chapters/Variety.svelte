@@ -461,7 +461,7 @@
     </p>
     <h3>Cases nobody listed</h3>
     <p>
-      Delegations can grow with the world, here to {word(VARIED_BEST)} kinds. Or offices can hold what a list cannot:
+      Delegations can grow with the world: here, {word(VARIED_BEST)} kinds would bring the wait under two weeks again. Or offices can hold what a list cannot:
       principles, such as what a loan is for and what the bank can afford to lose. If
       principles settled one unlisted case in three, the wait would stay near {word(Math.round(PRINCIPLED.wait))} days.
       Ashby’s homeostat of 1948 kept no list: pushed out of bounds, it tried new settings until one held.

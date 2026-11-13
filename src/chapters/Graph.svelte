@@ -13,6 +13,7 @@
   import { int, pct } from '../lib/format.js';
 
   const MAX = 60;
+  const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
   // Before the first answer the slider stops at the opening size; the asked case, sixty, opens after it.
   const OPEN = 24;
   let nodes = $state(24);
@@ -139,7 +140,8 @@
     </p>
     <p>
       Graph theory also explains what happens with scale. If everyone must link to everyone else, the number of links
-      grows far faster than the group: 10 people have 45 pairs, 50 have 1,225.
+      grows far faster than the group: 10 people have 45 pairs, 50 have 1,225. And a link that must be kept up costs
+      time at both ends: a regular check-in, an update to read, a thread to follow.
     </p>
   {/snippet}
 
@@ -248,7 +250,8 @@
     </p>
     <p>
       Small teams with clear interfaces keep growing almost in proportion: sixty people produce {structure('teams', MAX).output.toFixed(0)}
-      people’s worth. They have a second advantage, which the watchmakers show: they survive interruptions. A network of conditions can fail in a worse way than slowing down: it can lock.
+      people’s worth, because each keeps up with {WORDS[TEAM_SIZE - 1]} teammates, and only each team’s link person with
+      the {WORDS[structure('teams', MAX).sizes.length - 1]} other teams. They have a second advantage, which the watchmakers show: they survive interruptions. A network of conditions can fail in a worse way than slowing down: it can lock.
     </p>
   {/snippet}
 
