@@ -164,6 +164,12 @@ export const band = (rs) => {
   return rs.filter((r) => r.total <= low * (1 + TOLERANCE)).map((r) => r.memory);
 };
 
+/**
+ * The same table with lending missed just after a bad year counted once, not AFTER_BAD times: the check that the
+ * result does not hang on that one assumption.
+ */
+export const countedOnce = (rs) => rs.map((r) => ({ ...r, total: r.total - r.afterBad * (1 - 1 / AFTER_BAD) }));
+
 /** The country the figure shows in each world (a seed for country()). */
 export const FIGURE = { rarely: 50150, sometimes: 175939, often: 37867 };
 

@@ -432,7 +432,7 @@
       be stopped. A pilot with its own team, targets and reputation is a link that cannot be dropped.
     </p>
     <p>
-      Evolution works this way too: many small variations, most of which fail, and a few that are kept. Keeping what
+      Evolution works this way: many small variations, most of which fail, and a few that are kept. Keeping what
       was learnt is the other half.
     </p>
   {/snippet}

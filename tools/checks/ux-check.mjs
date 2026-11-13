@@ -49,8 +49,8 @@ await page.waitForTimeout(500);
 out.push(['ArrowRight on a figure button stays in the chapter', (await page.evaluate(() => location.hash)) === '#riddle', await page.evaluate(() => location.hash)]);
 
 // 3. Wrong answer feedback and show-answer focus.
-await goto('emergence');
-await page.locator('.puzzle label', { hasText: 'shorter' }).first().click();
+await goto('tools');
+await page.locator('.puzzle label', { hasText: 'Autopilot' }).first().click();
 await page.locator('.puzzle button', { hasText: 'Check' }).click();
 await page.waitForTimeout(200);
 out.push(['wrong answer says so', ((await page.locator('.puzzle .feedback').textContent()) || '').startsWith('Not quite.'), (await page.locator('.puzzle .feedback').textContent())?.slice(0, 60)]);
@@ -59,19 +59,18 @@ await page.locator('.puzzle button', { hasText: 'Show me the answer' }).click();
 await page.waitForTimeout(300);
 out.push(['show answer: 0 points, focus on the answer', (await state()) === 'Answer shown' && (await active()).startsWith('p.found'), `${await state()} / ${await active()}`]);
 
-// 4. Black swans: one fall beyond the record does not count; both falls within it do.
-await goto('black-swans');
-const tr = page.locator('#tkc-bs-traffic');
-await tr.focus();
-for (let i = 0; i < 20; i++) await tr.press('ArrowRight');
-await page.waitForTimeout(1200);
-out.push(['one fall beyond the record leaves it open', (await state()) === 'Worth 2 points', await state()]);
-for (let i = 0; i < 8; i++) await tr.press('ArrowLeft');
-const cu = page.locator('#tkc-bs-currency');
-await cu.focus();
-for (let i = 0; i < 15; i++) await cu.press('ArrowRight');
-await page.waitForTimeout(1200);
-out.push(['both falls within the record solve it', (await state())?.includes('Solved'), await state()]);
+// 4. The gate: checking every large payment is not enough while half the small ones are checked too; a tenth is.
+await goto('gate');
+const large = page.locator('#tkc-g-large');
+await large.focus();
+for (let i = 0; i < 3; i++) await large.press('ArrowRight');
+await page.waitForTimeout(1500);
+out.push(['meeting one target of two leaves the gate open', (await state()) === 'Worth 2 points', await state()]);
+const small = page.locator('#tkc-g-small');
+await small.focus();
+for (let i = 0; i < 2; i++) await small.press('ArrowLeft');
+await page.waitForTimeout(1500);
+out.push(['meeting both solves it', (await state())?.includes('Solved'), await state()]);
 
 // 5. Monday: start again asks first and keeps focus sensible.
 await goto('monday');
@@ -99,14 +98,14 @@ out.push(['figure reset restores the controls', before !== '80' && after === '80
 out.push(['focus stays on the reset button', (await active()).includes('Reset'), await active()]);
 
 // 7. The header score opens a panel with a confirmed reset.
-const scoreBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('two-chains-puzzles-v1') || '{}'));
+const scoreBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('two-chains-puzzles-v2') || '{}'));
 await page.locator('button.score').click();
 await page.waitForTimeout(150);
 out.push(['score panel opens', (await page.locator('.score-panel').count()) === 1, (await page.locator('.score-line').textContent())?.trim()]);
 await page.locator('.score-panel button', { hasText: 'Reset score' }).click();
 await page.locator('.score-panel button', { hasText: 'Clear my score' }).click();
 await page.waitForTimeout(800);
-const scoreAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('two-chains-puzzles-v1') || '{}'));
+const scoreAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('two-chains-puzzles-v2') || '{}'));
 out.push(['score cleared after confirming', Object.keys(scoreBefore).length > 0 && Object.keys(scoreAfter).length === 0, `${Object.keys(scoreBefore).length} → ${Object.keys(scoreAfter).length} entries`]);
 out.push(['header shows zero, panel closed, focus on score', (await page.locator('button.score').textContent())?.includes('★ 0/') && (await page.locator('.score-panel').count()) === 0 && (await active()).includes('★'), (await page.locator('button.score').textContent())?.trim()]);
 

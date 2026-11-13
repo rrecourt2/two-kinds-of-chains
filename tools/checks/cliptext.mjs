@@ -5,7 +5,7 @@ const [base, ids, ...widths] = process.argv.slice(2);
 const browser = await chromium.launch();
 for (const w of widths) {
   const page = await browser.newPage({ viewport: { width: +w, height: 844 } });
-  if (process.env.SOLVED === '1') await page.addInitScript((ids) => { try { localStorage.setItem('two-chains-puzzles-v1', JSON.stringify(Object.fromEntries(ids.map((id) => [id, { status: 'solved', help: 0, points: 2 }])))); } catch {} }, ids.split(','));
+  if (process.env.SOLVED === '1') await page.addInitScript((ids) => { try { localStorage.setItem('two-chains-puzzles-v2', JSON.stringify(Object.fromEntries(ids.map((id) => [id, { status: 'solved', help: 0, points: 2 }])))); } catch {} }, ids.split(','));
   for (const id of ids.split(',')) {
     await page.goto(`${base}#${id}`);
     await page.waitForTimeout(800);

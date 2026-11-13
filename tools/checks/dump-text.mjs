@@ -4,7 +4,7 @@ import fs from 'fs';
 const require = createRequire('/opt/node22/lib/node_modules/');
 const { chromium } = require('playwright');
 const [url, out] = process.argv.slice(2);
-const ids = ['start','riddle','specialization','systems','queues','async','emergence','ergodicity','contagion','black-swans','extinction','gate','graph','knot','modules','disbursement','covenants','tools','automation','variety','tinkering','redqueen','pace','monday'];
+const ids = ['start','riddle','specialization','modules','queues','variety','ergodicity','contagion','gate','tools','tinkering','pace','disbursement','monday'];
 const b = await chromium.launch();
 const p = await b.newPage({ viewport: { width: 1280, height: 900 } });
 const errs = []; p.on('pageerror', (e) => errs.push(e.message));

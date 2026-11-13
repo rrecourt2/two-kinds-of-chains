@@ -8,7 +8,7 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { MEMORIES, WORLDS, YEARS, COUNTRIES, LIMIT, HISTORIES, VALUE, PARAMS, rows, best, band, figure } from '../lib/sim/pace.js';
+  import { MEMORIES, WORLDS, YEARS, COUNTRIES, LIMIT, HISTORIES, VALUE, PARAMS, rows, best, band, figure, countedOnce } from '../lib/sim/pace.js';
   import { linear, log10, barUp } from '../lib/scales.js';
   import { int } from '../lib/format.js';
 
@@ -44,6 +44,7 @@
   const AT = SOME[ANSWER - 1];
   const LONG = SOME.at(-1);
   const RARE = best(rows('rarely')).memory;
+  const ONCE = best(countedOnce(SOME)).memory; // the best memory if lending after a bad year counted once
   const OFTEN = best(rows('often')).memory;
   const usd = (v) => `$${v.toFixed(1)}m`;
   const years = (n) => `${n} year${n === 1 ? '' : 's'}`;
@@ -82,7 +83,7 @@
   };
 
   // ---- The country: risk and losses above (log scale), the limit below ----
-  const m = { left: 36, right: 8 };
+  const m = { left: 40, right: 8 };
   const A = { top: 40, h: 128 };
   const B = { top: A.top + A.h + 38, h: 66 };
   const H = B.top + B.h + 36;
@@ -184,8 +185,7 @@
       pull out.
     </p>
     <p>
-      But not every bad year is a change. Some are noise, <span class="tkc-idea">false positives</span> about the
-      country: a drought, a slump in a commodity price, one large default.
+      But not every bad year is a change. Some are noise, <span class="tkc-idea">false positives</span>: a drought, a slump in a commodity price, one large default.
       Others mark a crisis that lasts, or a reform that holds. The question is how long a memory it takes to tell them
       apart.
     </p>
@@ -296,7 +296,8 @@
           8% or more, a third less for each doubling between. Lending more than the true risk calls for loses its loss
           rate on the extra; lending less gives up {VALUE}% a year of it, twice that just after a bad year. Costs add up
           {COUNTRIES} countries over {YEARS} years, after 20 years of history, averaged over {int(HISTORIES)} histories; the
-          chart shows one country.
+          chart shows one country. Counted once, not twice, lending after a bad year moves the best memory from
+          {word(ANSWER)} years to {word(ONCE)}.
         </p>
       {/snippet}
     </Instrument>

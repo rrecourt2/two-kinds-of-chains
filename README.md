@@ -1,56 +1,46 @@
 # Two Kinds of Chains
 
 An interactive learning story about good complexity (specialization), bad complexity (dependence) and how scale
-amplifies both, and about how a long, rigid chain of conditions tips into failure. Twenty-two short chapters in five
+amplifies both, and about how a long, rigid chain of conditions tips into failure. Twelve short chapters in five
 parts, each built around a puzzle with a live model the reader can change, and a closing playbook. Built with Svelte 5 and Vite. Everything
 ships as one file, with no external requests, so it can run inside a locked-down bank intranet.
 
 | # | Chapter | Puzzle and live model |
 |---|---------|------------------------|
-| 0 | Two Kinds of Chains | Guess how many of 100 loans clear six checks the first time, then watch them flow; every run draws its own luck, and runs can be repeated and tallied |
+| 0 | Two Kinds of Chains | Guess how many of 100 loans clear six checks the first time, then watch them flow; every run draws its own luck. A warm-up, with no points |
 | | **Part 1 · Two kinds of chains** | |
-| 1 | A riddle about chains | Better attendance or a stand-in per role? A month calendar (AND vs OR) |
+| 1 | A riddle about chains | Better attendance or a stand-in per role? A month calendar (AND vs OR), then a quorum |
 | 2 | Why longer chains get cheaper | The smallest market in which twelve specialists pay off |
+| 3 | Two watchmakers | Herbert Simon's parable as a live race: one long chain against pieces that hold |
 | | **Part 2 · How a chain grows rigid** | |
-| 3 | When systems lean on each other | Faster and safer without dropping a system: copies vs one shared record |
-| 4 | Why full calendars make long queues | Named lines vs one shared line for four busy reviewers |
-| 5 | Don't wait for each other | Which two speed-ups help most when a client request runs in parallel |
-| 6 | The fast track | One committee with five places a week and an urgent lane: once every deal is marked urgent, the average wait grows from 3.9 to about 19 days |
+| 4 | Why full calendars make long queues | Named lines vs one shared line for four busy reviewers; the tipping point |
+| 5 | Only variety absorbs variety | The fewest kinds of request a country office may decide on its own that keep head office's committee from jamming |
 | | **Part 3 · When the world pulls on the chain** | |
-| 7 | When the average lies | Ole Peters' coin game: the paper value against the typical player; staking less and pooling |
-| 8 | When links become conditions | The stress test: 48 banks around a few hubs; a capital slider and its cliff, extra capital for the biggest hubs so no landing brings down more than five at an average capital of 6%; then many similar banks |
-| 9 | How to find a black swan | A dollar loan repaid from local-currency tolls, 96 good months: find the year that breaks the claim (both falls at once); Russell's chicken, Popper's swans |
-| 10 | Why species go extinct | Where the generalist overtakes the specialist as the years get more volatile; why islands |
-| | **Part 4 · Chains that bend** | |
-| 11 | The gate worth keeping | An automatic fraud screen and a call-back above an amount, over one year’s 600 account changes and a thousand simulated years: most flags are false positives; call back every payment above $1m and screen the rest lightly, so that no year loses more than $5m and payments stay on time |
-| 12 | The shape of the network | What sixty fully linked people produce; mesh, hub and small teams |
-| 13 | A chain tied in a knot | One power deal, twelve documents, twenty clauses tied in rings: move the fewest clauses after the money so all can be signed in order (two: equity alongside the loan, a provisional tariff); joint closings; random deals tip past one clause per document; Kauffman's complexity catastrophe |
-| 14 | Two watchmakers | Herbert Simon's parable as a live race: one long chain against modules |
-| 15 | Time to disbursement | Twelve conditions precedent, 2,000 loans: keeping a three-month promise for nine clients in ten |
-| 16 | A warning light, not a tripwire | 200 borrowers, 10 in real trouble: two to four strong covenants, not twelve; Bayes in natural frequencies; Occam's razor |
-| | **Part 5 · Chains that learn** | |
-| 17 | A person in the loop | One AI, twenty requests, with a person in the loop or on autopilot; a steady or an erratic AI |
-| 18 | The irony of the reliable machine | A system reads 99% of borrowers' accounts; on the day it fails, analysts out of practice misread the figures; a day by hand each month |
-| 19 | Only variety absorbs variety | Ashby's law of requisite variety: the fewest kinds of request an office may decide on its own (its delegations) that keep exceptions waiting under two weeks; then a more varied world |
-| 20 | Many short chains | Convex tinkering: one big programme or pilots first, in a world nobody can predict |
-| 21 | Running to stand still | Fraud learns round the checks: what monthly-reviewed checks catch in year three (about one in four); one check at random; never dropping a check |
-| 22 | How fast to forget | A country cushion sized to the worst year remembered: the memory that keeps losses and idle lending in bounds |
-| 23 | What it means on Monday | Options and conditions in short and long chains, a pattern for every chapter, and the reader's score |
+| 6 | When the average lies | Ole Peters' coin game: the paper value against the typical player; staking less and pooling |
+| 7 | When links become conditions | The stress test: 48 banks around a few hubs; a capital slider and its cliff, extra capital for the biggest hubs; then many similar banks |
+| 8 | The gate worth keeping | Call-backs on disbursements to new accounts: the share checked above and below $1m, so that no year in a thousand loses more than $5m and payments stay on time; false positives |
+| | **Part 4 · Chains that learn** | |
+| 9 | A person in the loop | One AI, twenty requests, with a person in the loop or on autopilot; a steady or an erratic AI |
+| 10 | Many short chains | One big programme or pilots first, in a world nobody can predict |
+| 11 | How fast to forget | Twenty countries, forty years: how many years of losses should set a country limit, when some bad years are noise and some are change |
+| | **Part 5 · One loan, the whole chain** | |
+| 12 | Time to disbursement | Twelve conditions precedent, 2,000 loans: keeping a three-month promise for nine clients in ten |
+| 13 | What it means on Monday | Options and conditions in short and long chains, a pattern for every puzzle, and the reader's score |
 
 ### Puzzles and score
 
-Every chapter except the closing playbook opens with one puzzle. Solving it unaided earns two points, solving it after a hint or a wrong try
+Each of the twelve chapters opens with one puzzle; the opening page's quick guess is a warm-up with no points. Solving it unaided earns two points, solving it after a hint or a wrong try
 earns one, and "Show me the answer" sets the figure and earns none. The explanation below each figure opens once
 its puzzle is solved or shown.
 
-- Choice puzzles are predictions, like the opening guess: the figure's controls open after the first answer or a
+- Choice puzzles are predictions: the figure's controls open after the first answer or a
   hint, so the reader commits before testing.
 - Target puzzles count once the figure has rested on the goal for a moment, so sweeping a slider past the answer
   does not solve them. Goals with several conditions show a live checklist.
 - Every figure has a "Reset" that puts its controls back as they started. The score in the header opens a small
   panel with "Reset score", which asks before clearing anything.
 
-Scores are kept in the reader's own browser (`localStorage`, key `two-chains-puzzles-v1`); nothing is sent anywhere.
+Scores are kept in the reader's own browser (`localStorage`, key `two-chains-puzzles-v2`); nothing is sent anywhere.
 On the standalone page, chapters change with a short slide (the View Transitions API, where the browser supports it,
 and never when the reader prefers reduced motion); inside SharePoint the host page is left alone.
 

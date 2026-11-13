@@ -362,7 +362,7 @@
     {#if T}
       <p>
         Fraud is rare, so most checks fall on genuine clients, each a <span class="tkc-idea">false positive</span>: an
-        alarm with nothing behind it. Yet the screen’s ranking is worth a great deal. A clumsy fraud shows its signs and
+        alarm with nothing behind it. Yet the screen’s ranking is worth a lot. A clumsy fraud shows its signs and
         rises to the top of the order, so below $1m the most suspicious tenth holds {T.smallCaught}, at the cost of
         {T.smallGenuine} genuine clients a year.
       </p>
@@ -383,9 +383,9 @@
       </p>
       <p>
         Checking more of the small ones buys little. A quarter instead of a tenth stops one more small fraud every
-        {T.everyYears} years, but {T.waitMore} more clients a year wait; the reviewers are busy {T.quarterBusy} of their days
-        and, past a <span class="tkc-idea">tipping point</span> like the queues chapter’s, {T.quarterLate} of payments are
-        late. Inside the gate sits an <span class="tkc-or">OR</span>: any one of three qualified reviewers may call, a
+        {T.everyYears} years, but {T.waitMore} more clients a year wait; the reviewers are busy {T.quarterBusy} of their days,
+        and the waiting grows faster than the work, as on the queues chapter’s curve: {T.quarterLate} of payments are
+        late. Inside the gate sits an <span class="tkc-or">OR</span>: any one of three reviewers may call, a
         <span class="tkc-idea">quorum</span> of one; with a named reviewer for each payment, {T.named} would be late.
       </p>
     {:else}

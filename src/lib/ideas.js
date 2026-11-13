@@ -43,26 +43,26 @@ export const IDEAS = {
   loop: {
     name: 'Loop',
     mark: 'idea',
-    first: 'emergence',
-    text: 'Cause and effect in a circle. One that feeds itself runs on: a fast-track mark saves under a day while one deal in ten has one, 78 days once nine in ten do. One that steadies itself holds a level, like a thermostat.',
+    first: 'contagion',
+    text: 'Cause and effect in a circle. One that feeds itself runs on: when a hub bank fails, each round of failures sets up the next, until all 48 banks are down. One that steadies itself holds a level, like a thermostat.',
   },
   sequence: {
     name: 'One after another',
     mark: 'idea',
-    first: 'async',
-    text: 'Each link waits for the one before, so the times add up, waits included: the five pieces of one client request take sixteen days this way, five of them spent waiting for handoffs. Side by side, seven.',
+    first: 'queues',
+    text: 'Each link waits for the one before, so the waits add up: six named reviewers, each 95% busy, cost a request about nineteen hours of waiting apiece, nearly three working weeks in all.',
   },
   parallel: {
     name: 'Side by side',
     mark: 'idea',
-    first: 'async',
-    text: 'Links that run at the same time: the last to finish sets the date, so speeding up any other changes nothing. The five pieces of one client request take seven days side by side, sixteen one after another.',
+    first: 'queues',
+    text: 'Links that run at the same time: the last to finish sets the date, so speeding up any other changes nothing. Six busy reviewers side by side on one file keep it about 48 hours; one after another, 114.',
   },
   falsePositive: {
     name: 'False positive',
     mark: 'idea',
     first: 'gate',
-    text: 'An alarm with nothing behind it. When the real thing is rare, most alarms are false: with twelve covenants on each of 200 loans, 113 of a normal year’s 123 breaches fall on healthy borrowers.',
+    text: 'An alarm with nothing behind it. When the real thing is rare, most alarms are false: one request in 200 to pay into a new account is a fraud, so nearly every call-back reaches a genuine client.',
   },
 };
 

@@ -1,125 +1,121 @@
-// How fast to forget (chapter “pace”): every number the chapter quotes, from the model.
-import { test } from 'node:test';
+// How fast to forget (Pace.svelte): a lender that sets each country's limit from the losses it remembers.
+import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MEMORIES, YEARS, COSTS, SEED, HISTORIES, LIMITS, PARAMS, world, run, table, costs, best, checks, figureRuns, chapterStep, chapterReady } from '../src/lib/sim/pace.js';
 
-const near = (a, b, tol = 0.05) => assert.ok(Math.abs(a - b) <= tol, `${a} is not within ${tol} of ${b}`);
-const rows = table();
-const at = (m, carry = COSTS.some) => costs(rows[MEMORIES.indexOf(m)], carry);
-const pct = (v) => Math.round(v);
+import { RISKS, WORLDS, MEMORIES, YEARS, BURN, COUNTRIES, PARAMS, AFTER_BAD, TOLERANCE, limit, country, lend, table, rows, best, band, countedOnce, FIGURE, figure, TABLE_DATA } from '../src/lib/sim/pace.js';
 
-test('the slider runs from one year to fifty, thirteen stops', () => {
-  assert.deepEqual(MEMORIES, [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 30, 50]);
-  assert.equal(YEARS, 60);
-  assert.equal(HISTORIES, 3000);
+const near = (a, b, tol) => assert.ok(Math.abs(a - b) <= tol, `${a} not within ${tol} of ${b}`);
+
+test('pace: the limit is full at 1% remembered, nothing at 8%, a third less for each doubling', () => {
+  assert.equal(limit(0.5), 1);
+  assert.equal(limit(1), 1);
+  near(limit(2), 2 / 3, 1e-12);
+  near(limit(4), 1 / 3, 1e-12);
+  assert.equal(limit(8), 0);
+  assert.equal(limit(20), 0);
 });
 
-test('the world: one year in twenty a crisis, four times a normal year; a normal year starts at 2% of the book', () => {
+test('pace: a country stays on the ladder, moves one rung at a time, and its bad years are part of its risk', () => {
   let years = 0;
-  let crises = 0;
-  let base = 0;
+  let bad = 0;
+  let changes = 0;
   let ratio = 0;
-  for (let s = 1; s <= 2000; s++) {
-    const w = world(s);
-    for (let t = 40; t < 100; t++) {
-      years += 1;
-      base += w.base[t];
-      if (w.crisis[t]) {
-        crises += 1;
-        ratio += w.loss[t] / w.base[t];
-      }
+  for (let seed = 1; seed <= 400; seed++) {
+    const c = country(seed, WORLDS.sometimes);
+    assert.equal(c.risk.length, BURN + YEARS);
+    for (let t = 0; t < c.risk.length; t++) {
+      assert.ok(RISKS.includes(c.risk[t]));
+      if (t > 0 && c.change[t]) {
+        // A crisis doubles the risk and a reform halves it.
+        near(c.risk[t] / c.risk[t - 1], c.change[t] > 0 ? 2 : 0.5, 1e-12);
+        changes++;
+      } else if (t > 0) assert.equal(c.risk[t], c.risk[t - 1]);
+      years++;
+      bad += c.bad[t];
+      ratio += c.loss[t] / c.risk[t];
     }
   }
-  near(crises / years, 1 / 20, 0.003);
-  near(ratio / crises, PARAMS.mult, 0.05);
-  // A normal year starts at 2% of the book and drifts; over the 60 years it averages about 2.3%.
-  near(base / years, 2.3, 0.1);
+  near(bad / years, 1 / PARAMS.badEvery, 0.01);
+  near(changes / years, 1 / WORLDS.sometimes, 0.01);
+  // Over many years a country loses its risk: normal years a little less, bad years four times as much.
+  near(ratio / years, 1, 0.03);
 });
 
-test('memory: one year means a cushion of last year’s losses; the cushion never drops below the year just seen', () => {
-  const w = world(SEED);
-  const one = run(w, 1);
-  for (let i = 1; i < one.path.length; i++) near(one.path[i].cushion, one.path[i - 1].loss, 1e-9);
-  const six = run(w, 6);
-  for (let i = 1; i < six.path.length; i++) assert.ok(six.path[i].cushion >= six.path[i - 1].loss - 1e-9);
+test('pace: the lender is scored over forty years, and its costs add up', () => {
+  const c = country(7, WORLDS.sometimes);
+  for (const memory of [1, 6, 20]) {
+    const r = lend(c, memory, { path: true });
+    assert.equal(r.path.length, YEARS);
+    assert.ok(r.losses >= 0 && r.missed >= 0 && r.afterBad >= 0 && r.afterBad <= r.missed + 1e-12);
+    near(r.total, r.losses + r.missed, 1e-12);
+    for (const y of r.path) assert.ok(y.held >= 0 && y.held <= 1 && y.right >= 0 && y.right <= 1);
+  }
+  // With a memory of one year the limit held follows last year's losses alone.
+  const one = lend(c, 1, { path: true }).path;
+  for (let i = 1; i < one.length; i++) near(one[i].belief, one[i - 1].loss, 1e-9);
 });
 
-test('the figure’s history: crises in years 10 and 39, and the chart’s scale holds every year', () => {
-  const runs = figureRuns();
-  const path = runs[0].path;
-  assert.equal(path.length, 60);
-  assert.deepEqual(
-    path.filter((p) => p.crisis).map((p) => p.year),
-    [10, 39],
-  );
-  for (const r of runs) for (const p of r.path) assert.ok(p.loss < 10 && p.cushion < 10 && p.loss > 1);
-  // Never forgetting holds more back and lets less through, in this history too.
-  assert.ok(runs.at(-1).held > runs[0].held && runs.at(-1).through < runs[0].through);
-});
-
-test('averages over 3,000 histories: the found text and the tiles', () => {
-  const one = at(1);
-  const six = at(6);
-  const fifty = at(50);
-  // “at six, 19% gets through and 25% is held back, against 37% and 16% at one year”
-  assert.equal(pct(six.through), 19);
-  assert.equal(pct(six.held), 25);
-  assert.equal(pct(one.through), 37);
-  assert.equal(pct(one.held), 16);
-  // Forgetting fast: short in 30 years of 60. Never forgetting: 7% through, 46% held back, short in 2 years.
-  assert.equal(pct(one.broken), 30);
-  assert.equal(pct(fifty.through), 7);
-  assert.equal(pct(fifty.held), 46);
-  assert.equal(pct(fifty.broken), 2);
-  assert.equal(pct(six.broken), 10);
-  // The average cushion at six years, a year: 4.1% of the book; at one 2.6%, at fifty 7.7%.
-  assert.equal((rows[MEMORIES.indexOf(6)].cushion / YEARS).toFixed(1), '4.1');
-  assert.equal((rows[0].cushion / YEARS).toFixed(1), '2.6');
-  assert.equal((rows.at(-1).cushion / YEARS).toFixed(1), '7.7');
-});
-
-test('the puzzle: four to ten years meet both checks; one year and fifty do not', () => {
-  assert.deepEqual(LIMITS, { through: 22, held: 30 });
-  const solving = MEMORIES.filter((m) => {
-    const c = checks(at(m));
-    return c.through && c.held;
-  });
-  assert.deepEqual(solving, [4, 5, 6, 8, 10]);
-  assert.deepEqual(checks(at(1)), { through: false, held: true });
-  assert.deepEqual(checks(at(50)), { through: true, held: false });
-  // The nearest misses, as the tiles show them: 24% at three years, 31% held back at twelve.
-  assert.equal(pct(at(3).through), 24);
-  assert.equal(pct(at(4).through), 22);
-  assert.equal(pct(at(10).held), 29);
-  assert.equal(pct(at(12).held), 31);
-});
-
-test('the best pace: about six years; twenty when an idle cushion costs little, three when it costs a lot', () => {
-  assert.equal(best(rows, COSTS.some).memory, 6);
-  assert.equal(best(rows, COSTS.little).memory, 20);
-  assert.equal(best(rows, COSTS.lot).memory, 3);
-  // Forgetting fast and never forgetting cost about the same in all: 53% of the book, against 44% at six.
-  assert.equal(pct(at(1).total), 53);
-  assert.equal(pct(at(50).total), 53);
-  assert.equal(pct(at(6).total), 44);
-});
-
-test('how fast the world drifts hardly moves the best pace: five or six years from no drift to five times as much', () => {
-  for (const drift of [0, 0.06, 0.15, 0.3]) {
-    const m = best(table({ histories: 1200, drift })).memory;
-    assert.ok(m === 5 || m === 6, `drift ${drift}: best ${m}`);
+test('pace: the printed tables are what the model works out, for each world', () => {
+  for (const world of Object.keys(WORLDS)) {
+    const fresh = table(world);
+    assert.equal(fresh.length, MEMORIES.length);
+    fresh.forEach((r, i) => {
+      const [losses, missed, afterBad] = TABLE_DATA[world][i];
+      near(r.losses, losses, 0.0006);
+      near(r.missed, missed, 0.0006);
+      near(r.afterBad, afterBad, 0.0006);
+    });
   }
 });
 
-test('the chapter works the table out in steps, to the same numbers', () => {
-  let steps = 0;
-  while (!chapterStep()) steps += 1;
-  assert.ok(steps >= 5, String(steps));
-  const t = chapterReady();
-  assert.equal(t.length, MEMORIES.length);
-  t.forEach((row, i) => {
-    near(row.through, rows[i].through, 1e-9);
-    near(row.cushion, rows[i].cushion, 1e-9);
-    near(row.broken, rows[i].broken, 1e-9);
-  });
+test('pace: the best memory sits in the middle and follows how often countries change', () => {
+  const some = rows('sometimes');
+  assert.equal(best(some).memory, 6);
+  assert.deepEqual(band(some), [5, 6, 7]); // the memories the puzzle accepts
+  assert.ok(TOLERANCE <= 0.02);
+  assert.equal(best(rows('rarely')).memory, 13);
+  assert.equal(best(rows('often')).memory, 3);
+  // The numbers the text prints: $14.6m a year at six years, against $19.2m at one and $18.3m at twenty.
+  near(some[5].total, 14.64, 0.01);
+  near(some[0].total, 19.16, 0.01);
+  near(some[19].total, 18.33, 0.01);
+});
+
+test('pace: forgetting fast and remembering long fail in opposite ways', () => {
+  const some = rows('sometimes');
+  const [one, six, twenty] = [some[0], some[5], some[19]];
+  // One year: too much lent into countries believed safe, and limits cut just after a bad year.
+  assert.ok(one.losses > six.losses && one.afterBad > 2 * six.afterBad);
+  near(one.losses, 11.8, 0.05);
+  near(one.afterBad, 5.6, 0.05);
+  // Twenty years: slow to follow a real change, in both directions.
+  assert.ok(twenty.losses > six.losses && twenty.missed > six.missed);
+  near(twenty.losses, 8.8, 0.05);
+});
+
+test('pace: the result does not hang on counting lending after a bad year double', () => {
+  assert.equal(AFTER_BAD, 2);
+  const once = (world) => best(countedOnce(rows(world))).memory;
+  // Counted once, the best memory is still in the middle, a little shorter: five years, not six.
+  assert.equal(once('sometimes'), 5);
+  assert.equal(once('rarely'), 13);
+  assert.equal(once('often'), 2);
+  for (const world of Object.keys(WORLDS)) {
+    const rs = countedOnce(rows(world));
+    const low = best(rs);
+    assert.ok(low.total < rs[0].total && low.total < rs.at(-1).total);
+  }
+});
+
+test('pace: the country on the card shows a change and a bad year that passes', () => {
+  for (const world of Object.keys(WORLDS)) {
+    const paths = figure(world);
+    assert.equal(paths.length, MEMORIES.length);
+    assert.ok(paths.every((p) => p.path.length === YEARS));
+    assert.ok(Number.isInteger(FIGURE[world]));
+  }
+  const shown = figure('sometimes')[5].path;
+  assert.ok(shown.some((y) => y.change !== 0), 'a crisis or a reform');
+  assert.ok(shown.some((y) => y.bad), 'a bad year');
+  assert.equal(COUNTRIES, 20);
 });

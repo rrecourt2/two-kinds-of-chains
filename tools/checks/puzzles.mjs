@@ -22,33 +22,23 @@ const state = async () => (await page.locator('.puzzle .state').first().textCont
 const steps = {
   riddle: () => choose(['qualified stand-in']),
   specialization: () => keys('#tkc-p-market', 'ArrowRight', 9),
-  systems: () => radio('One shared record'),
+  modules: () => choose(['Thousands']),
   queues: () => radio('One shared line'),
-  async: async () => { await chip('Credit analysis'); await chip('E&S review'); },
-  emergence: () => choose(['Longer']),
+  variety: () => keys('#tkc-v-menu', 'ArrowRight', 10),
   ergodicity: async () => { await keys('#tkc-e-stake', 'ArrowLeft', 4); await radio('4 others'); },
   contagion: () => radio('12 biggest +4'),
-  'black-swans': async () => { await keys('#tkc-bs-traffic', 'ArrowRight', 12); await keys('#tkc-bs-currency', 'ArrowRight', 15); },
-  extinction: () => keys('#tkc-x-swing', 'ArrowRight', 5),
   gate: async () => { await keys('#tkc-g-small', 'ArrowLeft', 2); await keys('#tkc-g-large', 'ArrowRight', 3); },
-  graph: () => choose(['Nothing at all']),
-  knot: async () => { await page.locator('details.clauses summary').click(); for (const t of ['The tariff decree waits for the loan', 'The loan waits for the equity']) await page.locator('details.clauses button', { hasText: t }).click(); await page.waitForTimeout(200); },
-  modules: () => choose(['Thousands']),
-  disbursement: async () => { await keys('#tkc-d-before', 'ArrowLeft', 4); await page.locator('label:has(#tkc-d-late-1)').click(); await page.waitForTimeout(200); },
-  covenants: () => keys('#tkc-cv-n', 'ArrowLeft', 9),
   tools: () => choose(['The person in the loop']),
-  automation: () => radio('A day a month'),
-  variety: () => keys('#tkc-v-menu', 'ArrowRight', 10),
   tinkering: () => keys('#tkc-tk-pilots', 'ArrowRight', 11),
-  redqueen: () => choose(['About one in four']),
   pace: () => keys('#tkc-p-memory', 'ArrowRight', 5),
+  disbursement: async () => { await keys('#tkc-d-before', 'ArrowLeft', 4); await page.locator('label:has(#tkc-d-late-1)').click(); await page.waitForTimeout(200); },
 };
 
 // The opening hook: guess 74, send the loans, wait for the result.
 await keys('#tkc-guess', 'ArrowRight', 24);
 await page.locator('button', { hasText: 'Send 100 loans' }).click();
 await page.waitForSelector('text=Start the story', { timeout: 20000 });
-console.log('start'.padEnd(15), await page.locator('.hook').getByText(/Puzzle:/).first().textContent().catch(() => '(no points line)'));
+console.log('start'.padEnd(15), 'warm-up, no points:', (await page.locator('.hook').getByText(/Puzzle:/).count()) === 0 ? 'ok' : 'STILL SHOWS POINTS');
 
 for (const [id, solve] of Object.entries(steps)) {
   const before = errors.length;
