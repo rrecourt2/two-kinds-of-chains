@@ -2,15 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { simulateMonth, coverageOdds } from '../src/lib/sim/presence.js';
-import { simulateSystems } from '../src/lib/sim/systems.js';
 import { DESIGNS, averagePayoff, chainSuccess, sampleRequests, STEADY, ERRATIC } from '../src/lib/sim/convexity.js';
 import { watchmakers } from '../src/lib/sim/watchmakers.js';
 import { erlangC, meanWait, LiveQueue } from '../src/lib/sim/queue.js';
 import { typicalFactor, expectedFactor, simulateCoin } from '../src/lib/sim/coin.js';
 import { cascade, sweep, buildNetwork, mostConnected } from '../src/lib/sim/network.js';
-import { longRunGrowth, simulateIslands } from '../src/lib/sim/species.js';
 import { bestDesign, workshop } from '../src/lib/sim/pins.js';
-import { structure } from '../src/lib/sim/scale.js';
 import { makeRng } from '../src/lib/sim/rng.js';
 
 const near = (a, b, tol) => assert.ok(Math.abs(a - b) <= tol, `${a} not within ${tol} of ${b}`);
@@ -81,60 +78,12 @@ test('contagion window: sparse and dense networks absorb single failures', () =>
   console.log('hub degree', hubs[hub].length, 'hub failure topples', cascade(hubs, 4, [hub]).count);
 });
 
-test('species: specialists win calm worlds, generalists win volatile ones', () => {
-  assert.ok(longRunGrowth('specialist', 0.1) > longRunGrowth('generalist', 0.1));
-  assert.ok(longRunGrowth('specialist', 0.5) < longRunGrowth('generalist', 0.5));
-  for (let v = 0; v <= 0.7; v += 0.05) {
-    if (longRunGrowth('specialist', v) < longRunGrowth('generalist', v)) {
-      console.log('crossover near', v.toFixed(2));
-      break;
-    }
-  }
-  const sim = simulateIslands({ v: 0.5, start: 100 });
-  console.log('islands v=0.5 start=100', sim.survivors, 'growth', longRunGrowth('specialist', 0.5), longRunGrowth('generalist', 0.5));
-  assert.ok(sim.survivors.specialist < sim.survivors.generalist);
-  const small = simulateIslands({ v: 0.2, start: 10 });
-  const large = simulateIslands({ v: 0.2, start: 1000 });
-  console.log('islands v=0.2 start=10', small.survivors, 'start=1000', large.survivors);
-});
-
 test('pin workshop: the best chain lengthens with the market', () => {
   assert.equal(bestDesign(10).roles, 1);
   assert.equal(bestDesign(100).roles, 4);
   assert.equal(bestDesign(300).roles, 6);
   assert.equal(bestDesign(1000).roles, 12);
   near(workshop(144000, 12).minutesPerPin, 4, 1e-9);
-});
-
-test('scale: mesh peaks then falls, hub peaks early then falls, teams keep growing', () => {
-  const mesh = Array.from({ length: 60 }, (_, i) => structure('mesh', i + 1).output);
-  const peak = mesh.indexOf(Math.max(...mesh)) + 1;
-  console.log('mesh peak at', peak, 'output', Math.max(...mesh).toFixed(1), 'teams@60', structure('teams', 60).output.toFixed(1));
-  assert.ok(peak >= 24 && peak <= 27);
-  near(structure('hub', 11).output, 9.6, 1e-9);
-  assert.equal(structure('hub', 51).output, 0);
-  assert.ok(structure('teams', 60).output > 50);
-});
-
-test('systems: perfect conditions give the minimum lead times', () => {
-  const perfect = { systems: 6, problems: 0, availability: 0.999999, meanSpell: 4, standIns: 0 };
-  assert.equal(simulateSystems({ ...perfect, info: 'copies', approvals: 'each' }, { requests: 50 }).median, 12);
-  assert.equal(simulateSystems({ ...perfect, info: 'copies', approvals: 'end' }, { requests: 50 }).median, 7);
-  assert.equal(simulateSystems({ ...perfect, info: 'shared', approvals: 'each' }, { requests: 50 }).median, 2);
-  assert.equal(simulateSystems({ ...perfect, info: 'shared', approvals: 'end' }, { requests: 50 }).median, 2);
-});
-
-test('systems: one shared record and one late approval are faster and let fewer problems through', () => {
-  const base = { systems: 6, problems: 0.1, availability: 0.85, meanSpell: 4, standIns: 0 };
-  const now = simulateSystems({ ...base, info: 'copies', approvals: 'each' });
-  const best = simulateSystems({ ...base, info: 'shared', approvals: 'end' });
-  console.log('systems copies/each', now.median, now.p90, now.slipped.toFixed(3), '| shared/end', best.median, best.p90, best.slipped.toFixed(3));
-  assert.ok(best.median < now.median / 3);
-  assert.ok(best.slipped < now.slipped);
-  // With no problems at all, nothing slips and nothing stops.
-  const clean = simulateSystems({ ...base, problems: 0, info: 'copies', approvals: 'each' });
-  assert.equal(clean.slipped, 0);
-  assert.equal(clean.stopped, 0);
 });
 
 test('convexity: variability helps a tool and hurts a gate', () => {

@@ -297,16 +297,17 @@
 
 <Chapter
   n={18}
-  kicker="Requisite variety"
+  kicker="Delegations"
   title="Only variety absorbs variety"
   lede="An office’s delegations say what it may decide on its own. Whatever the world asks beyond them travels up the chain."
   puzzle="variety"
 >
   {#snippet setup()}
     <p>
-      A development lender’s offices in a dozen countries receive about forty client requests a week. Most are
-      familiar: a loan on standard terms, a new repayment date. Some are not: a working capital line in a new currency, a
-      guarantee for a local bank, a loan to a cooperative with no audited accounts, a grace period after a drought.
+      Some requests wait because the person who receives them may not decide them. A development lender’s offices in
+      a dozen countries receive about forty client requests a week. Most are familiar: a loan on standard terms, a new
+      repayment date. Some are not: a working capital line in a new currency, a loan to a cooperative with no audited
+      accounts, a grace period after a drought.
     </p>
     <p>
       Each office has delegated authority: the kinds of request it may decide on its own, within its products, terms

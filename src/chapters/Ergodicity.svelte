@@ -14,6 +14,8 @@
 
   const clipId = `${getContext('tkc-id') ?? 'tkc'}-coin-clip`;
 
+  const game = getContext('tkc-game');
+  const done = $derived(!game.isOpen('ergodicity'));
   const ROUNDS = 100;
   const SEED = 5;
   let stake = $state(100);
@@ -185,6 +187,9 @@
         <p class="tkc-caption">
           {stake === 100 ? '' : `Staking ${stake}%, alone: `}{stake === 100 ? 'One' : 'one'} head and one tail: ×{pair.up} then ×{pair.down} = ×{pair.both}, in either order.
         </p>
+        {#if done}
+          <p class="tkc-caption tkc-twin">Read the stake as the share of a bank’s capital riding on one borrower or one country, and the pool as a portfolio whose bad years fall at different times.</p>
+        {/if}
       </div>
 
       <div class="tkc-stats" use:announce>

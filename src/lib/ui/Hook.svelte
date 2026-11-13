@@ -14,7 +14,6 @@
   const REQUESTS = 100;
 
   let guess = $state(50);
-  let scoredRun = $state(false); // whether the run on show is the one that set the opening puzzle's points
   let phase = $state('ask'); // ask | run | done
   let gates = $state(6);
   let backups = $state(false);
@@ -201,15 +200,7 @@
     t = totalTime();
     phase = 'done';
     runs = [...runs, { gates, backups, through: flow.through, guess }];
-    // The opening guess is the first puzzle, judged against what to expect, not against one run's luck:
-    // two points within 5, one within 10.
-    scoredRun = runs.length === 1 && !!game?.isOpen('start');
-    if (scoredRun) {
-      const off = Math.abs(guess - expectOf({ gates, backups }));
-      if (off <= 5) game.solve('start');
-      else if (off <= 10) (game.help('start'), game.solve('start'));
-      else game.show('start');
-    }
+    // The opening guess is a warm-up: it is judged against what to expect, and carries no points.
     announce = `${flow.through} of 100 got through ${describe({ gates, backups })}.${runs.length === 1 ? ` You guessed ${guess}; expect about ${expectOf({ gates, backups })}.` : ''}`;
     await tick();
     resultEl?.focus({ preventScroll: true });
@@ -279,12 +270,6 @@
     `Your runs through ${latest ? describe(latest) : ''}: ${mine.join(', ')}. Expect about ${expected}; nine runs in ten end between ${spread.lo} and ${spread.hi}.`,
   );
   const savedTotal = $derived(flow.saved.reduce((a, b) => a + b, 0));
-  const entry = $derived(game?.entry('start'));
-  const pointsText = $derived.by(() => {
-    if (!entry || entry.status === 'open') return '';
-    if (!scoredRun) return 'Practice run: your first guess set your score';
-    return entry.points ? `Puzzle: ${entry.points} point${entry.points === 1 ? '' : 's'}` : 'Puzzle: no points this time';
-  });
   const arithmetic = $derived(
     latest ? `${latest.backups ? '0.9975' : '0.95'} multiplied ${latest.gates} times ≈ ${Math.round(100 * (latest.backups ? 0.9975 : 0.95) ** latest.gates)}%` : '',
   );
@@ -416,7 +401,7 @@
           <input id="{prefix}-guess" type="range" min="0" max="100" bind:value={guess} bind:this={guessEl} aria-describedby="{prefix}-hook-q" style:--pct="{guess}%" />
           <output for="{prefix}-guess" class="guess-value tkc-num">{guess}</output>
         </div>
-        <p class="tkc-small rule">{entry && entry.status !== 'open' ? 'Your first guess already counted; this one is practice.' : 'Within 5 of what to expect: 2 points. Within 10: 1 point.'}</p>
+        <p class="tkc-small rule">A warm-up, with no points: the twelve puzzles that follow keep the score.</p>
         <button type="button" class="tkc-btn tkc-btn--primary go" onclick={() => send()}>Send 100 loans</button>
       </div>
     {:else if phase === 'run'}
@@ -447,7 +432,6 @@
               Fewer get stuck than that: expect about {e} (this run: {first.through}), since {arithmetic}. Still, one loan in
               four does.
             {/if}
-            {#if pointsText}<span class="points" class:none={!scoredRun || !entry?.points}>{pointsText}</span>{/if}
           </p>
         {:else if latest.backups}
           <p class="lead">
@@ -476,7 +460,7 @@
         </div>
         <div class="next">
           <button type="button" class="tkc-btn tkc-btn--primary" onclick={() => go?.(1)}>Start the story →</button>
-          <span class="tkc-small">{(game?.ids.length ?? total + 1) - 1} more puzzles about why this happens, and what changes it.</span>
+          <span class="tkc-small">{game?.ids.length ?? total - 1} puzzles about why this happens, and what changes it.</span>
         </div>
       </div>
     {/if}
@@ -706,20 +690,6 @@
   .lead {
     max-width: 42rem;
     text-wrap: pretty;
-  }
-  .points {
-    display: inline-block;
-    margin-left: 6px;
-    padding: 1px 8px;
-    border-radius: 999px;
-    font-size: 0.8125rem;
-    font-weight: 700;
-    color: var(--tkc-options-ink);
-    background: var(--tkc-options-wash);
-  }
-  .points.none {
-    color: var(--tkc-muted);
-    background: var(--tkc-sunken);
   }
   .rule {
     color: var(--tkc-muted);

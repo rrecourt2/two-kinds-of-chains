@@ -1,11 +1,9 @@
-// Round 8 simplification: the numbers the simplified chapters 1, 2, 4, 10, 12 and 13 print.
+// The numbers printed by the riddle, the pin workshop, the watchmakers and the queues.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { simulateMonth, coverageOdds } from '../src/lib/sim/presence.js';
 import { bestDesign, workshop } from '../src/lib/sim/pins.js';
-import { longRunGrowth, simulateIslands } from '../src/lib/sim/species.js';
-import { structure } from '../src/lib/sim/scale.js';
 import { watchmakers } from '../src/lib/sim/watchmakers.js';
 import { meanWait } from '../src/lib/sim/queue.js';
 
@@ -79,32 +77,6 @@ test('specialization: twelve roles first win at 794 pins a day on the slider', (
   assert.equal(bestDesign(721).roles, 12);
   assert.notEqual(bestDesign(720).roles, 12);
   near(1 - workshop(794, 12).utilization, 0.45, 0.01); // idle for almost half the day
-});
-
-test('extinction: the generalist first leads at ±35% on the slider, crossing at ±31%', () => {
-  const crossing = Array.from({ length: 71 }, (_, i) => i).find((s) => longRunGrowth('specialist', s / 100) < longRunGrowth('generalist', s / 100));
-  assert.equal(crossing, 31);
-  assert.ok(longRunGrowth('specialist', 0.3) > longRunGrowth('generalist', 0.3));
-  assert.ok(longRunGrowth('specialist', 0.35) < longRunGrowth('generalist', 0.35));
-  const at50 = simulateIslands({ v: 0.5, start: 100, islands: 40, years: 100, seed: 21 });
-  assert.ok(at50.survivors.specialist < 20, 'gone from most islands at ±50%');
-});
-
-test('extinction: ten generalists die out about one time in three in a calm world; a hundred almost never', () => {
-  let lost10 = 0;
-  let lost100 = 0;
-  const n = 4000;
-  for (let seed = 1; seed <= 4; seed++) {
-    lost10 += 1000 - simulateIslands({ v: 0, start: 10, islands: 1000, years: 100, seed }).survivors.generalist;
-    lost100 += 1000 - simulateIslands({ v: 0, start: 100, islands: 1000, years: 100, seed }).survivors.generalist;
-  }
-  near(lost10 / n, 1 / 3, 0.04);
-  assert.ok(lost100 / n < 0.001);
-});
-
-test('networks: sixty people who all depend on each other produce nothing', () => {
-  assert.equal(structure('mesh', 60).output, 0);
-  near(structure('mesh', 25).output, 13, 0.01);
 });
 
 test('watchmakers: Hora finishes thousands of watches for each of Tempus’s', () => {

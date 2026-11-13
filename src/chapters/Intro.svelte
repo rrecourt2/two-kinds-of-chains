@@ -16,30 +16,21 @@
   const total = CHAPTERS.length - 1;
 
   const contents = {
-    riddle: 'Why can a pencil’s chain of thousands beat a loan’s chain of six?',
-    specialization: 'When does adding specialists make things cheaper, and not just longer?',
-    systems: 'One loan, six linked systems, and a wrong field that travels.',
+    riddle: 'Why can a pencil’s chain of thousands beat a loan’s chain of six? Start with a committee that needs everyone in the room.',
+    specialization: 'When does a team of specialists make work cheaper, and not just longer?',
+    modules: 'Two watchmakers, the same watch, and a phone that keeps ringing: why does only one of them prosper?',
     queues: 'Four busy reviewers and one stream of requests: where does the waiting come from?',
-    async: 'Five pieces of one client request: what really sets the pace?',
-    emergence: 'One committee, five places, and a fast track any deal can take: what happens when every deal takes it?',
-    ergodicity: 'A bet that pays 5% a round on paper and leaves most players poorer.',
+    variety: 'Country offices may decide ten kinds of request; the rest go to a committee with five places a week. How many kinds should an office decide?',
+    ergodicity: 'A bet that pays 5% a round on paper and leaves most players poorer. What would you change?',
     contagion: 'Forty-eight banks, one large loss: where does it stop, and where should extra capital go?',
-    'black-swans': 'A toll road has paid 96 months in a row. Which year would it miss?',
-    extinction: 'Two species, forty islands, and weather that grows less calm: which one lasts?',
-    gate: 'On its lowest setting, a fraud screen flags 60 genuine clients a year to catch two frauds. Which payments are worth a call-back?',
-    graph: 'Sixty people who must all work with each other: how much gets done?',
-    knot: 'Twelve documents, twenty sensible clauses, and a power deal that cannot close: which clauses can wait until after the money?',
-    modules: 'Two watchmakers, the same watch, and a phone that keeps ringing.',
-    disbursement: 'A three-month promise, twelve conditions: how often is the money on time?',
-    covenants: 'Twelve covenants on every loan, and 10 of 200 borrowers in real trouble: what does one breach tell the lender?',
-    tools: 'The same AI with a person in the loop or on autopilot: which one gains when the AI turns erratic?',
-    automation: 'A system that reads borrowers’ accounts and almost never fails: what does the day it fails cost, once nobody does its work any more?',
-    variety: 'Sixty kinds of client request, offices that may decide ten of them, and a committee with five places a week: how many kinds should offices decide?',
+    gate: 'One disbursement in 200 to a new account is a fraud. Which ones are worth the wait of a call-back?',
+    tools: 'An AI drafts, and a person checks or nobody does: which design gains when the AI turns erratic?',
     tinkering: 'A budget of 100, and nobody can tell which approach will work: one big programme, or pilots first?',
-    redqueen: 'Checks catch three frauds in four in their first month. Reviewed every month, what do they catch in year three, once the other side has learned?',
-    pace: 'After a crisis every lender adds links. How fast should the lesson fade?',
+    pace: 'A country has a bad year. Is it noise, or has the country changed? How many years should its limit remember?',
+    disbursement: 'A three-month promise and twelve conditions: how often is the money on time, and which conditions need it to wait?',
     monday: 'The patterns behind the puzzles, and your score.',
   };
+
 
 </script>
 
@@ -61,8 +52,9 @@
     <p role="listitem"><span class="scale">Scale</span> multiplies whichever you have.</p>
   </div>
   <p class="howto">
-    Each chapter is a short puzzle about one problem: what happens as a chain of conditions grows long and rigid, and what lets it bend and learn. Solve
-    it unaided for two points, or after a hint or a wrong try for one. Stuck? Ask for the answer and read on.
+    Each puzzle is a decision from a bank’s working week, and each is about a chain: what makes it long and strong,
+    what makes it rigid, and what lets it bend and learn. They build on each other. Solve one unaided for two points,
+    or after a hint or a wrong try for one. Stuck? Ask for the answer and read on.
   </p>
 
   <div class="start">

@@ -15,6 +15,7 @@
   const game = getContext('tkc-game');
   // A prediction: the slider and the monthly totals open after the first answer or a hint.
   const live = $derived(game.engaged('modules'));
+  const done = $derived(!game.isOpen('modules'));
 
   let interrupt = $state(10); // tenths of a percent per part
   // Before the first answer the slider runs from quiet up to the asked case, 1.0%; busier settings open after it.
@@ -218,6 +219,9 @@
           {/if}
         </svg>
         <p class="tkc-caption">A row of ten modules is a larger module; ten rows make the watch.</p>
+        {#if done}
+          <p class="tkc-caption tkc-twin">Read a watch as a credit paper. Tempus’s is reviewed only once it is complete; Hora’s section by section, and each approved section holds.</p>
+        {/if}
         <p class="tkc-caption">
           {#if still}
             The animation is off because this device asks for reduced motion.
@@ -278,6 +282,7 @@
       works is invariably found to have evolved from a simple system that worked. A complex system designed from scratch,
       he added, never works and cannot be patched up to make it work.
     </p>
+    <p>Tempus lost his work to interruptions. Most work in a bank meets a quieter trouble: it waits in line.</p>
   {/snippet}
 
   {#snippet bank()}

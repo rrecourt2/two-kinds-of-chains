@@ -8,7 +8,7 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { LiveQueue, meanWait, tippingPoint } from '../lib/sim/queue.js';
+  import { LiveQueue, meanWait, tippingPoint, slowestOf } from '../lib/sim/queue.js';
   import { makeRng } from '../lib/sim/rng.js';
   import { linear, line, ticks } from '../lib/scales.js';
   import { hours } from '../lib/format.js';
@@ -165,8 +165,9 @@
 >
   {#snippet setup()}
     <p>
-      The riddle asked whether the right people are in. Even when they are, they are busy. Say four credit analysts
-      review every new deal, and each review takes about an hour. Each deal goes to the analyst who covers its client,
+      The riddle asked whether the right people are in. Even when they are, they are busy: a specialist whom
+      everyone needs has a full calendar. Say four credit analysts review every new deal, and each review takes about
+      an hour. Each deal goes to the analyst who covers its client,
       and waits in that analyst’s line.
     </p>
     <p>
@@ -324,10 +325,12 @@
       stand-in again: any qualified person may take the work.
     </p>
     <p>
-      In a long chain, the waits add up. A request that passes six named reviewers, each 95% busy, waits about nineteen
-      hours at each: nearly three working weeks of waiting for six hours of work. That is how a chain in which everyone
-      works flat out can still deliver slowly. Spare capacity is what lets work flow, in people and in IT systems alike:
-      a server at 95% load answers slowly for everyone, which is why engineers keep headroom.
+      Links joined <span class="tkc-idea">one after another</span> add their waits. A request that passes six named
+      reviewers, each 95% busy, waits about nineteen hours at each: nearly three working weeks of waiting for six hours
+      of work. The same six reviews run <span class="tkc-idea">side by side</span> on one file wait only for the
+      slowest of them, about {Math.round(slowestOf(6, 0.95))} hours. Either way, a chain in which everyone works flat
+      out delivers slowly. Spare capacity is what lets work flow, in people and in IT systems alike: a server at 95%
+      load answers slowly for everyone, which is why engineers keep headroom.
     </p>
   {/snippet}
 

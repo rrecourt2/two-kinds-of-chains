@@ -5,7 +5,7 @@
 <script>
   import { setContext, tick } from 'svelte';
   import { Tween } from 'svelte/motion';
-  import { CHAPTERS } from './chapters/index.js';
+  import { CHAPTERS, MOVED } from './chapters/index.js';
   import { prefersReducedMotion } from './lib/motion.js';
   import { createGame } from './lib/game.svelte.js';
   import IdeaNotes from './lib/ui/IdeaNotes.svelte';
@@ -28,7 +28,8 @@
     if (!syncHash) return -1;
     try {
       const id = decodeURIComponent(window.location.hash.slice(1));
-      return CHAPTERS.findIndex((c) => c.id === id);
+      // A link to a chapter that has left the story lands on the one that carries its idea now.
+      return CHAPTERS.findIndex((c) => c.id === (MOVED[id] ?? id));
     } catch {
       return -1;
     }

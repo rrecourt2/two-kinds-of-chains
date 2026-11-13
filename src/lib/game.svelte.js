@@ -2,7 +2,7 @@
 // solving with help earns 1, and asking to see the answer earns none. Scores stay in
 // this browser, so a reader can come back to them later; nothing is sent anywhere.
 
-const KEY = 'two-chains-puzzles-v1';
+const KEY = 'two-chains-puzzles-v2';
 
 function load() {
   try {

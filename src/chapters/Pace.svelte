@@ -167,24 +167,25 @@
 
 <Chapter
   n={22}
-  kicker="Antifragility"
+  kicker="Country limits"
   title="How fast to forget"
   lede="Every loss teaches a lender something about a country. The hard part is deciding how long to remember it."
   puzzle="pace"
 >
   {#snippet setup()}
     <p>
-      After an infection the body lets most of the cells that fought it go, and keeps a few memory cells for years:
-      enough to know the next attack at once, with room left for infections it has never met.
+      After an infection the body lets most of the cells that fought it go and keeps a few for years: enough to know
+      the next attack.
     </p>
     <p>
       A lender learns from losses the same way. It sets each country’s limit from the losses it remembers: after bad
       years the limit comes down, a link added to the chain; in calm years it goes back up. For a development lender
-      the timing matters most. The year after a bad one is often when a country needs counter-cyclical finance, and
-      when other lenders pull out.
+      the timing matters: the year after a bad one is often when a country most needs finance, and when other lenders
+      pull out.
     </p>
     <p>
-      But not every bad year is a change. Some are noise: a drought, a slump in a commodity price, one large default.
+      But not every bad year is a change. Some are noise, <span class="tkc-idea">false positives</span> about the
+      country: a drought, a slump in a commodity price, one large default.
       Others mark a crisis that lasts, or a reform that holds. The question is how long a memory it takes to tell them
       apart.
     </p>
@@ -318,8 +319,8 @@
     <p>
       In between, at about {word(ANSWER)} years, the total is lowest: {usd(AT.total)} a year, against {usd(ONE.total)} and
       {usd(LONG.total)}. Losses lower the limits and calm years raise them again: a <span class="tkc-idea">loop</span> that
-      steadies itself, if it learns at the right pace. The immune system’s memory cells strike the same balance.
-      Antifragility is a matter of pace: enough change to adapt, not so fast that the lesson is forgotten.
+      steadies itself, where the stress test’s fed itself, if it learns at the right pace. Antifragility is a matter of
+      pace: enough change to adapt, not so fast that the lesson is forgotten.
     </p>
     <h3>What sets the pace</h3>
     <p>
@@ -330,7 +331,7 @@
     </p>
     <p>
       A chain that learns adds links after a shock and takes them off as the calm returns, at the pace the world sets.
-      That is the last of the puzzles; what follows gathers what the chains have shown.
+      Most lessons stay on as links, though, and a list of them is what stands between a signed loan and its money.
     </p>
   {/snippet}
 

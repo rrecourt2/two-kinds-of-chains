@@ -11,6 +11,8 @@
   import { linear } from '../lib/scales.js';
   import { int, pct } from '../lib/format.js';
 
+  const game = getContext('tkc-game');
+  const done = $derived(!game.isOpen('specialization'));
   let exponent = $state(2); // pins ordered per day = 10^exponent
   let width = $state(560);
   let hover = $state(null);
@@ -165,6 +167,9 @@
           </text>
         </svg>
       </div>
+      {#if done}
+        <p class="tkc-caption tkc-twin">Read a pin as a deal. A desk of specialists pays for itself at a head office with hundreds of deals a year; a country office of five keeps generalists.</p>
+      {/if}
 
       <div class="tkc-stats" use:announce>
         <Stat label="Cheapest design" value="{best.roles} role{best.roles > 1 ? 's' : ''}" sub="{int(best.workers)} {best.workers > 1 ? 'people' : 'person'}, busy {pct(best.utilization)} of the day" swatch="var(--tkc-options)" />
@@ -204,6 +209,7 @@
       only one, in the Netherlands, builds the machines that print them. Specialization concentrates skill. It does not
       have to concentrate dependence, but here it does.
     </p>
+    <p>A long chain has a second weakness: the more links it has, the more often something interrupts it.</p>
   {/snippet}
 
   {#snippet bank()}

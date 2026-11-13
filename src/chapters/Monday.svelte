@@ -1,6 +1,6 @@
 <script>
   import { getContext, tick } from 'svelte';
-  import { CHAPTERS } from './index.js';
+  import { CHAPTERS, PARTS } from './index.js';
 
   const go = getContext('tkc-go');
   const game = getContext('tkc-game');
@@ -30,27 +30,20 @@
   const moves = [
     { title: 'Alternatives everywhere', text: 'Every approval can be given by more than one qualified person, and every critical system has a tested fallback. No link depends on one name.', ch: 'riddle' },
     { title: 'Specialists where the volume carries them', text: 'A specialist role pays where there is enough work to keep it busy; below that volume, the extra link is mostly idle time.', ch: 'specialization' },
-    { title: 'Data entered once, at its source', text: 'Each piece of data has one home, close to the people who create it, and every system reads it from there, so a problem is fixed in one place and every approver sees the same record.', ch: 'systems' },
+    { title: 'Work in pieces that hold', text: 'Long work is saved in finished pieces, each with a clear owner, so an interruption costs only the piece in hand and trouble in one part stays there.', ch: 'modules' },
     { title: 'Slack and one shared line', text: 'The people that everything waits for run below about 80% of their time, and work waits in one line that any qualified colleague can take from.', ch: 'queues' },
-    { title: 'Parallel work', text: 'Every piece that can start, starts, and a bad input is stopped as it comes in. The slowest piece then sets the date; speeding up any other changes nothing.', ch: 'async' },
-    { title: 'A shortcut judged by its last user', text: 'A shortcut that saves time for the first deals that take it can cost time for all of them once every deal does.', ch: 'emergence' },
+    { title: 'Delegations as varied as the world', text: 'Offices may decide the kinds of request they actually meet, and hold principles for the ones nobody listed, so what reaches head office is the truly new rather than the merely unlisted.', ch: 'variety' },
     { title: 'Bets sized to survive a bad run', text: 'Each risk is sized so that a bad run cannot end the game, and risks are pooled across units whose luck is independent of each other.', ch: 'ergodicity' },
     { title: 'Buffers where the links meet', text: 'Spare capacity sits with the people, committees and systems that everything passes through, and it is big enough to cover what would hit them.', ch: 'contagion' },
-    { title: 'Claims tested by what would break them', text: 'A track record counts the years a claim survived; a reverse stress test starts from the missed payment and looks for the years that would cause it, shocks that arrive together included.', ch: 'black-swans' },
-    { title: 'Several sources, not one', text: 'A unit that draws on several sources grows a little more slowly in good years and survives the years when one source fails.', ch: 'extinction' },
-    { title: 'Gates sized to the loss', text: 'Where fraud is rare, most flags are false positives; a check earns its wait where one loss would be too large to survive, and stays light where losses can be borne.', ch: 'gate' },
-    { title: 'Small teams, light links', text: 'Work sits in small teams that are fully linked inside and lightly linked to each other, so required links grow with the team, not with the whole organization.', ch: 'graph' },
-    { title: 'Conditions read together', text: 'Clauses in different documents can wait for each other in rings that no document can go first in. Read side by side, the rings show before closing, and a clause on several rings, moved after the money, cuts them all.', ch: 'knot' },
-    { title: 'Modular work', text: 'Work is saved in finished pieces, each with a clear owner and a clear interface, so an interruption costs only the piece in hand and trouble in one part stays there.', ch: 'modules' },
-    { title: 'Conditions that bend', text: 'Every condition stays on the list; a late document can be met another way where one exists, and a condition that need not come first follows the money as an undertaking with a deadline.', ch: 'disbursement' },
-    { title: 'Warning lights read against the base rate', text: 'What a covenant breach says depends on how many healthy borrowers trip the same covenant; past a few strong covenants, each new one adds mostly noise, and every false alarm becomes a waiver.', ch: 'covenants' },
+    { title: 'Gates sized to the loss', text: 'Where fraud is rare, most checks fall on genuine clients; a check earns its wait where one loss would be too large to survive, and is sampled lightly where losses can be borne.', ch: 'gate' },
     { title: 'A person where the AI swings', text: 'Where AI or automation is erratic, a person keeps the good results and drops the bad ones before they move on; autopilot is kept for work that is steady, or whose mistakes are small, visible and easy to undo.', ch: 'tools' },
-    { title: 'A backup kept in practice', text: 'The more reliably a system does the work, the longer its people go without doing it; a day by hand now and then, with the system checking behind them, keeps the day it fails from finding them out of practice.', ch: 'automation' },
-    { title: 'Delegations as varied as the world', text: 'Offices may decide the kinds of request they actually meet, and hold principles for the ones nobody listed, so what reaches head office is the truly new rather than the merely unlisted.', ch: 'variety' },
     { title: 'Pilots that can be stopped', text: 'Where nobody can tell in advance what will work, several small pilots go first, each cheap to stop, and the money follows the one that works.', ch: 'tinkering' },
-    { title: 'Checks that stand still are learned', text: 'Against someone who tests every link, a check that stands still is soon walked round, and one moved after last month’s attempts runs to stand still; a check nobody can predict keeps more of what it catches.', ch: 'redqueen' },
-    { title: 'Lessons that fade at a measured pace', text: 'Links added after a crisis come off a little with each calm year, neither all at once nor never, at a pace set by what an idle cushion costs.', ch: 'pace' },
+    { title: 'Limits that remember at the world’s pace', text: 'A limit set from last year alone swings with every bad year; one set from twenty years misses a country that has changed. The memory that serves best is about as long as the world takes to change.', ch: 'pace' },
+    { title: 'Conditions that bend', text: 'Every condition stays on the list; a late document can be met another way where one exists, and a condition that need not come first follows the money as an undertaking with a deadline.', ch: 'disbursement' },
   ];
+  // The patterns under the story's five parts, each with what the part was about in a bank's terms.
+  const ABOUT = ['what makes a long chain work', 'where the time goes', 'where the losses come from', 'how a bank gets better at both', 'both at once'];
+  const groups = PARTS.map((part, k) => ({ part, about: ABOUT[k], moves: moves.filter((m) => CHAPTERS[numberOf(m.ch)].part === k + 1) }));
 
   const sources = [
     ['Amos Tversky and Daniel Kahneman', '1974', '“Judgment under uncertainty: heuristics and biases”, Science', 'People overestimate the chance that every link in a chain of likely events holds.'],
@@ -58,14 +51,16 @@
     ['Adam Smith', '1776', 'The Wealth of Nations, Book I, chapters 1 and 3', 'The pin workshop; the division of labour is limited by the extent of the market.'],
     ['OECD', '2020', '“Trade policy implications of global value chains”, Trade Policy Brief', 'About 70% of international trade involves global value chains.'],
     ['Chris Miller', '2022', 'Chip War', 'How the semiconductor industry split into a long chain of specialists.'],
-    ['George Labovitz and Yu Sang Chang', '1992', 'The 1-10-100 rule', 'A data error costs far more to fix the longer it survives. The rule is commonly attributed to them; we found no primary publication.'],
+    ['Herbert A. Simon', '1962', '“The Architecture of Complexity”, Proceedings of the American Philosophical Society', 'The watchmakers Hora and Tempus, and why modular systems survive.'],
+    ['John Gall', '1975', 'General Systemantics', 'A complex system that works has evolved from a simple system that worked.'],
     ['J. F. C. Kingman', '1961', '“The single server queue in heavy traffic”, Proceedings of the Cambridge Philosophical Society', 'Why waiting explodes near full utilization.'],
     ['Adrian Bagust, Michael Place and John Posnett', '1999', '“Dynamics of bed use in accommodating emergency admissions”, BMJ', 'Why hospitals run into bed crises above about 85% occupancy.'],
     ['Donald Reinertsen', '2009', 'The Principles of Product Development Flow', 'Queues, utilization and batch size in knowledge work.'],
-    ['Andrew S. Grove', '1983', 'High Output Management', 'The limiting step, and catching problems at the lowest-value stage.'],
-    ['Dietrich Braess', '1968', '“Über ein Paradoxon aus der Verkehrsplanung”, Unternehmensforschung', 'A new road, or a shortcut, can make every journey slower.'],
+    ['W. Ross Ashby', '1956', 'An Introduction to Cybernetics, chapter 11, “Requisite variety”', 'Only variety can destroy variety: a regulator copes only with as many kinds of disturbance as it has kinds of response.'],
+    ['W. Ross Ashby', '1952', 'Design for a Brain', 'The homeostat, a machine that searched for its own stability.'],
     ['Ole Peters', '2019', '“The ergodicity problem in economics”, Nature Physics', 'The coin game, and time averages versus ensemble averages.'],
     ['Ole Peters and Alexander Adamou', '2015', '“An evolutionary advantage of cooperation”', 'Pooling raises the growth rate a typical member experiences.'],
+    ['Nassim Nicholas Taleb', '2012, 2018', 'Antifragile; Skin in the Game', 'Antifragility and convex tinkering, and one person at the casino a hundred times.'],
     ['Duncan J. Watts', '2002', '“A simple model of global cascades on random networks”, PNAS', 'Cascade windows and robust-yet-fragile networks.'],
     ['Prasanna Gai and Sujit Kapadia', '2010', '“Contagion in financial networks”, Proceedings of the Royal Society A', 'The interbank model behind the stress test.'],
     ['Andrew Haldane', '2009', '“Rethinking the financial network”, speech, Amsterdam', 'The financial system as robust yet fragile.'],
@@ -74,35 +69,9 @@
     ['Réka Albert, Hawoong Jeong and Albert-László Barabási', '2000', '“Error and attack tolerance of complex networks”, Nature', 'Hub networks shrug off random failures and collapse when a hub fails.'],
     ['Basel Committee on Banking Supervision', '2011', '“Global systemically important banks: assessment methodology and the additional loss absorbency requirement”', 'Capital surcharges of 1 to 3.5 percentage points for the most systemic banks.'],
     ['Basel Committee on Banking Supervision', '2012', '“A framework for dealing with domestic systemically important banks”', 'National surcharges for banks that matter at home.'],
-    ['Bertrand Russell', '1912', 'The Problems of Philosophy, chapter 6, “On Induction”', 'The chicken fed every day of its life, until the day its neck is wrung.'],
-    ['Karl Popper', '1959', 'The Logic of Scientific Discovery', 'Theories can be falsified, never proven by examples.'],
-    ['Basel Committee on Banking Supervision', '2009', 'Principles for sound stress testing practices and supervision', 'Reverse stress tests: start from the loss that would break the bank and look for what could cause it.'],
-    ['Nassim Nicholas Taleb', '2012, 2018', 'Antifragile; Skin in the Game', 'Antifragility and convex tinkering, and one person at the casino a hundred times.'],
-    ['Lian Pin Koh and colleagues', '2004', '“Species coextinctions and the biodiversity crisis”, Science', 'Species that disappear with the species they depend on.'],
-    ['Olof Arrhenius', '1921', '“Species and area”, Journal of Ecology', 'A larger area holds more species, but fewer per square metre.'],
-    ['Robert H. MacArthur and Edward O. Wilson', '1967', 'The Theory of Island Biogeography', 'How an island’s area and isolation set the number of species it holds.'],
-    ['Michael L. McKinney and Julie L. Lockwood', '1999', '“Biotic homogenization: a few winners replacing many losers in the next mass extinction”, Trends in Ecology & Evolution', 'Where people join up separate places, a few widespread species replace many local ones.'],
-    ['Nassim Nicholas Taleb', '2010', '“On Robustness and Fragility”, in The Black Swan, second edition', 'Species density: the larger and more connected the space, the more a few winners spread at the expense of the rest.'],
     ['Basel Committee on Banking Supervision', '2006', 'International Convergence of Capital Measurement and Capital Standards (Basel II), paragraphs 463, 472 and 667', 'Operational-risk capital for the worst year in a thousand; at least five years of data for default rates, and seven for losses on loans to firms, banks and governments.'],
-    ['Frederick P. Brooks', '1975', 'The Mythical Man-Month', 'Adding people to a late project makes it later.'],
-    ['Richard M. Karp', '1990', '“The transitive closure of a random digraph”, Random Structures & Algorithms', 'Below one link each, knots of waiting stay small; above it, one giant knot forms.'],
-    ['Tomasz Łuczak', '1990', '“The phase transition in the evolution of random digraphs”, Journal of Graph Theory', 'The same threshold, from the other side.'],
-    ['Edward G. Coffman, Michael J. Elphick and Arie Shoshani', '1971', '“System deadlocks”, ACM Computing Surveys', 'A circular wait: the condition under which nothing can move first.'],
-    ['Stuart Kauffman and Simon Levin', '1987', '“Towards a general theory of adaptive walks on rugged landscapes”, Journal of Theoretical Biology', 'The complexity catastrophe: interlocking parts stop improvement one step at a time.'],
-    ['Daniel A. Levinthal', '1997', '“Adaptation on rugged landscapes”, Management Science', 'Kauffman’s landscapes applied to organizations.'],
-    ['Herbert A. Simon', '1962', '“The Architecture of Complexity”, Proceedings of the American Philosophical Society', 'The watchmakers Hora and Tempus, and why modular systems survive.'],
-    ['John Gall', '1975', 'General Systemantics', 'A complex system that works has evolved from a simple system that worked.'],
-    ['Thomas Bayes', '1763', '“An essay towards solving a problem in the doctrine of chances”, Philosophical Transactions of the Royal Society', 'Prior, evidence, updated belief: the arithmetic behind what a breach means. Published after his death by Richard Price.'],
-    ['William of Ockham', '14th century', 'Ockham’s razor', '“Plurality should never be posited without necessity”; the familiar wording, “entities must not be multiplied beyond necessity”, is John Punch’s, from 1639.'],
-    ['Ilia D. Dichev and Douglas J. Skinner', '2002', '“Large-sample evidence on the debt covenant hypothesis”, Journal of Accounting Research', 'Private lenders set covenants tightly, as tripwires; a breach is not necessarily a sign of distress.'],
     ['Lisanne Bainbridge', '1983', '“Ironies of automation”, Automatica', 'Automation leaves people the hardest tasks and the least practice.'],
-    ['Bureau d’Enquêtes et d’Analyses', '2012', 'Final report on the accident of 1 June 2009 over the Atlantic', 'Pilots who rarely flew by hand, on the night the automation handed back control.'],
-    ['Basel Committee on Banking Supervision', '2021', 'Principles for operational resilience', 'Delivering critical operations through severe but plausible disruption.'],
-    ['W. Ross Ashby', '1956', 'An Introduction to Cybernetics, chapter 11, “Requisite variety”', 'Only variety can destroy variety: a regulator copes only with as many kinds of disturbance as it has kinds of response.'],
-    ['W. Ross Ashby', '1952', 'Design for a Brain', 'The homeostat, a machine that searched for its own stability.'],
     ['Bent Flyvbjerg and Alexander Budzier', '2011', '“Why your IT project may be riskier than you think”, Harvard Business Review, September', '1,471 IT projects: an average cost overrun of 27%, and one in six overran by about 200%.'],
-    ['Lewis Carroll', '1871', 'Through the Looking-Glass, and What Alice Found There', 'The Red Queen: “it takes all the running you can do, to keep in the same place”.'],
-    ['Leigh Van Valen', '1973', '“A new evolutionary law”, Evolutionary Theory', 'The Red Queen hypothesis: each species must keep evolving to keep up with its rivals.'],
     ['Jack M. Guttentag and Richard J. Herring', '1986', '“Disaster myopia in international banking”, Essays in International Finance 164, Princeton University', 'The longer since the last shock, the less likely the next one seems, and the thinner the cushion held against it.'],
   ];
 </script>
@@ -123,7 +92,7 @@
     <div class="cell" role="cell">
       <span class="cell-tag" aria-hidden="true">A short chain, calm weather</span>
       <span class="cell-name">Looks like waste</span>
-      <span>Paid for every day, needed on few of them. <em>A stand-in who never stands in; a reviewer with time to spare; a day by hand while the system works; pilots when results are predictable.</em></span>
+      <span>Paid for every day, needed on few of them. <em>A stand-in who never stands in; a reviewer with time to spare; a person checking a steady AI; pilots when results are predictable.</em></span>
     </div>
     <div class="cell good" role="cell">
       <span class="cell-tag" aria-hidden="true">A long chain, rough weather</span>
@@ -135,27 +104,30 @@
     <div class="cell" role="cell">
       <span class="cell-tag" aria-hidden="true">A short chain, calm weather</span>
       <span class="cell-name">Barely felt</span>
-      <span>Each link nearly always holds, and so, mostly, does the chain. <em>Six checks at 95%; a few conditions that wait on one another; an autopilot while the AI is steady.</em></span>
+      <span>Each link nearly always holds, and so, mostly, does the chain. <em>Six checks at 95%; twelve conditions when every party is prompt; an autopilot while the AI is steady.</em></span>
     </div>
     <div class="cell bad" role="cell">
       <span class="cell-tag" aria-hidden="true">A long chain, rough weather</span>
       <span class="cell-name">Stalls all at once</span>
-      <span>Past the tipping point, each extra link costs more than the last. <em>Reviewers at 95%; a deal tied in a knot; the hubs of the stress test; Tempus at his bench.</em></span>
+      <span>Past the tipping point, each extra link costs more than the last. <em>Reviewers at 95%; a committee one kind of request past its room; the hubs of the stress test; Tempus at his bench.</em></span>
     </div>
   </div>
 
   <div class="grid">
     <section class="moves" aria-labelledby="{prefix}-moves">
-      <h3 class="tkc-display moves-title" id="{prefix}-moves">The patterns, chapter by chapter</h3>
-      <ol>
-        {#each moves as move (move.title)}
-          <li>
-            <span class="move-title">{move.title}</span>
-            <span class="move-text">{move.text}</span>
-            <button type="button" class="see" onclick={() => go(move.ch)}>See “{CHAPTERS[numberOf(move.ch)].short}”</button>
-          </li>
-        {/each}
-      </ol>
+      <h3 class="tkc-display moves-title" id="{prefix}-moves">The patterns, puzzle by puzzle</h3>
+      {#each groups as group, k (group.part)}
+        <h4 class="group"><span class="group-part">{group.part}</span><span class="group-about">{group.about}</span></h4>
+        <ol aria-label="Part {k + 1}: {group.part}" start={numberOf(group.moves[0].ch)}>
+          {#each group.moves as move (move.title)}
+            <li>
+              <span class="move-title">{move.title}</span>
+              <span class="move-text">{move.text}</span>
+              <button type="button" class="see" onclick={() => go(move.ch)}>See “{CHAPTERS[numberOf(move.ch)].short}”</button>
+            </li>
+          {/each}
+        </ol>
+      {/each}
     </section>
   </div>
 
@@ -331,7 +303,26 @@
     list-style: none;
     display: grid;
     gap: 14px;
+  }
+  .moves {
     counter-reset: move;
+  }
+  .group {
+    margin: 22px 0 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--tkc-rule);
+    font-size: 0.9375rem;
+  }
+  .group-part {
+    font-weight: 700;
+  }
+  .group-about {
+    color: var(--tkc-muted);
+    font-weight: 400;
   }
   .moves li {
     counter-increment: move;

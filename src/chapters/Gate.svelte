@@ -74,7 +74,7 @@
   const rules = [
     'About 650 requests a year, $50,000 to $80m; one in 200 is fraud.',
     'A screen ranks requests by signs of fraud; one fraud in four shows none.',
-    'A check stops any fraud; it takes one of three reviewers a day.',
+    'A call-back stops any fraud; each of three reviewers closes one a day.',
   ];
 
   // ---- Puzzle ----
@@ -252,9 +252,9 @@
 
 <Chapter
   n={11}
-  kicker="Gates"
+  kicker="Payment checks"
   title="The gate worth keeping"
-  lede="A chain that bends still keeps a few links rigid: the checks before a payment that cannot be undone. The question is which payments."
+  lede="Capital absorbs a loss after it lands. A check stops it before the money leaves. The question is which payments are worth the wait."
   puzzle="gate"
 >
   {#snippet setup()}
@@ -264,10 +264,10 @@
       fraudster rarely comes back.
     </p>
     <p>
-      A call-back to the client, on a number already on file, stops any fraud: no fraudster can answer it. But each call
-      takes one of three qualified reviewers a day, and payment is promised within three working days, so the bank
-      checks only a share: today, half, at every amount. An automatic screen picks which, the most suspicious first, by
-      signs such as a new country, a request by email or a letterhead that does not match.
+      A call-back to the client, on a number already on file, stops any fraud. But reaching the right person takes
+      time: each of three qualified reviewers closes about one call-back a day, and payment is promised within three
+      working days. So the bank checks only a share: today, half, at every amount. A screen picks which, the most
+      suspicious first, by signs such as a new country or a letterhead that does not match.
     </p>
     <p>
       The board has set one limit: no year may lose more than $5m to fraud, however good the years around it.
@@ -368,14 +368,14 @@
       </p>
       <p>
         What no ranking can see is a fraud with no sign, such as a request from a client’s own mailbox, taken over. It may
-        sit anywhere in the order, so checking nine in ten large disbursements lets one in ten of these through. That is
-        rare: the average year then loses only {T.ninetyMean}. But the bank lives its years one after another, like the
+        sit anywhere in the order, so checking nine in ten large disbursements lets one in ten of these through. The
+        average year then loses only {T.ninetyMean}. But the bank lives its years one after another, like the
         player in the coin game, and the limit applies to each one: {T.ninetyOver} years in 1,000 lose more than $5m, the worst
         {T.ninetyWorst}.
       </p>
       <p>
-        So the check is sized to the loss. A call costs a reviewer a day whatever the amount, and what it saves grows with
-        the amount. Above $1m the gate becomes an <span class="tkc-and">AND</span> behind an
+        So the check is sized to the loss. A call-back costs a reviewer a day whatever the amount, and what it saves
+        grows with the amount. Above $1m the gate becomes an <span class="tkc-and">AND</span> behind an
         <span class="tkc-if">IF</span>: no disbursement goes out unchecked, {T.half} the payments and {T.money} of the
         money. Below $1m a tenth is checked, the most suspicious, and what slips through the bank can survive. The worst
         year now loses {T.worst}. False positives remain, about {T.genuine} genuine clients a year, only {T.more} more
@@ -387,10 +387,6 @@
         and, past a <span class="tkc-idea">tipping point</span> like the queues chapter’s, {T.quarterLate} of payments are
         late. Inside the gate sits an <span class="tkc-or">OR</span>: any one of three qualified reviewers may call, a
         <span class="tkc-idea">quorum</span> of one; with a named reviewer for each payment, {T.named} would be late.
-      </p>
-      <p>
-        A lizard caught by the tail sheds it and grows another, but guards its head. A chain that bends does the same: it
-        lets small losses through and holds firm where a single loss would be one too many.
       </p>
     {:else}
       <p class="tkc-small">Simulating a thousand years…</p>

@@ -33,6 +33,21 @@ export function tippingPoint(c) {
 }
 
 /**
+ * Average wait for the slowest of `n` named reviewers working side by side on one file, each `rho` busy, in
+ * multiples of the work time. A named line's wait is zero with chance 1 − rho and otherwise exponential, so the
+ * mean of the largest of n has a closed form: the sum over k of (−1)^(k+1) · C(n, k) · rho^k ÷ (k · (1 − rho)).
+ */
+export function slowestOf(n, rho) {
+  let sum = 0;
+  let choose = 1;
+  for (let k = 1; k <= n; k++) {
+    choose = (choose * (n - k + 1)) / k;
+    sum += ((k % 2 ? 1 : -1) * choose * rho ** k) / (k * (1 - rho));
+  }
+  return sum;
+}
+
+/**
  * A live queue for the animation: `servers` approvers, Poisson arrivals and
  * exponential work times of mean 1 hour. In "named" mode each request is
  * assigned to one approver at random and waits in that approver's line; in
