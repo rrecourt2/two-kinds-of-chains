@@ -252,7 +252,7 @@
       Signing a loan is not paying it out. The client has been told the money will come within about three months of
       signing: 60 working days. In between stands a list of conditions precedent: a board approval, a legal opinion,
       signed and registered security, insurance, permits and more. Every item must be met, so the list is the purest
-      chain of <span class="tkc-and">ANDs</span> a bank has.
+      chain of <span class="tkc-and">ANDs</span> a bank has: the opening page’s six checks, grown to twelve.
     </p>
     <p>
       Each item comes from someone else, a borrower, a lawyer, a registry or a central bank, with its own queue and its
@@ -446,7 +446,8 @@
       loan waits {F.start.mid}.
     </p>
     <p>
-      The spread decides. Predictable or not, the parties take the same typical time, but the wider spread makes
+      The spread decides, because the loan waits for whichever condition comes last: what counts is how late each can
+      be, not how long it usually takes. Predictable or not, the parties take the same typical time, but the wider spread makes
       deliveries about {meanStretch}% longer on average and the slowest loans much later: nine in ten are paid by day
       {F.start.p90}, against {F.pred.p90} with predictable parties, who keep the promise as things stand.
     </p>
@@ -464,8 +465,8 @@
     </p>
     <p>
       An <span class="tkc-or">OR</span> here and an undertaking with a deadline there keep every condition on the list,
-      and let the chain bend instead of break. Once the money moves, other conditions take over for the life of the loan:
-      the covenants.
+      and let the chain bend instead of break. That is the last of the puzzles; what follows gathers what the chains
+      have shown.
     </p>
   {/snippet}
 

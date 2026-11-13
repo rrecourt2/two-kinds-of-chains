@@ -251,7 +251,7 @@
 
 <Chapter
   n={21}
-  kicker="Convex tinkering"
+  kicker="Pilots"
   title="Many short chains"
   lede="One big programme is one long chain. A set of pilots is many short ones, and a short chain that fails can be dropped."
   puzzle="tinkering"
@@ -406,23 +406,24 @@
 
   {#snippet after()}
     <p>
-      Each pilot is a short chain: a few links, tested quickly, and dropped if one breaks. A pilot that fails costs
+      Each pilot is a short chain, like one of Hora’s modules, with one more virtue: if it breaks, it can be dropped. A
+      pilot that fails costs
       {PILOT} and no more; one that works gets the rest of the budget behind it. Losses are capped and gains are open, a
       shape called convex, and the futures move to the right: with twelve pilots, {T.below12} of them end below 100,
       against {T.below1} for one big programme.
     </p>
     <p>
-      The pilots make no approach better. They turn the spread of results into a choice, and a choice is worth more the
-      wider the spread, even when the readings mislead: in the opened future, pilot {O12.pick.n} read best but was worth
-      {SHARE} of pilot {O12.best.n}, and its {O12.rest} still returned {int(O12.result)} against one big programme’s
-      {int(O1.result)}. When results are predictable, the approaches barely differ, and twelve pilots leave a typical
-      {T.pred12}. When results are wild, {words(T.wildN)} pilots do best, at a typical {T.wildT}. Unpredictability is
+      The pilots make no approach better. They turn the spread of results into a choice, and the wider the spread, the
+      further the best of {words(ANSWER)} stands above the typical one. The choice pays even when the readings mislead: in the
+      opened future, pilot {O12.pick.n} read best but was worth {SHARE} of pilot {O12.best.n}, and the {O12.rest} left
+      after the pilots, put behind it, still returned {int(O12.result)} against one big programme’s {int(O1.result)}. When results are predictable, the approaches barely differ, so
+      the choice is worth less than the {ANSWER * PILOT} that {words(ANSWER)} pilots cost: they leave a typical {T.pred12}. When results are wild, {words(T.wildN)} pilots do best, at a typical {T.wildT}. Unpredictability is
       what pilots are paid in.
     </p>
     <p>
       One big programme takes the swings whole: whatever its one approach proves worth, the whole budget gets it. Real
       programmes often fare worse, because their surprises are mostly overruns. Bent Flyvbjerg and
-      Alexander Budzier studied 1,471 IT projects: the average overran its budget by 27%, and one in six by about 200%.
+      Alexander Budzier studied 1,471 IT projects: one in six overran its budget by about 200%.
     </p>
     <p>
       One big programme is a long chain of <span class="tkc-and">ANDs</span>: its one
@@ -430,7 +431,10 @@
       <span class="tkc-or">OR</span>: the programme needs only one approach to work. The OR holds only while a pilot can
       be stopped. A pilot with its own team, targets and reputation is a link that cannot be dropped.
     </p>
-    <p>Evolution works this way too: it makes many small variations, most of which fail, and keeps the few that work.</p>
+    <p>
+      Evolution works this way: many small variations, most of which fail, and a few that are kept. Keeping what
+      was learnt is the other half.
+    </p>
   {/snippet}
 
   {#snippet bank()}

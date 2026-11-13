@@ -133,13 +133,14 @@
 >
   {#snippet setup()}
     <p>
-      So far, variability has mostly done harm in this story. In the coin game, the stress test and on the islands,
-      chains broke when the world pulled on them; since then, they have learned to bend. The chains in this last part
-      learn, and some gain from the swings.
+      So far the world’s swings have only done harm. In the coin game and the stress test, chains broke when the world
+      pulled on them, and the bank’s answer was a buffer or a check. The chains in this part learn, and some gain from
+      the swings.
     </p>
     <p>
-      The first is the newest link in many chains: an AI that reads a request and drafts the answer. With a person in the loop, someone looks at each draft before it moves on, keeps a good one and
-      drops a bad one. On autopilot, every draft goes straight on, and a wrong one is redone further down the chain.
+      The first is the newest link in many chains: an AI that reads a client’s request, for a waiver, say, or a new
+      repayment date, and drafts the reply. With a person in the loop, someone looks at each draft before it moves on,
+      keeps a good one and drops a bad one. On autopilot, every draft goes straight on, and a wrong one is redone further down the chain.
     </p>
     <p>Below, the same AI handles the same twenty requests both ways. For now it is steady: rarely wrong.</p>
   {/snippet}
@@ -250,7 +251,9 @@
     <p>
       A person in the loop is usually counted as a safety measure, a cost paid for caution. Here it is also what turns the
       AI’s swings into a gain. It works only while the person can tell a good draft from a bad one in the time they have;
-      where they cannot, it quietly becomes autopilot. That is where the irony of the reliable machine begins.
+      where they cannot, it quietly becomes autopilot. And a check that is rarely needed is rarely practised: the
+      steadier the AI, the less the person’s eye is worth on the day it turns. Lisanne Bainbridge called that an irony
+      of automation, in 1983.
     </p>
   {/snippet}
 

@@ -7,10 +7,12 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { ROLE_OPTIONS, MARKETS, workshop, bestDesign, workingMinutes } from '../lib/sim/pins.js';
+  import { ROLE_OPTIONS, MARKETS, SOLO_PINS_PER_DAY, workshop, bestDesign, workingMinutes } from '../lib/sim/pins.js';
   import { linear } from '../lib/scales.js';
   import { int, pct } from '../lib/format.js';
 
+  const game = getContext('tkc-game');
+  const done = $derived(!game.isOpen('specialization'));
   let exponent = $state(2); // pins ordered per day = 10^exponent
   let width = $state(560);
   let hover = $state(null);
@@ -38,6 +40,9 @@
 
   // Twelve roles are the cheapest design from 721 pins a day; the first slider step past that is 794 (exponent 2.9).
   const FIRST_TWELVE = 794;
+  // Pins a day that twelve specialists, one in each role, can make between them; half of it is where they start to win.
+  // (One pin-maker's 10 a day, twelve times faster, through each of twelve stations.)
+  const TWELVE_CAN = SOLO_PINS_PER_DAY * 12 * 12;
   const puzzle = $derived({
     goal: 'Twelve roles make the cheapest pins once the market is big enough. Find the smallest market where they beat every shorter chain.',
     met: best.roles === 12 && demand <= FIRST_TWELVE,
@@ -162,6 +167,9 @@
           </text>
         </svg>
       </div>
+      {#if done}
+        <p class="tkc-caption tkc-twin">Read a pin as a deal. A desk of specialists pays for itself at a head office with hundreds of deals a year; a country office of five keeps generalists.</p>
+      {/if}
 
       <div class="tkc-stats" use:announce>
         <Stat label="Cheapest design" value="{best.roles} role{best.roles > 1 ? 's' : ''}" sub="{int(best.workers)} {best.workers > 1 ? 'people' : 'person'}, busy {pct(best.utilization)} of the day" swatch="var(--tkc-options)" />
@@ -177,9 +185,11 @@
 
   {#snippet after()}
     <p>
-      Twelve roles only win once the market passes about 720 pins a day. Below that a shorter chain does at least as
-      well, and in the smallest markets one person doing everything is cheapest of all. A village has a family doctor; a city can
-      keep a heart surgeon busy.
+      Twelve roles only win once the market passes about {int(TWELVE_CAN / 2)} pins a day, because every role needs a
+      whole person. Twelve specialists could make {int(TWELVE_CAN)} pins a day between them; below half that, they are
+      idle more than half the day, and a shorter chain, whose people are kept busier, does at least as well. In the
+      smallest markets one person doing everything is cheapest of all. A village has a family doctor; a city can keep a
+      heart surgeon busy.
     </p>
     <p>
       This is why chains grow as markets grow. Around 70% of international trade now passes through global value
@@ -191,14 +201,15 @@
     <p>
       Until 1987 almost every chip company designed and made its own chips. That year Morris Chang founded a firm in Taiwan
       to do one thing only: make chips that others design. Since then each link has specialized, from the blueprints
-      and the design software to the machines that print the circuits, and the chain has been one of the most
-      innovative in industry.
+      and the design software to the machines that print the circuits. Each serves the whole world, a market large
+      enough to keep the narrowest specialist busy, and the chain has been one of the most innovative in industry.
     </p>
     <p>
       Its weak spots are the links without an alternative. One firm makes most of the world’s most advanced chips, and
       only one, in the Netherlands, builds the machines that print them. Specialization concentrates skill. It does not
       have to concentrate dependence, but here it does.
     </p>
+    <p>A long chain has a second weakness: the more links it has, the more often something interrupts it.</p>
   {/snippet}
 
   {#snippet bank()}

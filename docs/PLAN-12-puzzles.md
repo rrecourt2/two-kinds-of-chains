@@ -276,7 +276,7 @@ Changes in the shape of the story:
 | 5 | Only variety absorbs variety | what an office may decide on its own | the queue, tipping point, OR | find the smallest setting that meets a target | 2 |
 | 6 | When the average lies | chains that multiply over time; typical against average | AND as multiplying, OR as pooling | set two controls for one target | 2 |
 | 7 | When links become conditions | IF; hubs; the loop that feeds itself | quorum, tipping point, the limit of pooling | set two controls for two targets | 3 |
-| 8 | The gate worth keeping | false positive; a check sized to the loss | IF, the worst year against the average, tipping point, quorum | set two controls for two targets that pull against each other | 3 |
+| 8 | The gate worth keeping | false positive; a check sized to the loss | IF, the worst year against the average, the queue, quorum | set two controls for two targets that pull against each other | 3 |
 | 9 | A person in the loop | the option: keep the good, drop the bad | OR against AND, swings (the coin game) | predict a reversal, then test it | 3 |
 | 10 | Many short chains | options made on purpose | the option, pieces that hold, typical against worst | hit two targets with one slider; the answer is a band | 3 |
 | 11 | How fast to forget | memory against change: a loop that steadies itself | the loop, false positive (a bad year that is only noise), IF (a limit) | search for a minimum, then watch it move | 4 |
@@ -482,8 +482,8 @@ Work on `twelve-puzzles`. Merge to `main` only at the milestones, each after the
 Update this list as work lands, so that an interrupted session can be resumed.
 
 - [x] Plan written and revised with the author's choices
-- [ ] 2. The cut
-- [ ] 3. The chapters and the hover notes
+- [x] 2. The cut (commit `f16ba5d` on `twelve-puzzles`)
+- [x] 3. The chapters and the hover notes (all checks in section 8 pass: 96 tests, 24 of 24 on the walk-through)
 - [ ] 4. Milestone 1 on `main`
 - [ ] 5. Review
 - [ ] 6. Milestone 2 on `main`, artifact and files delivered

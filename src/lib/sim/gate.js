@@ -1,33 +1,35 @@
-// The gate worth keeping: a false-positive case. A development lender receives about 600
-// requests a year to send a payment to a new bank account; one in 200 is a fraudster's. An
-// automatic screen scores every request for signs of fraud, and a flagged payment waits for a
-// call-back to the client on a number already on file, which stops any fraud. The call takes one
-// of three qualified reviewers a day, and payments are promised within three working days.
+// The gate worth keeping: a false-positive case, made statistical. A development lender receives
+// about 650 requests a year to pay a disbursement into a new bank account; one in 200 is a
+// fraudster's. A check (a call-back to the client on a number already on file) stops any fraud,
+// but takes one of three qualified reviewers a day, and payments are promised within three
+// working days. So the bank checks a share of the requests above $1m and a share of those below,
+// and an automatic screen picks which: the most suspicious first.
 //
-// Fraud is rare, so at every sensitivity most flags are genuine clients: false positives. Turned
-// up, the screen floods the reviewers; turned down, it misses frauds; and one fraud in four shows
-// no sign at all, so no setting stops a large one for sure. The way out sizes the gate to the
-// loss: call back every payment above an amount, whatever the screen says, and screen the rest
-// lightly. Each simulated year is lived through once, as in the coin game: the board's limit is on
-// the worst of 1,000 years, not the average. All amounts in $m.
+// Fraud is rare, so most checks fall on genuine clients: false positives. The screen's ranking is
+// strong (a fraud that shows its signs sits near the top, so checking a tenth catches most of
+// them), but one fraud in four shows no sign and sits anywhere in the order: only a check of every
+// request is sure to stop it. The way out sizes the check to the loss: all of the large ones, a
+// tenth of the rest. Each simulated year is lived through once, as in the coin game: the board's
+// limit is on the worst of 1,000 years, not the average. All amounts in $m.
 
 import { makeRng, poisson, normal, quantile } from './rng.js';
 
 export const PARAMS = Object.freeze({
-  perDay: 2.4, // change-of-account requests a working day (Poisson): about 600 a year
+  perDay: 2.6, // requests a working day to pay into a new account (Poisson): about 650 a year
   days: 250, // working days in a year
-  median: 1, // payment sizes: lognormal, median $1m …
+  median: 1, // disbursement sizes: lognormal, median $1m …
   sigma: 1.4, // … with this spread on the log scale,
   floor: 0.05, // redrawn unless between $50,000 …
   cap: 80, // … and $80m
+  line: 1, // the two controls: the share checked above $1m, and the share checked at or below it
   fraudEvery: 200, // one request in 200 is a fraudster's
   hidden: 0.25, // one fraud in four shows no sign: it scores like a genuine request
   signal: 3, // the others score this many standard deviations above a genuine request, on average
-  reviewers: 3, // qualified reviewers; a call-back takes one of them one working day
+  reviewers: 3, // qualified reviewers; a check takes one of them one working day
   presence: 0.9, // each is in nine days in ten …
   spell: 4, // … away for spells of four days on average
   promise: 3, // payment is promised within three working days of the request
-  tail: 60, // working days after the year in which call-backs still in the line are finished
+  tail: 60, // working days after the year in which checks still in the line are finished
 });
 
 export const LIMIT = 5; // the board's limit: no year may lose more than $5m
@@ -35,23 +37,12 @@ export const YEARS = 1000;
 export const SEED = 12;
 export const LATE = 0.01; // the promise: fewer than 1 payment in 100 late
 
-/** The screen's settings: the share of genuine requests each one flags. */
-export const SENSITIVITY = Object.freeze([
-  Object.freeze({ label: 'Low', flags: 0.1 }),
-  Object.freeze({ label: 'Medium', flags: 0.35 }),
-  Object.freeze({ label: 'High', flags: 0.5 }),
-  Object.freeze({ label: 'Very high', flags: 0.7 }),
-]);
+/** The shares a control can check, the most suspicious first. Never none. */
+export const SHARES = Object.freeze([0.1, 0.25, 0.5, 0.75, 0.9, 1]);
+export const shareLabel = (k) => `${Math.round(SHARES[k] * 100)}%`;
 
-/** Call back every payment above this amount, whatever the screen says ($m). */
-export const CALLBACK = Object.freeze([
-  Object.freeze({ at: Infinity, label: 'None' }),
-  Object.freeze({ at: 10, label: '$10m' }),
-  Object.freeze({ at: 1, label: '$1m' }),
-]);
-
-export const START = Object.freeze({ sens: 1, callback: 0 }); // the screen alone, at Medium
-export const ANSWER = Object.freeze({ sens: 0, callback: 2 }); // a light screen, and every payment above $1m
+export const START = Object.freeze({ large: 2, small: 2 }); // the most suspicious half, at every amount
+export const ANSWER = Object.freeze({ large: 5, small: 0 }); // every request above $1m, a tenth below
 
 /** The standard normal quantile (Acklam's rational approximation, accurate to about 1e-9). */
 export function qnorm(p) {
@@ -69,10 +60,16 @@ export function qnorm(p) {
   return ((((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q) / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
 }
 
-/** The score above which a setting flags a request: it flags the share `flags` of genuine requests. */
-export const cutoff = (flags) => (flags <= 0 ? Infinity : qnorm(1 - flags));
+/**
+ * The score above which a request is checked when a side checks `share` of its requests: the
+ * screen's bar, set so that this share of genuine requests scores above it. All: no bar at all.
+ */
+export const cutoff = (share) => (share >= 1 ? -Infinity : share <= 0 ? Infinity : qnorm(1 - share));
 
-/** One payment size: lognormal, redrawn until it falls between the floor and the cap. */
+/** The two bars of a setting, from the indices of its two shares. */
+export const cuts = (large, small) => ({ large: cutoff(SHARES[large]), small: cutoff(SHARES[small]) });
+
+/** One request size: lognormal, redrawn until it falls between the floor and the cap. */
 function sizeOf(rng, p) {
   for (;;) {
     const s = p.median * Math.exp(p.sigma * normal(rng));
@@ -134,19 +131,23 @@ export function calendars(rng, p = PARAMS, days = p.days + p.tail) {
   });
 }
 
-/** Whether request i waits for a call-back: above the amount, or flagged by the screen. */
-export const calledBack = (y, i, threshold, cut) => y.size[i] > threshold || y.score[i] > cut;
+/** Whether request i is above the line ($1m), on the side of the larger disbursements. */
+export const isLarge = (y, i, p = PARAMS) => y.size[i] > p.line;
+
+/** Whether request i is checked: its score clears the bar of its own side. */
+export const checked = (y, i, bars, p = PARAMS) => y.score[i] > (isLarge(y, i, p) ? bars.large : bars.small);
 
 /**
- * One year under one rule: call back every payment above `threshold`, and any the screen flags
- * (score above `cut`). The rest are paid the day they arrive, and a fraud among them is lost in
- * full. Call-backs wait in one line, first come first served, for any qualified reviewer who is in
+ * One year under one setting: the bars of the two sides (`large`, `small`: scores above which a
+ * request is checked). The rest are paid the day they arrive, and a fraud among them is lost in
+ * full. Checks wait in one line, first come first served, for any qualified reviewer who is in
  * (`pooled`), or each for their own named reviewer. A call made on day d pays a genuine request
  * the next day: its wait is d − arrival + 1 working days.
  */
-export function runYear(y, cal, { threshold, cut, pooled = true }, p = PARAMS) {
+export function runYear(y, cal, { large, small, pooled = true }, p = PARAMS) {
   const horizon = cal[0].length;
   const { n, day, size, fraud, reviewer } = y;
+  const bars = { large, small };
   const lanes = pooled ? 1 : p.reviewers;
   // Each line is a slice of one buffer: line q holds its requests from q * n onwards.
   const buf = new Int32Array(lanes * n);
@@ -154,25 +155,37 @@ export function runYear(y, cal, { threshold, cut, pooled = true }, p = PARAMS) {
   const tail = new Int32Array(lanes);
   for (let q = 0; q < lanes; q++) head[q] = tail[q] = q * n;
   const order = new Int32Array(n);
-  const r = { n, money: 0, called: 0, genuineCalled: 0, bySize: 0, bySizeMoney: 0, flagged: 0, flaggedFraud: 0, frauds: 0, stopped: 0, loss: 0, fraudMoney: 0, valid: 0, late: 0, waitSum: 0 };
+  const r = {
+    n, money: 0, called: 0, genuineCalled: 0, frauds: 0, stopped: 0, loss: 0, fraudMoney: 0, valid: 0, late: 0, waitSum: 0,
+    largeN: 0, largeMoney: 0, largeCalled: 0, largeFrauds: 0, largeStopped: 0,
+    smallCalled: 0, smallGenuineCalled: 0, smallFrauds: 0, smallStopped: 0,
+  };
   for (let i = 0; i < n; i++) {
+    const big = isLarge(y, i, p);
+    const call = checked(y, i, bars, p);
     r.money += size[i];
-    if (y.score[i] > cut) {
-      r.flagged++;
-      r.flaggedFraud += fraud[i];
+    if (big) {
+      r.largeN++;
+      r.largeMoney += size[i];
     }
     if (fraud[i]) {
       r.frauds++;
       r.fraudMoney += size[i];
+      if (big) r.largeFrauds++;
+      else r.smallFrauds++;
     }
-    if (calledBack(y, i, threshold, cut)) {
+    if (call) {
       order[r.called++] = i;
-      if (size[i] > threshold) {
-        r.bySize++;
-        r.bySizeMoney += size[i];
+      if (big) r.largeCalled++;
+      else r.smallCalled++;
+      if (fraud[i]) {
+        r.stopped++;
+        if (big) r.largeStopped++;
+        else r.smallStopped++;
+      } else {
+        r.genuineCalled++;
+        if (!big) r.smallGenuineCalled++;
       }
-      if (fraud[i]) r.stopped++;
-      else r.genuineCalled++;
     } else if (fraud[i]) r.loss += size[i]; // paid at once to a fraudster: lost in full
     else r.valid++; // paid at once, no wait
   }
@@ -199,7 +212,7 @@ export function runYear(y, cal, { threshold, cut, pooled = true }, p = PARAMS) {
       }
     }
   }
-  // Anything still in the line at the horizon (only when nearly every payment is called) counts as very late.
+  // Anything still in the line at the horizon (only when nearly every payment is checked) counts as very late.
   for (let q = 0; q < lanes; q++) {
     for (let h = head[q]; h < tail[q]; h++) {
       const i = buf[h];
@@ -212,21 +225,24 @@ export function runYear(y, cal, { threshold, cut, pooled = true }, p = PARAMS) {
   return r;
 }
 
-/** Every setting of the card, in order: sensitivity by sensitivity, each with every call-back amount. */
+/** Every setting of the card, in order: each share above $1m, with every share below it. */
 export const SETTINGS = Object.freeze(
-  SENSITIVITY.flatMap((s, si) => CALLBACK.map((c, ci) => Object.freeze({ sens: si, callback: ci, threshold: c.at, cut: cutoff(s.flags), pooled: true }))),
+  SHARES.flatMap((_, li) => SHARES.map((__, si) => Object.freeze({ largeShare: li, smallShare: si, ...cuts(li, si), pooled: true }))),
 );
-export const settingIndex = (sens, callback) => sens * CALLBACK.length + callback;
+export const settingIndex = (large, small) => large * SHARES.length + small;
 
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
-const FIELDS = ['n', 'money', 'called', 'genuineCalled', 'bySize', 'bySizeMoney', 'flagged', 'flaggedFraud', 'frauds', 'stopped', 'fraudMoney', 'valid', 'late', 'waitSum'];
+const FIELDS = [
+  'n', 'money', 'called', 'genuineCalled', 'frauds', 'stopped', 'fraudMoney', 'valid', 'late', 'waitSum',
+  'largeN', 'largeMoney', 'largeCalled', 'largeFrauds', 'largeStopped', 'smallCalled', 'smallGenuineCalled', 'smallFrauds', 'smallStopped',
+];
 
 /**
  * A thousand years (by default), every rule in `runs` applied to the same years in one pass.
  * Returns one summary per run, in order: the loss of every year, its average, typical (median) and
- * worst, the years over the limit, the share of genuine payments late, call-backs and flags a
- * year, the share of flags that were fraud, the share of frauds and of fraud money stopped, and
- * how busy the reviewers were.
+ * worst, the years over the limit, the share of genuine payments late, checks a year (and how many
+ * of them genuine clients), the share of frauds stopped on each side, and how busy the reviewers
+ * were.
  */
 export function simulate(options = {}) {
   const steps = simulation(options);
@@ -266,9 +282,8 @@ export function* simulation({ runs = SETTINGS, years = YEARS, seed = SEED, p = P
     let worstYear = 0;
     for (let t = 1; t < years; t++) if (losses[t] > losses[worstYear]) worstYear = t;
     return {
-      sens: run.sens,
-      callback: run.callback,
-      threshold: run.threshold,
+      largeShare: run.largeShare,
+      smallShare: run.smallShare,
       pooled: run.pooled !== false,
       losses,
       mean: mean(losses),
@@ -279,17 +294,22 @@ export function* simulation({ runs = SETTINGS, years = YEARS, seed = SEED, p = P
       late: a.late / a.valid,
       avgWait: a.waitSum / a.valid,
       perYear: a.n / years,
-      calls: a.called / years, // call-backs a year
-      genuineCalls: a.genuineCalled / years, // genuine clients called back a year
-      bySize: a.bySize / a.n, // share of requests called back for their amount …
-      bySizeMoney: a.bySizeMoney / a.money, // … and their share of the money
-      flags: a.flagged / years, // requests the screen flags a year, at any amount
-      flagsFraud: a.flaggedFraud / years,
-      precision: a.flagged ? a.flaggedFraud / a.flagged : 0, // the share of flags that are fraud
+      calls: a.called / years, // checks a year
+      genuineCalls: a.genuineCalled / years, // genuine clients checked a year: false positives
+      smallGenuineCalls: a.smallGenuineCalled / years, // … of them below $1m
+      largeCalls: a.largeCalled / years,
+      smallCalls: a.smallCalled / years,
+      largeOfRequests: a.largeN / a.n, // the share of requests above $1m …
+      largeOfMoney: a.largeMoney / a.money, // … and their share of the money
       frauds: a.frauds / years,
       caught: a.frauds ? a.stopped / a.frauds : 1, // share of frauds stopped
+      largeCaught: a.largeFrauds ? a.largeStopped / a.largeFrauds : 1, // … above $1m
+      smallCaught: a.smallFrauds ? a.smallStopped / a.smallFrauds : 1, // … below it
+      smallStopped: a.smallStopped / years,
       moneyStopped: a.fraudMoney ? 1 - losses.reduce((s, l) => s + l, 0) / a.fraudMoney : 1,
-      // Calls asked of the reviewers against the days they are in: how busy the gate keeps them.
+      // The share of checks that find a fraud.
+      precision: a.called ? a.stopped / a.called : 0,
+      // Checks asked of the reviewers against the days they are in: how busy the gate keeps them.
       busy: a.called / present,
     };
   });
@@ -301,19 +321,19 @@ export const onTime = (r) => r.late < LATE;
 
 // ---- The year on the card ----
 // One year drawn on its own seed, chosen because its three frauds show the whole case: a hidden
-// one of several million that no setting of the screen sees, a clumsy small one that every setting
-// flags, and a hidden small one that only the two highest settings catch.
-// Found by searching seeds for those three frauds among about 600 requests (test/gate.test.js
-// checks them).
-export const SHOW_SEED = 255017;
+// one of several million among the least suspicious tenth above $1m, which only a check of every
+// large request stops; a clumsy small one in the most suspicious tenth below $1m; and a quieter
+// small one that a check of a quarter stops and a tenth does not.
+// Found by searching seeds (test/gate.test.js checks them).
+export const SHOW_SEED = 825152;
 
 /** The year shown on the card. */
 export const shownYear = (seed = SHOW_SEED, p = PARAMS) => yearOf(makeRng(seed), p);
 
 // The chapter's own runs: every setting with any qualified reviewer, then the answer with named
 // reviewers only (for the text). Worked out once, the first time the chapter opens, in steps of
-// 50 years; a later visit, or a reset, picks up the finished result or the same job.
-const NAMED = Object.freeze({ ...SETTINGS[settingIndex(ANSWER.sens, ANSWER.callback)], pooled: false });
+// 25 years; a later visit, or a reset, picks up the finished result or the same job.
+const NAMED = Object.freeze({ ...SETTINGS[settingIndex(ANSWER.large, ANSWER.small)], pooled: false });
 const CHAPTER_RUNS = [...SETTINGS, NAMED];
 const split = (out) => ({ runs: out.slice(0, SETTINGS.length), named: out[SETTINGS.length] });
 let finished = null;
@@ -325,7 +345,7 @@ export const chapterReady = () => finished;
 /** Advances the chapter's simulation by one step; returns the results once they are complete. */
 export function chapterStep() {
   if (finished) return finished;
-  job ??= simulation({ runs: CHAPTER_RUNS, chunk: 50 });
+  job ??= simulation({ runs: CHAPTER_RUNS, chunk: 25 });
   const step = job.next();
   if (step.done) {
     finished = split(step.value);

@@ -15,6 +15,7 @@
   const game = getContext('tkc-game');
   // A prediction: the slider and the monthly totals open after the first answer or a hint.
   const live = $derived(game.engaged('modules'));
+  const done = $derived(!game.isOpen('modules'));
 
   let interrupt = $state(10); // tenths of a percent per part
   // Before the first answer the slider runs from quiet up to the asked case, 1.0%; busier settings open after it.
@@ -156,8 +157,8 @@
 >
   {#snippet setup()}
     <p>
-      Kauffman’s teams escaped their dead ends by working inside modules. Herbert Simon, a Nobel economist and one of the
-      founders of artificial intelligence, had shown why in a parable of 1962. Tempus and Hora both make fine watches of
+      Some chains lose only time when they break; others lose the work already done. Herbert Simon, a Nobel economist
+      and one of the founders of artificial intelligence, told a parable about the difference in 1962. Tempus and Hora both make fine watches of
       1,000 parts, and both are often interrupted by customers calling.
     </p>
     <p>
@@ -218,6 +219,9 @@
           {/if}
         </svg>
         <p class="tkc-caption">A row of ten modules is a larger module; ten rows make the watch.</p>
+        {#if done}
+          <p class="tkc-caption tkc-twin">Read a watch as a credit paper. Tempus’s is reviewed only once it is complete; Hora’s section by section, and each approved section holds.</p>
+        {/if}
         <p class="tkc-caption">
           {#if still}
             The animation is off because this device asks for reduced motion.
@@ -258,8 +262,8 @@
   {#snippet after()}
     <p>
       Tempus is no worse at making watches than Hora. His work is one chain of a thousand steps, and every interruption
-      sends him back to the start. Hora’s is a hundred and eleven short chains, each of which ends in something that
-      holds. At one interruption in a hundred, ten steps in a row happen nine times in ten; a thousand in a row almost
+      sends him back to the start. Hora’s is a hundred and eleven short chains of ten steps each: a hundred modules,
+      ten larger ones and the watch itself, and each ends in something that holds. At one interruption in a hundred, ten steps in a row happen nine times in ten; a thousand in a row almost
       never happen. Simon’s own, rougher arithmetic gave Hora about 4,000 watches for each of Tempus’s.
     </p>
     <p>
@@ -278,6 +282,7 @@
       works is invariably found to have evolved from a simple system that worked. A complex system designed from scratch,
       he added, never works and cannot be patched up to make it work.
     </p>
+    <p>Tempus lost his work to interruptions. Most work in a bank meets a quieter trouble: it waits in line.</p>
   {/snippet}
 
   {#snippet bank()}

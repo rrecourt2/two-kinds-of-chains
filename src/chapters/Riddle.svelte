@@ -168,7 +168,8 @@
 
   {#snippet after()}
     <p>
-      Better attendance helps less than it seems: six people at 97% are all in together on only 83% of days. A stand-in
+      Better attendance helps less than it seems: when everyone must be in, the chances multiply, and six people at 97%
+      are all in together on only 83% of days. A stand-in
       changes the arithmetic. A role is covered unless both people are out, so each link holds on 99 days in 100, and all
       six hold on 94% of days. Nobody has to be in more often; more people can sign.
     </p>
@@ -188,11 +189,9 @@
       strong. ANDs weaken it with every link, and past a point it is blocked more often than it is open.
     </p>
     <p>
-      Between the two sits the <span class="tkc-idea">quorum</span>. All six of six is an <span class="tkc-and">AND</span>; any one of two, a person or their stand-in, is an
-      <span class="tkc-or">OR</span>; any four of six lies in between. The same six people, each in on nine days in ten, are all in together on
-      {pct(coverageOdds(COUNT, 0, 0.9).enough)} of days; any five on {pct(coverageOdds(COUNT, 0, 0.9, 5).enough)}, any
-      four on {pct(coverageOdds(COUNT, 0, 0.9, 4).enough)}. A quorum keeps several judgements without waiting for every
-      one of them.
+      Between the two sits the <span class="tkc-idea">quorum</span>, which keeps several judgements without waiting for
+      every one of them. Six people, each in on nine days in ten, are all in together on
+      {pct(coverageOdds(COUNT, 0, 0.9).enough)} of days; any four of them on {pct(coverageOdds(COUNT, 0, 0.9, 4).enough)}.
     </p>
   {/snippet}
 

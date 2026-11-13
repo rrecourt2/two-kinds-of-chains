@@ -297,16 +297,17 @@
 
 <Chapter
   n={18}
-  kicker="Requisite variety"
+  kicker="Delegations"
   title="Only variety absorbs variety"
   lede="An office’s delegations say what it may decide on its own. Whatever the world asks beyond them travels up the chain."
   puzzle="variety"
 >
   {#snippet setup()}
     <p>
-      A development lender’s offices in a dozen countries receive about forty client requests a week. Most are
-      familiar: a loan on standard terms, a new repayment date. Some are not: a working capital line in a new currency, a
-      guarantee for a local bank, a loan to a cooperative with no audited accounts, a grace period after a drought.
+      Some requests wait because the person who receives them may not decide them. A development lender’s offices in
+      a dozen countries receive about forty client requests a week. Most are familiar: a loan on standard terms, a new
+      repayment date. Some are not: a working capital line in a new currency, a loan to a cooperative with no audited
+      accounts, a grace period after a drought.
     </p>
     <p>
       Each office has delegated authority: the kinds of request it may decide on its own, within its products, terms
@@ -461,7 +462,7 @@
     </p>
     <h3>Cases nobody listed</h3>
     <p>
-      Delegations can grow with the world, here to {word(VARIED_BEST)} kinds. Or offices can hold what a list cannot:
+      Delegations can grow with the world: here, {word(VARIED_BEST)} kinds would bring the wait under two weeks again. Or offices can hold what a list cannot:
       principles, such as what a loan is for and what the bank can afford to lose. If
       principles settled one unlisted case in three, the wait would stay near {word(Math.round(PRINCIPLED.wait))} days.
       Ashby’s homeostat of 1948 kept no list: pushed out of bounds, it tried new settings until one held.

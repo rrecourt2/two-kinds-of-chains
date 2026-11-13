@@ -415,6 +415,9 @@
   const hubLinks = HUBS.adj[hub].length;
   const hubK = partnersToFail(CAPITAL, hubLinks);
   const evenly = CAPITAL + EXTRA / N;
+  // With four more each for the 12 biggest, a hub holds more than the loss, and the biggest needs more partners to fail.
+  const hubTop = CAPITAL + EXTRA / 12;
+  const hubKTop = partnersToFail(hubTop, hubLinks);
   const tipNone = CAPITALS[tippingPoint(HUBS.curves.none) + 1];
   const tipTop12 = CAPITALS[tippingPoint(HUBS.curves.top12) + 1];
   // The other system: many similar banks tip lower, with no extra, and absorb a single loss at 5%.
@@ -595,15 +598,15 @@
     <p>
       At {CAPITAL}% the system looks sound from almost everywhere: of the {N} places the loss can land, {atMostNine}
       bring down nine banks or fewer. The {WORDS[allFall]} biggest hubs each bring down all {N}: robust yet
-      fragile, as central bankers came to call it.
+      fragile, in the central bankers’ phrase.
     </p>
     <p>
       Each bank hangs on an <span class="tkc-if">IF</span>: it fails if its losses exceed its capital. Through its loans the IF
       becomes a <span class="tkc-idea">quorum</span>: a small bank falls if {WORDS[smallK]} of its two partners fails, the biggest if {WORDS[hubK]} of
-      its {WORDS[hubLinks]} do. When the hub falls, each round of failures sets up the next: a <span class="tkc-idea">loop</span> that feeds itself.
+      its {WORDS[hubLinks]} do. When the hub falls, each round of failures sets up the next. That is a <span class="tkc-idea">loop</span>: an effect that feeds its own cause.
     </p>
     <p>
-      So one bank’s <span class="tkc-if">IF</span> becomes the system’s <span class="tkc-idea">tipping point</span>, the cliff in the curve. Raising every bank to {evenly}% uses the whole allowance and changes nothing: the cliff is at {tipNone}%. The same average, as four more each for the 12 biggest, puts the buffer where the links meet, and the cliff moves to {tipTop12}%. Many similar banks, about
+      So one bank’s <span class="tkc-if">IF</span> becomes the system’s <span class="tkc-idea">tipping point</span>, the cliff in the curve. Raising every bank to {evenly}% uses the whole allowance and changes nothing: a hub at {evenly}% still cannot absorb an {LOSS}% loss, and the cliff is at {tipNone}%. The same average, as four more each for the 12 biggest, puts the buffer where the links meet: a hub at {hubTop}% absorbs the loss outright, the biggest falls only if {WORDS[hubKTop]} of its {WORDS[hubLinks]} partners do, and the cliff moves to {tipTop12}%. Many similar banks, about
       {WORDS[SIMILAR_LINKS]} partners each, absorb what the hubs pass on: at {CAPITAL}% no landing brings down more than
       {WORDS[similarMost]}, and their cliff sits at {tipSimilar}%, unaided. Robust yet fragile belongs to the hubs.
     </p>
@@ -615,7 +618,7 @@
     <h3>Hubs inside organizations</h3>
     <p>
       Organizations grow hubs the same way. Work flows to whoever already handles the most: the expert everyone
-      asks, the committee that sees every deal or the system every other system reads from. On a normal day a hub is
+      asks, or the committee that sees every deal. On a normal day a hub is
       efficient. On a bad day it is where a loss travels furthest, and where a deputy or a second route counts most.
     </p>
   {/snippet}
