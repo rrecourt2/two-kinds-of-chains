@@ -28,3 +28,11 @@ test('queues: six named reviewers at 95% busy, one after another and side by sid
   near(slowestOf(1, 0.95), meanWait(1, 0.95), 1e-9);
   assert.ok(slowestOf(6, 0.95) > slowestOf(3, 0.95) && slowestOf(6, 0.95) < 6 * meanWait(1, 0.95));
 });
+
+test('a shared line whose reviews take a sixth longer waits about as long as the named lines', () => {
+  // The queues chapter: at 80% busy a named line waits four hours; pooled reviewers a sixth slower are 93% busy.
+  const slower = meanWait(4, 0.8 * (7 / 6)) * (7 / 6);
+  assert.equal(Math.round(slower), 4);
+  assert.equal(Math.round(meanWait(1, 0.8)), 4);
+  assert.ok(meanWait(4, 0.8) < 1);
+});

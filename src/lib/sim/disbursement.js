@@ -22,7 +22,7 @@ import { makeRng, normal } from './rng.js';
 // evidence of filing and a letter from local counsel (or the registration itself, if sooner).
 export const CONDITIONS = [
   { id: 'kyc', name: 'KYC checks', median: 7, fixed: true },
-  { id: 'board', name: 'Board approval', median: 5, fixed: true, alt: 'a certified copy, originals to follow' },
+  { id: 'board', name: 'Borrower’s board', median: 5, fixed: true, alt: 'a certified copy, originals to follow' },
   { id: 'signed', name: 'Security signed', median: 10, fixed: true },
   { id: 'opinion', name: 'Legal opinion', median: 12, fixed: true, after: 'signed' },
   { id: 'central', name: 'Central bank', median: 20 },
@@ -160,10 +160,14 @@ export function simulateLoans({ before = TOTAL, alternatives = false, predictabl
   const days = new Int32Array(loans);
   const setBy = new Uint8Array(loans);
   const met = new Int32Array(loans * TOTAL);
+  const good = new Int32Array(loans * TOTAL);
   let one = null;
   for (let l = 0; l < loans; l++) {
     const conds = oneLoan(l, L, sigma, alternatives, p);
-    for (let c = 0; c < TOTAL; c++) met[l * TOTAL + c] = conds[c].met;
+    for (let c = 0; c < TOTAL; c++) {
+      met[l * TOTAL + c] = conds[c].met;
+      good[l * TOTAL + c] = conds[c].good;
+    }
     let last = 0;
     let by = 0;
     for (let c = 0; c < n; c++) {
@@ -192,7 +196,7 @@ export function simulateLoans({ before = TOTAL, alternatives = false, predictabl
       };
     }
   }
-  return { days, setBy, met, sample: one, before: n, alternatives, predictable, check: p.check };
+  return { days, setBy, met, good, sample: one, before: n, alternatives, predictable, check: p.check };
 }
 
 /** For each condition, the share of loans in which it alone would let the money move within `limit` days. */
@@ -203,6 +207,23 @@ export function inTime(sim, limit) {
     for (let l = 0; l < loans; l++) if (sim.met[l * TOTAL + c] + sim.check <= limit) ok++;
     return ok / loans;
   });
+}
+
+/**
+ * What speed leaves open: the share of loans paid while a condition was still open (one that follows the money,
+ * or one met by its alternative with the original still to come), and how many working days after the money the
+ * last original typically arrives in those loans.
+ */
+export function stillOpen(sim) {
+  const loans = sim.days.length;
+  const lags = [];
+  for (let l = 0; l < loans; l++) {
+    let last = 0;
+    for (let c = 0; c < TOTAL; c++) last = Math.max(last, sim.good[l * TOTAL + c]);
+    if (last > sim.days[l]) lags.push(last - sim.days[l]);
+  }
+  lags.sort((a, b) => a - b);
+  return { share: lags.length / loans, later: lags.length ? lags[lags.length >> 1] : 0 };
 }
 
 /** For each condition, the share of loans whose date it set (it was met last); the extra last slot is the safeguard. */

@@ -148,7 +148,7 @@
     goal: 'There is no budget for a fifth reviewer. Cut the average wait for a review to under an hour.',
     met: busy >= 80 && wait < 1,
     checks: [
-      { label: 'Reviewers at least 80% busy, as the budget requires', ok: busy >= 80 },
+      { label: 'The same workload: reviewers at least 80% busy', ok: busy >= 80 },
       { label: `Average wait under an hour (now ${hours(wait)})`, ok: wait < 1 },
     ],
     hints: ['How busy they are is only half of it. Look at how requests reach the reviewers.', 'Can a request wait while a reviewer who could take it is free?'],
@@ -166,13 +166,13 @@
   {#snippet setup()}
     <p>
       The riddle asked whether the right people are in. Even when they are, they are busy: a specialist whom
-      everyone needs has a full calendar. Say four credit analysts review every new deal, and each review takes about
-      an hour. Each deal goes to the analyst who covers its client,
-      and waits in that analyst’s line.
+      everyone needs has a full calendar. Say four credit analysts review every request that touches a loan, a
+      waiver, a new repayment date, a change of security, and each review takes about an hour. Each request goes to
+      the analyst who covers its client, and waits in that analyst’s line.
     </p>
     <p>
-      Queueing theory, the mathematics of waiting lines, says that how busy the analysts are decides how long every deal
-      waits. Each review is a link in the deal’s chain, and a busy link is a slow one. The surprise is the shape:
+      Queueing theory, the mathematics of waiting lines, says that how busy the analysts are decides how long every request
+      waits. Each review is a link in a chain, and a busy link is a slow one. The surprise is the shape:
       waiting does not grow in step with how busy someone is.
     </p>
   {/snippet}
@@ -300,7 +300,7 @@
 
       {#snippet model()}
         <p>Requests arrive at random, and review times vary the way an exponential distribution does: an hour on average, sometimes much longer. The named line is the classic single-server queue: average wait = busy ÷ (1 − busy) × work time. At 90% busy that is 0.9 ÷ 0.1 = 9 hours. Reviews that always took exactly one hour would halve the waits. Kingman (1961) showed that, approximately, any single-server queue near full load has this shape, scaled by how variable the arrivals and the work are.</p>
-        <p>The shared line is the same four people serving one queue, which queueing theory calls M/M/4 and solves with the Erlang C formula. The animation is a live simulation of the same system.</p>
+        <p>The shared line is the same four people serving one queue, which queueing theory calls M/M/4 and solves with the Erlang C formula. The animation is a live simulation of the same system. The shared line assumes that any of the four reviews as quickly as the reviewer who covers the client.</p>
       {/snippet}
     </Instrument>
   {/snippet}
@@ -321,16 +321,20 @@
       A shared line changes the shape, not the workload. In named lines a request can wait behind a colleague’s backlog
       while another reviewer sits idle; in one shared line that never happens, and the <span class="tkc-idea">tipping point</span> moves out to
       {Math.round(TIP_SHARED * 100)}%.
-      Bank branches learned this long ago: one line for all the tellers beats a line per teller. It is the riddle’s
-      stand-in again: any qualified person may take the work.
+      Bank branches learnt this long ago: one line for all the tellers beats a line per teller. It is the riddle’s
+      stand-in again: any qualified person may take the work. It comes at the pin workshop’s price: a reviewer new to the
+      client is slower, and if every review took a sixth longer, the wait would be back near
+      {Math.round(meanWait(4, 0.8 * (7 / 6)) * (7 / 6))} hours.
     </p>
     <p>
       Links joined <span class="tkc-idea">one after another</span> add their waits. A request that passes six named
       reviewers, each 95% busy, waits about nineteen hours at each: nearly three working weeks of waiting for six hours
       of work. The same six reviews run <span class="tkc-idea">side by side</span> on one file wait only for the
       slowest of them, about {Math.round(slowestOf(6, 0.95))} hours. Either way, a chain in which everyone works flat
-      out delivers slowly. Spare capacity is what lets work flow, in people and in IT systems alike: a server at 95%
-      load answers slowly for everyone, which is why engineers keep headroom.
+      out delivers slowly. Spare capacity is what lets work flow.
+    </p>
+    <p>
+      A shared line works where any reviewer may decide. Often the wait is for permission.
     </p>
   {/snippet}
 

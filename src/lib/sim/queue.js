@@ -1,4 +1,4 @@
-// Waiting-line mathematics for chapter 4 and the busy approvers in the linked-systems model (chapter 3).
+// Waiting-line mathematics for the queues chapter.
 
 import { exponential } from './rng.js';
 

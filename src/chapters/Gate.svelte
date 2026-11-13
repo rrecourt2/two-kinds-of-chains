@@ -74,7 +74,7 @@
   const rules = [
     'About 650 requests a year, $50,000 to $80m; one in 200 is fraud.',
     'A screen ranks requests by signs of fraud; one fraud in four shows none.',
-    'A call-back stops any fraud; each of three reviewers closes one a day.',
+    'A call-back stops any fraud; each of three reviewers, in nine days in ten, closes one a day.',
   ];
 
   // ---- Puzzle ----
@@ -246,7 +246,7 @@
 
   const describe = $derived(
     `One year of ${YEAR.n} requests to pay a new account, by amount. ${year.called} are checked by a call-back: ${year.stopped} ${frauds(year.stopped)} stopped and ${year.genuine} genuine clients. ` +
-      `${year.paid} are paid at once${year.missed ? `, including ${year.missed} ${frauds(year.missed)}: ${money(year.lost)} lost` : ', none of them a fraud'}.`,
+      `${year.paid} are paid on the standard checks alone${year.missed ? `, including ${year.missed} ${frauds(year.missed)}: ${money(year.lost)} lost` : ', none of them a fraud'}.`,
   );
 </script>
 
@@ -264,10 +264,11 @@
       fraudster rarely comes back.
     </p>
     <p>
-      A call-back to the client, on a number already on file, stops any fraud. But reaching the right person takes
-      time: each of three qualified reviewers closes about one call-back a day, and payment is promised within three
-      working days. So the bank checks only a share: today, half, at every amount. A screen picks which, the most
-      suspicious first, by signs such as a new country or a letterhead that does not match.
+      Every request passes the usual signature and document checks. A call-back to the client, on a number already
+      on file, is the extra step that stops any fraud. But reaching the right person takes time: each of three
+      reviewers, in on nine days in ten, closes about one a day, and payment is promised within three working days.
+      So the bank calls back only a share: today, half, at every amount. A screen picks which, the most suspicious
+      first, by signs such as a new country or a mismatched letterhead.
     </p>
     <p>
       The board has set one limit: no year may lose more than $5m to fraud, however good the years around it.
@@ -275,7 +276,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument title="Checks on new bank accounts" sub="One year’s requests by amount: above the axis, checked by a call-back; below it, paid at once." {rules}>
+    <Instrument title="Checks on new bank accounts" sub="One year’s requests by amount: above the axis, checked by a call-back; below it, paid on the standard checks alone." {rules}>
       <Puzzle id="gate" {...puzzle} onshow={showAnswer} />
       <div class="tkc-controls">
         <Slider id="g-small" label="Below $1m, check" bind:value={small} min={0} max={SHARES.length - 1} format={shareLabel} ends={['A tenth', 'All']} />
@@ -310,7 +311,7 @@
           {/each}
         </svg>
         <p class="side">
-          <strong class="tkc-num">Paid at once: {year.paid}</strong>
+          <strong class="tkc-num">Paid without a call-back: {year.paid}</strong>
           <span>
             ·
             {#if year.missed}<span class="miss-ink">{year.missed} {frauds(year.missed)} paid out, {money(year.lost)} lost</span>{:else}no fraud among them{/if}
@@ -375,8 +376,8 @@
       </p>
       <p>
         So the check is sized to the loss. A call-back costs a reviewer a day whatever the amount, and what it saves
-        grows with the amount. Above $1m the gate becomes an <span class="tkc-and">AND</span> behind an
-        <span class="tkc-if">IF</span>: no disbursement goes out unchecked, {T.half} the payments and {T.money} of the
+        grows with the amount. Above $1m the call-back becomes a condition on every payment, an <span class="tkc-and">AND</span> behind an
+        <span class="tkc-if">IF</span>: none goes out unchecked, {T.half} the payments and {T.money} of the
         money. Below $1m a tenth is checked, the most suspicious, and what slips through the bank can survive. The worst
         year now loses {T.worst}. False positives remain, about {T.genuine} genuine clients a year, only {T.more} more
         than with half of every amount checked, but now where a wait buys the most.

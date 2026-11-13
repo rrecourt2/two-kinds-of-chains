@@ -1,5 +1,4 @@
-// Absence model shared by the calendar (chapter 1) and the linked-systems
-// model (chapter 3). Each person is either in or away; absences come in
+// Absence model for the riddle's calendar. Each person is either in or away; absences come in
 // spells (a week of holiday, three days of training), not single random days.
 
 import { makeRng } from './rng.js';

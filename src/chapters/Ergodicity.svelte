@@ -123,7 +123,7 @@
   {/snippet}
 
   {#snippet figure()}
-    <Instrument rules={['A fair coin each round: heads adds 50% to the stake, tails takes 40%.', '2,000 players, 100 rounds, all starting with the same wealth.', 'Pooled players add up their results every round and share the total equally.']} title="The coin game" sub="Wealth after each round, against the start. Each grey line is one player.">
+    <Instrument rules={['Every player flips their own fair coin: heads adds 50% to the stake, tails takes 40%.', '2,000 players, 100 rounds, all starting with the same wealth.', 'Pooled players add up their results every round and share the total equally.']} title="The coin game" sub="Wealth after each round, against the start. Each grey line is one player.">
       <Puzzle id="ergodicity" {...puzzle} onshow={() => ((stake = 80), (pool = 5))} />
       <div class="tkc-controls">
         <Slider id="e-stake" label="Stake each round" bind:value={stake} min={10} max={100} step={5} format={(v) => `${v}% of wealth`} />
@@ -185,10 +185,14 @@
           <span><span class="tkc-swatch tkc-swatch--line sw-player"></span>One player</span>
         </div>
         <p class="tkc-caption">
-          {stake === 100 ? '' : `Staking ${stake}%, alone: `}{stake === 100 ? 'One' : 'one'} head and one tail: ×{pair.up} then ×{pair.down} = ×{pair.both}, in either order.
+          {#if pool === 1}
+            {stake === 100 ? '' : `Staking ${stake}%, alone: `}{stake === 100 ? 'One' : 'one'} head and one tail: ×{pair.up} then ×{pair.down} = ×{pair.both}, in either order.
+          {:else}
+            Sharing with {pool - 1} {pool === 2 ? 'other' : 'others'}, each round’s result is the average of {pool} coins, and swings far less than one coin’s.
+          {/if}
         </p>
         {#if done}
-          <p class="tkc-caption tkc-twin">Read the stake as the share of a bank’s capital riding on one borrower or one country, and the pool as a portfolio whose bad years fall at different times.</p>
+          <p class="tkc-caption tkc-twin">Read the stake as the share of capital at risk in a year, and the players as country books on one balance sheet, whose bad years fall at different times.</p>
         {/if}
       </div>
 
@@ -233,17 +237,17 @@
       Two remedies follow. <strong>Staking less</strong> makes the swings smaller and gives up some of the paper return
       with them. <strong>Pooling</strong> keeps the return: five independent coins seldom land the same way, so the pool’s
       result swings far less than one player’s, and less is lost to the compounding. Insurance and a portfolio spread
-      over many countries work the same way. Pooling is interdependence of the good kind, but a shock that hits everyone
-      at once cannot be pooled away, as the stress test shows next.
+      over many countries work the same way. Pooling is interdependence of the good kind. But the links that share
+      luck also carry losses, as the stress test shows next.
     </p>
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Which of our processes would look different if judged by their worst month rather than their average?">
+    <BankNote ask="Which of our exposures would have their bad year in the same year?">
       <p>
         A bank lives through one path, so it holds capital and liquidity buffers and caps what rides on any one client,
-        country or sector: staking less and pooling, in banking terms. The pooling works while countries and sectors have
-        their bad years at different times.
+        country or sector: staking less and pooling, in banking terms. For a development lender the pool is thinnest
+        where it is needed most: a devaluation gives every client in a country its bad year at once.
       </p>
     </BankNote>
   {/snippet}

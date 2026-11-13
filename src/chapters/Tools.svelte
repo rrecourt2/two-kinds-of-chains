@@ -99,9 +99,9 @@
   );
 
   const rules = [
-    'Each draft saves half an hour on average; a wrong one costs time to redo.',
+    'A note takes a person about half a day; a draft saves half an hour on average.',
     'In six minutes, a person keeps a helpful draft and drops a harmful one.',
-    'On autopilot, every draft is used as it is, with nobody looking.',
+    'On autopilot, every draft is used as it is; a wrong one must be redone.',
   ];
 
   const puzzle = {
@@ -139,8 +139,10 @@
     </p>
     <p>
       The first is the newest link in many chains: an AI that reads a client’s request, for a waiver, say, or a new
-      repayment date, and drafts the reply. With a person in the loop, someone looks at each draft before it moves on,
-      keeps a good one and drops a bad one. On autopilot, every draft goes straight on, and a wrong one is redone further down the chain.
+      repayment date, and drafts the note for the approver: the facts from the file, the clauses that apply, a
+      proposed reply. With a person in the loop, the officer looks at each draft before it moves on, keeps a good one
+      and drops a bad one. On autopilot, the draft goes to the approver as it is, and a wrong one is redone further
+      down the chain.
     </p>
     <p>Below, the same AI handles the same twenty requests both ways. For now it is steady: rarely wrong.</p>
   {/snippet}
@@ -260,9 +262,9 @@
   {#snippet bank()}
     <BankNote ask="Where do AI answers travel on with nobody looking, and what would a wrong one cost when it surfaced?">
       <p>
-        An AI project is easiest to judge by what it takes out of the chain: steps, fields and waits. On autopilot, it is
-        safe only where its mistakes are small, visible and easy to undo. With a person in the loop, its worth depends on
-        that person having the time, and the knowledge, to tell.
+        On autopilot, an AI is safe only where its mistakes are small, visible and easy to undo. With a person in the
+        loop, its worth depends on that person having the time, and the knowledge, to tell. A draft that reaches a
+        credit committee unread has moved the checking to the people with the least time for it.
       </p>
     </BankNote>
   {/snippet}
