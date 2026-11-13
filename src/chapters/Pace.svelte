@@ -8,7 +8,7 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { MEMORIES, WORLDS, YEARS, COUNTRIES, LIMIT, HISTORIES, VALUE, PARAMS, rows, best, band, figure, countedOnce } from '../lib/sim/pace.js';
+  import { MEMORIES, WORLDS, YEARS, COUNTRIES, LIMIT, HISTORIES, VALUE, PARAMS, rows, best, figure, countedOnce } from '../lib/sim/pace.js';
   import { linear, log10, barUp } from '../lib/scales.js';
   import { int } from '../lib/format.js';
 
@@ -38,7 +38,9 @@
 
   // ---- Words and numbers, all from the model ----
   const SOME = rows('sometimes');
-  const BAND = band(SOME);
+  // The puzzle's target: a total cost under $15m a year, which four to eight years of memory meet.
+  const TARGET = 15;
+  const PASS = SOME.filter((r) => r.total < TARGET).map((r) => r.memory);
   const ANSWER = best(SOME).memory;
   const ONE = SOME[0];
   const AT = SOME[ANSWER - 1];
@@ -55,27 +57,27 @@
 
   const rules = [
     'A country’s risk doubles in a crisis and halves with a reform, now and then.',
-    'One year in ten is a bad year that passes; lending just after counts double.',
-    'The limit is full at 1% losses remembered, a third less per doubling.',
+    'One year in ten is bad: four times the usual losses, then back to normal.',
+    'The limit follows the average loss remembered: full at 1% a year, nothing at 8%.',
   ];
 
-  // ---- Puzzle: in the world where countries change sometimes, a memory within 1% of the lowest total ----
-  const inBand = $derived(BAND.includes(memory));
+  // ---- Puzzle: in the world where countries change sometimes, a memory whose total cost is under the target ----
+  const inBand = $derived(PASS.includes(memory));
   const puzzle = $derived({
-    goal: 'Countries change sometimes. Find the memory that keeps the total cost, losses plus good lending missed, at its lowest.',
+    goal: `Countries change sometimes. Find a memory that keeps the total cost, losses plus the value of lending missed, under $${TARGET}m a year.`,
     met: here === 'sometimes' && inBand,
-    checks: [{ label: `Total cost at its lowest (now ${usd(SOME[memory - 1].total)} a year)`, ok: inBand }],
+    checks: [{ label: `Total cost under $${TARGET}m a year (now ${usd(SOME[memory - 1].total)})`, ok: inBand }],
     progress:
-      memory < BAND[0]
-        ? `Each bad year still moves the limits: ${usd(SOME[memory - 1].afterBad)} a year of good lending is missed just after one.`
-        : memory > BAND.at(-1)
+      memory < PASS[0]
+        ? `Each bad year still moves the limits: ${usd(SOME[memory - 1].afterBad)} a year of the value missed falls just after one.`
+        : memory > PASS.at(-1)
           ? 'The limits trail real changes: the average still holds years from before a crisis or a reform.'
           : '',
     hints: [
       'Try short and long memories; the chart under the tiles keeps the total for each one you try.',
       'The total falls fast as the memory lengthens, then rises slowly. Look between four and ten years.',
     ],
-    found: `${Word(BAND[0])} to ${word(BAND.at(-1))} years: at ${word(ANSWER)}, ${usd(AT.total)} a year in all, against ${usd(ONE.total)} remembering one year and ${usd(LONG.total)} remembering twenty.`,
+    found: `${Word(PASS[0])} to ${word(PASS.at(-1))} years: at ${word(ANSWER)}, ${usd(AT.total)} a year in all, against ${usd(ONE.total)} remembering one year and ${usd(LONG.total)} remembering twenty.`,
   });
   const showAnswer = () => {
     memory = ANSWER;
@@ -259,7 +261,7 @@
 
       <div class="tkc-stats two" use:announce>
         <Stat label="Lent too much" value="{usd(cur.losses)} a year" sub="lost in countries riskier than it believed, all {COUNTRIES}" swatch="var(--tkc-conditions)" />
-        <Stat label="Good lending missed" value="{usd(cur.missed)} a year" sub="{usd(cur.afterBad)} of it just after a bad year" swatch="var(--pace-missed-key)" />
+        <Stat label="Value of lending missed" value="{usd(cur.missed)} a year" sub="{VALUE}% a year of what was not lent, double just after a bad year" swatch="var(--pace-missed-key)" />
       </div>
 
       <div class="many">
@@ -280,6 +282,10 @@
               <text class="tkc-axis-label" class:on={c.memory === memory} x={c.mid} y={CH - cm.bottom + 15} text-anchor="middle">{c.memory}</text>
             {/if}
           {/each}
+          {#if here === 'sometimes'}
+            <line class="target" x1={cm.left} x2={span - cm.right} y1={cy(TARGET)} y2={cy(TARGET)} />
+            <text class="tkc-axis-label tkc-halo" x={span - cm.right} y={cy(TARGET) - 5} text-anchor="end">target: under ${TARGET}m</text>
+          {/if}
           {#if revealed}
             <text class="lowest tkc-halo" x={Math.min(span - cm.right, Math.max(0, lowCol.mid))} y={lowCol.top - 8} text-anchor={lowCol.mid > span - 40 ? 'end' : lowCol.mid < 40 ? 'start' : 'middle'}>Lowest</text>
           {/if}
@@ -308,7 +314,7 @@
       Forgetting fast, the lender reads every year as news. A few calm years and it believes a country safer than it
       is, because bad years are part of the risk and none is remembered; then one arrives and it cuts the limit just
       when the country needs the money most. At one year, {usd(ONE.losses)} a year is lost on lending too much and
-      {usd(ONE.missed)} of good lending is missed, {usd(ONE.afterBad)} of it in the year after a bad one. Jack Guttentag and
+      the good lending it misses is worth {usd(ONE.missed)}, {usd(ONE.afterBad)} of it in the year after a bad one. Jack Guttentag and
       Richard Herring called the first half of this disaster myopia (1986): the longer since the last shock, the less
       likely the next one seems.
     </p>
@@ -340,7 +346,7 @@
       <p>
         Capital rules set a minimum memory. A bank that estimates its own credit risk must base default rates on at least
         five years of history, and losses on loans to firms, banks and governments on at least seven. Country limits are
-        usually reviewed each year, in the light of recent losses.
+        usually reviewed each year, on ratings that lean on the last few years.
       </p>
     </BankNote>
   {/snippet}
@@ -404,6 +410,11 @@
   .tkc-axis-label.on {
     fill: var(--tkc-ink);
     font-weight: 700;
+  }
+  .target {
+    stroke: var(--tkc-ink-2);
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
   }
   .lowest {
     fill: var(--tkc-options-ink);

@@ -35,7 +35,7 @@ test('disbursement: twelve conditions with short names, four that never move, an
   for (const c of CONDITIONS) assert.ok(c.name.length <= 19, c.name);
   assert.deepEqual(
     CONDITIONS.filter((c) => c.fixed).map((c) => c.name),
-    ['KYC checks', 'Board approval', 'Security signed', 'Legal opinion'],
+    ['KYC checks', 'Borrower’s board', 'Security signed', 'Legal opinion'],
   );
   assert.deepEqual(REMOVAL_ORDER, ['agent', 'hedging', 'registered', 'insurance', 'equity', 'permits', 'esap', 'central']);
   assert.deepEqual(
@@ -281,4 +281,16 @@ test('disbursement: fast enough to recompute on every slider step', () => {
   const t0 = performance.now();
   for (let before = 4; before <= 12; before++) simulateLoans({ before, alternatives: before % 2 === 0 });
   assert.ok((performance.now() - t0) / 9 < 40);
+});
+
+test('disbursement: what the speed leaves open', async () => {
+  const { stillOpen } = await import('../src/lib/sim/disbursement.js');
+  // As signed, every condition is met before the money moves.
+  assert.equal(stillOpen(simulateLoans({})).share, 0);
+  // At the answer, most loans are paid with a condition still open, closed about four weeks later.
+  const o = stillOpen(simulateLoans({ before: 10, alternatives: true }));
+  assert.equal(Math.round(o.share * 100), 78);
+  assert.equal(o.later, 20);
+  // Moving more conditions after the money leaves more open.
+  assert.ok(stillOpen(simulateLoans({ before: 4, alternatives: true })).share > o.share);
 });

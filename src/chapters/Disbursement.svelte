@@ -8,7 +8,7 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { simulateLoans, typical, nineInTen, shareWithin, histogram, inTime, dateSetters, CONDITIONS, TOTAL, MIN_BEFORE, POLICY_BEFORE, TARGET, PARAMS } from '../lib/sim/disbursement.js';
+  import { simulateLoans, typical, nineInTen, shareWithin, histogram, inTime, dateSetters, stillOpen, CONDITIONS, TOTAL, MIN_BEFORE, POLICY_BEFORE, TARGET, PARAMS } from '../lib/sim/disbursement.js';
   import { linear, ticks, barUp } from '../lib/scales.js';
 
   const START = { before: TOTAL, late: 'wait', parties: 'unpredictable' };
@@ -24,6 +24,8 @@
   const mid = $derived(typical(sim.days));
   const p90 = $derived(nineInTen(sim.days));
   const loan = $derived(sim.sample);
+  // What the speed leaves open: loans paid with a condition still open, and how long after the money it closes.
+  const open = $derived(stillOpen(sim));
   // The rows of "One of the loans": the conditions still required, any safeguard a moved
   // condition leaves behind, then the conditions no longer required before the money moves.
   const rows = $derived([
@@ -64,14 +66,12 @@
     .reverse()
     .map((c) => `the ${c.name.toLowerCase()}`);
   const moreChangesNothing = solving.every((x) => x.p90 === fewest.p90);
-  // Average delivery, unpredictable over predictable parties: the same medians, a wider spread.
-  const meanMet = (s) => s.met.reduce((a, v) => a + v, 0) / s.met.length;
-  const meanStretch = Math.round((meanMet(F.start.s) / meanMet(F.pred.s) - 1) * 100);
   const worstEach = Math.floor(Math.min(...inTime(F.start.s, TARGET)) * 100);
   const allTogether = Math.round(shareWithin(F.start.s.days, TARGET) * 100);
   const slowestTypical = Math.max(...CONDITIONS.map((c) => c.median));
   const registeredShare = dateSetters(F.start.s)[CONDITIONS.findIndex((c) => c.id === 'registered')];
   const altCount = CONDITIONS.filter((c) => c.alt).length;
+  const OPEN = stillOpen(at({ before: fewest.before, alternatives: fewest.alternatives }).s);
   // Once security registered follows the money, its filing evidence stays before it: one row more than the count.
   const REG = CONDITIONS.findIndex((c) => c.safeguard);
   const beforeLabel = (v) => `${v} of ${TOTAL}${v <= REG ? ' + filing' : ''}`;
@@ -224,6 +224,17 @@
     const how = w.alternatives ? 'Alternatives accepted' : 'Every original awaited';
     return `${how}, ${words[w.before]} conditions first: nine clients in ten are paid within ${w.p90} working days, not ${F.start.p90}; neither move works alone.`;
   });
+  // After a move that does not yet meet the goal: what the money waits for most often now.
+  const progress = $derived.by(() => {
+    if (goalMet || predictable || (before === TOTAL && !alternatives)) return '';
+    if (!enoughOk) return `Only ${words[before]} conditions still come before the money; policy keeps at least ${words[POLICY_BEFORE]}.`;
+    const shares = dateSetters(sim);
+    const top = shares.indexOf(Math.max(...shares));
+    const cond = CONDITIONS[top];
+    const name = cond ? cond.name : 'the filing evidence for the security';
+    const or = !cond ? '' : cond.alt ? (alternatives ? '' : ', which has an “or”') : ', which has no “or”';
+    return `Most often the money now waits for ${cond ? `“${name}”` : name}, in ${Math.round(shares[top] * 100)} loans in 100${or}.`;
+  });
   const puzzle = $derived({
     goal: `Keep the three-month promise for nine clients in ten, with at least ${words[POLICY_BEFORE]} conditions still met before the money moves.`,
     met: goalMet,
@@ -231,6 +242,7 @@
       { label: `At least ${POLICY_BEFORE} conditions before the money moves (now ${before})`, ok: enoughOk },
       { label: `9 clients in 10 paid within ${TARGET} working days (now ${p90})`, ok: fastOk },
     ],
+    progress,
     hints: [
       'In “One of the loans”, look at which condition sets the date, and whether it has an “or”.',
       'Neither change is enough alone: moving conditions and accepting alternatives speed up different conditions.',
@@ -361,7 +373,7 @@
         </svg>
         <div class="tkc-legend">
           <span><span class="tkc-swatch dot-key" aria-hidden="true"></span>Met</span>
-          <span><span class="or-key" aria-hidden="true">or</span>Has an alternative</span>
+          <span><span class="or-key" aria-hidden="true">or</span>Has an alternative: a certified copy, a comfort letter, a guaranteed commitment, a broker’s undertaking, filing evidence</span>
           {#if anyAlt}<span><span class="tkc-swatch dot-key alt" aria-hidden="true"></span>Met by its alternative <span class="orig-key" aria-hidden="true"></span>original’s day</span>{/if}
         </div>
         {#if loan.safeguards.length}
@@ -377,9 +389,14 @@
         {/if}
       </div>
 
-      <div class="tkc-stats two" use:announce>
+      <div class="tkc-stats tkc-stats--3" use:announce>
         <Stat label="Typical loan" value="{mid} days" sub="working days; half are sooner" />
         <Stat label="9 in 10 paid by" value="{p90} days" sub="promise: {TARGET} days" swatch="var(--tkc-conditions)" line={true} />
+        <Stat
+          label="Paid with a condition still open"
+          value="{Math.round(open.share * 100)} in 100"
+          sub={open.share ? `the last closes ${open.later} working days after the money, typically` : 'every condition is met before the money moves'}
+        />
       </div>
 
       <div class="part">
@@ -423,7 +440,7 @@
         <p>
           A simulation of {PARAMS.loans.toLocaleString('en-US')} loans, each with its own luck, the same under every
           setting. Each condition is met a log-normal number of working days after signing,
-          around a typical day from 5 (Board approval, Process agent) to 35 (Security registered): professional
+          around a typical day from 5 (Borrower’s board, Process agent) to 35 (Security registered): professional
           estimates, not data. Eight deliveries in ten arrive within about a fifth of that day when the parties are
           predictable, and between half and twice it when they are not.
         </p>
@@ -448,7 +465,7 @@
     <p>
       The spread decides, because the loan waits for whichever condition comes last: what counts is how late each can
       be, not how long it usually takes. Predictable or not, the parties take the same typical time, but the wider spread makes
-      deliveries about {meanStretch}% longer on average and the slowest loans much later: nine in ten are paid by day
+      the slowest loans much later: nine in ten are paid by day
       {F.start.p90}, against {F.pred.p90} with predictable parties, who keep the promise as things stand.
     </p>
     <p>
@@ -459,7 +476,9 @@
     </p>
     <p>
       Which conditions must come first is the question of the gate worth keeping, asked of a whole loan. Before the money
-      moves, a missing document keeps the door shut; afterwards it is a default to manage. So four never move here: the
+      moves, a missing document keeps the door shut; afterwards it is a default to manage, and with these two moves
+      {Math.round(OPEN.share * 100)} loans in 100 are paid with a condition still open, the last closed
+      typically {OPEN.later} working days later. So four never move here: the
       lender knows the client, the borrower’s board has approved the loan, the security is signed and a legal opinion
       says it holds.
     </p>
@@ -473,9 +492,9 @@
   {#snippet bank()}
     <BankNote ask="Which of our conditions precedent truly need the money to wait?">
       <p>
-        Each condition on a list was added for a reason, usually a good one, and most were added one loan at a time. The
-        list rarely records which reasons need the money to wait, and which an undertaking with a deadline, or another
-        document, would serve as well.
+        Each condition on a list was added for a reason, usually a good one, and most were added one loan at a time.
+        Lists rarely record which reasons need the money to wait, and more rarely which condition set the date on each
+        loan: the one figure that shows where the time goes.
       </p>
     </BankNote>
   {/snippet}

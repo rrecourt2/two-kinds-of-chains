@@ -231,7 +231,13 @@
   const cx = $derived(linear(CAPITALS[0], CAPITALS.at(-1), cm.left, chartW - cm.right));
   const cy = $derived(linear(0, N, CH - cm.bottom, cm.top));
   const path = (s) => line(net.curves[s].map((p) => [cx(p.capital), cy(p.worst)]));
-  const others = $derived(SHARES.filter((s) => s.value !== share));
+  // The other choices of extra are drawn in grey once they have been tried (all of them once the puzzle is solved),
+  // so the answer cannot be read off the chart before a move is made.
+  let tried = $state(['none']);
+  $effect(() => {
+    if (!tried.includes(share)) tried = [...tried, share];
+  });
+  const others = $derived(SHARES.filter((s) => s.value !== share && (solved || tried.includes(s.value))));
   const xTicks = $derived((chartW - cm.left - cm.right) / (CAPITALS.length - 1) >= 30 ? CAPITALS : CAPITALS.filter((c) => c % 2 === 0));
   const shareLabel = (s) => SHARES.find((x) => x.value === s).label;
   // Once the puzzle is solved, the other banking system's curve for the same extra, dotted.
@@ -367,9 +373,11 @@
   // Where a grey curve could not be named on the chart (on a phone, mostly), the legend names both, in the
   // order their cliffs stand from the left.
   const greyKey = $derived.by(() => {
-    if (greysAlike) return 'Grey: the other two choices, almost the same here';
+    if (others.length === 0) return '';
+    const which = others.length === 1 ? 'the other choice tried' : 'the other two choices';
+    if (greysAlike) return `Grey: ${which}, almost the same here`;
     const named = others.every((s) => alike(net.curves[s.value], net.curves[share]) || curveTags.some((t) => t.text === s.label));
-    if (named) return 'Grey: the other two choices';
+    if (named) return `Grey: ${which}`;
     const order = [...others].sort((a, b) => tippingPoint(net.curves[a.value]) - tippingPoint(net.curves[b.value]));
     return `Grey, from the left: ${order.map((s) => s.label).join('; ')}`;
   });
@@ -382,6 +390,8 @@
   // ---- The puzzle: every landing to five failures or fewer, no bank cut, average capital at most 6%. ----
   const answer = HUBS.curves.top12[ci(CAPITAL)];
   const met = $derived(now.worst <= LIMIT && withinBudget(base, top));
+  // The worst place for the loss to land with the capital as set: marked on the map while it is not the place chosen.
+  const worstBank = $derived(now.worst > 0 ? now.worstAt.reduce((a, b) => (net.rankOf[b] < net.rankOf[a] ? b : a)) : null);
   function progressFor() {
     if (met || base < CAPITAL) return '';
     if (now.worst <= LIMIT)
@@ -403,7 +413,7 @@
     progress: progressFor(),
     hints: [
       `A buffer stops the loss only where it covers all ${LOSS}%; raising every bank that far puts the average at ${averageCapital(LOSS, 0)}%.`,
-      'The loss travels furthest from the biggest banks. On the curve, the grey lines show the other two choices of extra.',
+      'The loss travels furthest from the biggest banks. Each choice of extra you try stays on the curve in grey.',
     ],
     found: `The 12 biggest at ${CAPITAL + EXTRA / 12}%, an average of ${averageCapital(CAPITAL, 12)}%: at most ${WORDS[answer.worst]} banks fail; stopping the loss everywhere would take ${LOSS}% for every bank.`,
   });
@@ -448,8 +458,9 @@
       along the links.
     </p>
     <p>
-      Today every bank holds capital of {CAPITAL}% of its assets. The supervisor can raise the average to
-      {MAX_AVERAGE}%: one more point for every bank, or more for a few hubs.
+      Today every bank holds capital of {CAPITAL}% of its assets. Supervisors, and the development lenders who put
+      equity and subordinated loans into banks, can raise the average to {MAX_AVERAGE}%: one more point for every
+      bank, or more for a few hubs.
     </p>
   {/snippet}
 
@@ -484,7 +495,7 @@
           width={chartW}
           height={CH}
           role="img"
-          aria-label="Banks that fail at the worst place to land, against the capital every bank holds. {systemOf(system).label}, {shareLabel(share)}: {net.curves[share].map((p) => `${p.capital}%, ${p.worst}`).join('; ')}. Limit: {WORDS[LIMIT]}. Grey lines: the other two choices of extra.{twin ? ` Dotted: ${otherSystem.label.toLowerCase()}, the same extra: ${twin.map((p) => `${p.capital}%, ${p.worst}`).join('; ')}.` : ''}"
+          aria-label="Banks that fail at the worst place to land, against the capital every bank holds. {systemOf(system).label}, {shareLabel(share)}: {net.curves[share].map((p) => `${p.capital}%, ${p.worst}`).join('; ')}. Limit: {WORDS[LIMIT]}. Grey lines: the other choices of extra, once tried.{twin ? ` Dotted: ${otherSystem.label.toLowerCase()}, the same extra: ${twin.map((p) => `${p.capital}%, ${p.worst}`).join('; ')}.` : ''}"
         >
           {#each [0, 12, 24, 36, 48] as t (t)}
             <line class={t === 0 ? 'tkc-base' : 'tkc-grid'} x1={cm.left} x2={chartW - cm.right} y1={cy(t)} y2={cy(t)} />
@@ -533,7 +544,7 @@
         {/if}
         <div class="tkc-legend">
           <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-conditions)"></span>Extra for the hubs: {shareLabel(share)}</span>
-          <span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-rule)"></span>{greyKey}</span>
+          {#if greyKey}<span><span class="tkc-swatch tkc-swatch--line" style:background="var(--tkc-rule)"></span>{greyKey}</span>{/if}
           {#if twin}<span><span class="tkc-swatch sw-dots"></span>Dotted: {otherSystem.label.toLowerCase()}, same extra</span>{/if}
         </div>
       </div>
@@ -563,6 +574,9 @@
               onkeydown={onKey}
             />
           {/each}
+          {#if worstBank !== null && worstBank !== at}
+            <circle cx={px(worstBank)} cy={py(worstBank)} r={radius(worstBank) + 4} class="ring worst" aria-hidden="true" />
+          {/if}
           <circle cx={px(at)} cy={py(at)} r={radius(at) + 4} class="ring" aria-hidden="true" />
           <text
             class="tkc-label tkc-halo tag"
@@ -578,6 +592,7 @@
         </p>
         <div class="tkc-legend">
           <span><span class="tkc-swatch sw-ring"></span>Where the loss lands</span>
+          {#if worstBank !== null && worstBank !== at}<span><span class="tkc-swatch sw-ring sw-worst"></span>Worst place to land: {now.worst} fail</span>{/if}
           <span><span class="tkc-swatch" style:background="var(--tkc-conditions)"></span>Failed</span>
           {#if share !== 'none'}<span><span class="tkc-swatch sw-extra"></span>Extra for the hubs</span>{/if}
         </div>
@@ -629,7 +644,7 @@
   {/snippet}
 
   {#snippet bank()}
-    <BankNote ask="Which partner, supplier or system in our chain would bring down many others if it failed?">
+    <BankNote ask="Which banks in our book, and which people in our own chain, would take many others down with them?">
       <p>
         In 2011 the world’s bank supervisors agreed that the banks whose failure would travel furthest should hold more
         capital than the rest: 1 to 2.5 extra percentage points of risk-weighted assets, with a higher step kept in reserve, set by how large, interlinked, complex, global and hard to replace a
@@ -711,6 +726,10 @@
     stroke-width: 2;
     pointer-events: none;
   }
+  .ring.worst {
+    stroke: var(--tkc-conditions);
+    stroke-dasharray: 3 3;
+  }
   .tag {
     font-weight: 650;
     pointer-events: none;
@@ -721,6 +740,11 @@
     background: transparent;
     box-shadow: inset 0 0 0 2px var(--tkc-ink);
     border-radius: 50%;
+  }
+  .sw-ring.sw-worst {
+    box-shadow: none;
+    border: 2px dashed var(--tkc-conditions);
+    box-sizing: border-box;
   }
   .sw-extra {
     background: var(--tkc-surface);

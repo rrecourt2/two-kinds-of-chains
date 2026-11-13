@@ -119,3 +119,8 @@ test('pace: the country on the card shows a change and a bad year that passes', 
   assert.ok(shown.some((y) => y.bad), 'a bad year');
   assert.equal(COUNTRIES, 20);
 });
+
+test('pace: the puzzle target, a total under $15m a year, is met by four to eight years of memory', () => {
+  const pass = rows('sometimes').filter((r) => r.total < 15).map((r) => r.memory);
+  assert.deepEqual(pass, [4, 5, 6, 7, 8]);
+});

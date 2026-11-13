@@ -8,7 +8,7 @@
   import { announce } from '../lib/ui/announce.js';
   import Puzzle from '../lib/ui/Puzzle.svelte';
   import BankNote from '../lib/ui/BankNote.svelte';
-  import { scenes, meets, openFuture, WORLDS, TARGET, BUDGET, PILOT, READ, FUTURES, MAX_PILOTS, PUZZLE_WORLD, OPENED } from '../lib/sim/tinkering.js';
+  import { scenes, meets, openFuture, results, summarize, sharedFutures, WORLDS, TARGET, BUDGET, PILOT, READ, FUTURES, MAX_PILOTS, PUZZLE_WORLD, OPENED } from '../lib/sim/tinkering.js';
   import { log10, line } from '../lib/scales.js';
   import { int } from '../lib/format.js';
 
@@ -50,13 +50,15 @@
     wildN: S.wild.bestN,
     wildT: int(S.wild.runs[S.wild.bestN].typical),
   };
+  // The same twelve pilots with rougher readings: an error as wide as the approaches differ, not READ.
+  const ROUGH = summarize(results(sharedFutures(), ANSWER, U.sigma, { read: U.sigma }));
   const mult = (v) => `×${v < 0.1 ? v.toFixed(2) : v.toFixed(1)}`;
   const O12 = openFuture(ANSWER, U.sigma);
   const O1 = openFuture(1, U.sigma);
   const SHARE = ['', 'all', 'half', 'a third', 'a quarter', 'a fifth'][Math.round(O12.best.worth / O12.pick.worth)] ?? 'a fraction';
 
   const rules = [
-    'A budget of 100; a typical approach returns what it costs, but results vary widely.',
+    'A budget of 100. A typical approach is worth what it costs; results vary widely.',
     `Each pilot costs ${PILOT}, earns nothing itself, and gives a rough reading of its approach.`,
     'What is left goes behind the approach whose pilot read best.',
   ];
@@ -69,7 +71,7 @@
         : '',
   );
   const puzzle = $derived({
-    goal: 'Results are unpredictable. Split the budget so the typical result at least doubles one big programme’s, and the worst one in ten still returns 100.',
+    goal: 'Results are unpredictable. Split the budget so the typical result at least doubles one big programme’s, and the worst one in ten is still worth 100.',
     met: world === PUZZLE_WORLD && meets(run),
     checks: [
       { label: `Typical result at least ${TARGET.typical} (now ${int(run.typical)})`, ok: run.typical >= TARGET.typical },
@@ -147,10 +149,10 @@
   const story = $derived.by(() => {
     const o = opened;
     if (o.n === 1)
-      return `One big programme puts all ${BUDGET} behind approach 1, untried. In this future it is worth ${mult(o.pick.worth)}: ${int(o.result)} comes back.`;
+      return `One big programme puts all ${BUDGET} behind approach 1, untried. In this future it is worth ${mult(o.pick.worth)}: a result worth ${int(o.result)}.`;
     const head = `Pilot ${o.pick.n} read best (${mult(o.pick.read)}), so the ${o.rest} left went behind its approach`;
-    if (o.pick.n === o.best.n) return `${head}, the one worth most (${mult(o.pick.worth)}): ${int(o.result)} comes back.`;
-    return `${head}, worth ${mult(o.pick.worth)}: ${int(o.result)} comes back. Pilot ${o.best.n} read ${mult(o.best.read)} but was worth ${mult(o.best.worth)}.`;
+    if (o.pick.n === o.best.n) return `${head}, the one worth most (${mult(o.pick.worth)}): a result worth ${int(o.result)}.`;
+    return `${head}, worth ${mult(o.pick.worth)}: a result worth ${int(o.result)}. Pilot ${o.best.n} read ${mult(o.best.read)} but was worth ${mult(o.best.worth)}.`;
   });
 
   // ---- The chart: one dot per future, stacked in columns on a log scale of what the 100 returns ----
@@ -238,7 +240,7 @@
   const plan = $derived(pilots === 1 ? 'one big programme' : `${pilots} pilots first`);
   const describe = $derived(
     `${int(FUTURES)} futures, ${plan}, results ${WORLDS.find((w) => w.id === world).label.toLowerCase()}. ` +
-      `Typical result ${int(run.typical)}, worst one in ten ${int(run.worst)}; ${pct(run.below)} of futures return less than 100. ` +
+      `Typical result ${int(run.typical)}, worst one in ten ${int(run.worst)}; ${pct(run.below)} of futures are worth less than 100. ` +
       `An outline shows one big programme’s spread: typical ${int(base.typical)}, worst one in ten ${int(base.worst)}. ` +
       `In the future opened above it: ${story}`,
   );
@@ -367,7 +369,7 @@
           {#each TICKS as t (t)}
             <text class="tkc-axis-label" class:at-budget={t === BUDGET} x={x(t)} y={BASE + 17} text-anchor={tickAnchor(t)}>{int(t)}</text>
           {/each}
-          <text class="tkc-axis-title" x={m.left + (span - m.left - m.right) / 2} y={H - 5} text-anchor="middle">What the budget of 100 returns</text>
+          <text class="tkc-axis-title" x={m.left + (span - m.left - m.right) / 2} y={H - 5} text-anchor="middle">What the budget of 100 is worth in results</text>
         </svg>
         <div class="tkc-legend">
           <span><span class="tkc-swatch sw-fut"></span>Returns 100 or more</span>
@@ -391,7 +393,7 @@
         <p>
           Each approach is worth a random amount per unit of money: lognormal, with a median of 1 and a spread (σ) of
           {WORLDS.map((w) => `${w.sigma} when results are ${w.label.toLowerCase()}`).join(', ')}. One big programme puts all
-          100 into one approach. With n pilots, each costs {PILOT} and returns nothing itself; it reads its approach’s worth
+          100 into one approach. With n pilots, each costs {PILOT} and yields nothing itself; it reads its approach’s worth
           with an error (σ {READ}), and the remaining 100 − {PILOT}n goes into the approach whose pilot read best.
         </p>
         <p>
@@ -416,12 +418,13 @@
       The pilots make no approach better. They turn the spread of results into a choice, and the wider the spread, the
       further the best of {words(ANSWER)} stands above the typical one. The choice pays even when the readings mislead: in the
       opened future, pilot {O12.pick.n} read best but was worth {SHARE} of pilot {O12.best.n}, and the {O12.rest} left
-      after the pilots, put behind it, still returned {int(O12.result)} against one big programme’s {int(O1.result)}. When results are predictable, the approaches barely differ, so
-      the choice is worth less than the {ANSWER * PILOT} that {words(ANSWER)} pilots cost: they leave a typical {T.pred12}. When results are wild, {words(T.wildN)} pilots do best, at a typical {T.wildT}. Unpredictability is
-      what pilots are paid in.
+      after the pilots, put behind it, were still worth {int(O12.result)} against one big programme’s {int(O1.result)}. When results are predictable, the approaches barely differ, so
+      the choice is worth less than the {ANSWER * PILOT} that {words(ANSWER)} pilots cost: they leave a typical {T.pred12}. Unpredictability is
+      what pilots are paid in. Rougher pilots gain less, and still gain: with readings as wide of the mark as the
+      approaches differ, twelve leave a typical {int(ROUGH.typical)} and a worst one in ten of {int(ROUGH.worst)}.
     </p>
     <p>
-      One big programme takes the swings whole: whatever its one approach proves worth, the whole budget gets it. Real
+      One big programme takes the swings whole. Real
       programmes often fare worse, because their surprises are mostly overruns. Bent Flyvbjerg and
       Alexander Budzier studied 1,471 IT projects: one in six overran its budget by about 200%.
     </p>
